@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-nexus-bg: #050505;
+  --color-nexus-panel: rgba(15, 15, 15, 0.7);
+  --color-nexus-accent: #00f2ff;
+  --color-nexus-border: rgba(255, 255, 255, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-nexus-bg text-white antialiased overflow-hidden;
+    font-family: var(--font-sans);
+  }
+}
+
+.glass {
+  @apply bg-nexus-panel backdrop-blur-xl border border-nexus-border;
+}
+
+.glow-accent {
+  box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+}
