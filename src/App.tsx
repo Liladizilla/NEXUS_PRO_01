@@ -4,6 +4,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { CICDPipeline } from './components/CICDPipeline';
+import { FeedbackWidget } from './components/FeedbackWidget';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { 
   Layout, 
   Code2, 
@@ -44,6 +48,9 @@ import {
   FormInput,
   CheckSquare,
   Type,
+  Bug,
+  ArrowDownLeft,
+  ArrowUpRight,
   Grid3X3,
   Columns,
   Rows,
@@ -57,15 +64,24 @@ import {
   Trello,
   ShoppingBag,
   Users,
-  LayoutDashboard
+  LayoutDashboard,
+  User,
+  Bot,
+  Palette,
+  Dumbbell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { KanbanBoard } from './components/KanbanBoard';
 import { Paywall } from './components/Paywall';
 import { Settings } from './components/Settings';
+import { AuthModal } from './components/AuthModal';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/Modals';
+import { Debugger } from './components/Debugger';
 import { useNexusStore, AgentStatus } from './store';
 import { generateApp } from './ai';
+import { getContrastColor } from './lib/utils';
+import { auth, googleProvider, syncUserProfile } from './firebase';
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
@@ -75,36 +91,6 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // --- Constants ---
-
-const TEMPLATES = [
-  {
-    id: 'ecommerce',
-    title: 'E-commerce Store',
-    description: 'A full-featured online store with product listings, cart, and checkout.',
-    prompt: 'A modern e-commerce platform with a product grid, category filters, a shopping cart, and a multi-step checkout process. Include a responsive design and a clean, minimalist aesthetic.',
-    icon: ShoppingBag,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10'
-  },
-  {
-    id: 'social',
-    title: 'Social Media App',
-    description: 'A social platform with user profiles, feed, and real-time interactions.',
-    prompt: 'A social media application featuring a real-time activity feed, user profile pages with avatars and bios, post creation with image support, and interactive elements like likes and comments.',
-    icon: Users,
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10'
-  },
-  {
-    id: 'dashboard',
-    title: 'Enterprise Dashboard',
-    description: 'A data-rich dashboard with analytics, charts, and user management.',
-    prompt: 'A professional enterprise dashboard with real-time data visualizations using Recharts, a sidebar for navigation, a user management table with search and filters, and key performance indicator (KPI) cards.',
-    icon: LayoutDashboard,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-400/10'
-  }
-];
 
 // --- Components ---
 
@@ -210,7 +196,7 @@ const AuthPage = ({ onLogin }: { onLogin: (email: string) => void }) => {
           </div>
           <button 
             onClick={() => onLogin(email || 'user@nexus.ai')}
-            className="w-full bg-nexus-accent text-black font-bold py-3 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all glow-accent"
+            className="w-full bg-nexus-accent text-nexus-accent-contrast font-bold py-3 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all glow-accent"
           >
             {isLogin ? 'Sign In' : 'Create Account'}
           </button>
@@ -248,23 +234,58 @@ const AuthPage = ({ onLogin }: { onLogin: (email: string) => void }) => {
 };
 
 const ProjectTemplates = ({ onSelect }: { onSelect: (prompt: string) => void }) => {
+  const { templates, fetchTemplates } = useNexusStore();
+
+  React.useEffect(() => {
+    if (templates.length === 0) {
+      fetchTemplates();
+    }
+  }, [templates.length, fetchTemplates]);
+
+  const displayTemplates = templates.slice(0, 3);
+
+  const ICON_MAP: Record<string, any> = {
+    ShoppingBag,
+    Users,
+    LayoutDashboard,
+    Bot,
+    Palette,
+    Dumbbell
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-12">
-      {TEMPLATES.map((template) => (
-        <motion.div
-          key={template.id}
-          whileHover={{ y: -5, scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onSelect(template.prompt)}
-          className="glass p-6 rounded-2xl text-left cursor-pointer border-white/5 hover:border-nexus-accent/30 transition-colors group"
-        >
-          <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors", template.bg)}>
-            <template.icon size={24} className={template.color} />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-4">
+      {templates.length === 0 ? (
+        Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="glass p-6 rounded-2xl border-white/5 animate-pulse">
+            <div className="w-12 h-12 rounded-xl bg-white/5 mb-4" />
+            <div className="h-4 bg-white/5 rounded w-3/4 mb-2" />
+            <div className="h-3 bg-white/5 rounded w-full" />
           </div>
-          <h3 className="text-lg font-bold mb-2 group-hover:text-nexus-accent transition-colors">{template.title}</h3>
-          <p className="text-xs text-white/40 leading-relaxed">{template.description}</p>
-        </motion.div>
-      ))}
+        ))
+      ) : (
+        displayTemplates.map((template) => {
+          const Icon = ICON_MAP[template.icon] || Layout;
+          return (
+            <motion.div
+              key={template.id}
+              whileHover={{ y: -5, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onSelect(template.prompt)}
+              className="glass p-6 rounded-2xl text-left cursor-pointer border-white/5 hover:border-nexus-accent/30 transition-colors group"
+            >
+              <div className={cn(
+                "w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors",
+                template.color.replace('text-', 'bg-').replace('400', '400/10')
+              )}>
+                <Icon size={24} className={template.color} />
+              </div>
+              <h3 className="text-lg font-bold mb-2 group-hover:text-nexus-accent transition-colors">{template.title}</h3>
+              <p className="text-xs text-white/40 leading-relaxed line-clamp-2">{template.description}</p>
+            </motion.div>
+          );
+        })
+      )}
     </div>
   );
 };
@@ -306,51 +327,154 @@ const AgentCard = ({ agent }: { agent: any }) => {
             {agent.status}
           </span>
         </div>
-        <p className="text-[10px] text-white/50 truncate">{agent.role}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] text-white/50 truncate">{agent.role}</p>
+          <span className="text-[8px] text-nexus-accent/60 font-mono uppercase truncate">{agent.model}</span>
+        </div>
       </div>
     </div>
   );
 };
 
+const AGENT_POSITIONS: Record<string, { x: string, y: string }> = {
+  architect: { x: '50%', y: '20%' },
+  frontend: { x: '20%', y: '45%' },
+  backend: { x: '80%', y: '45%' },
+  debug: { x: '35%', y: '80%' },
+  devops: { x: '65%', y: '80%' },
+};
+
 const CommunicationMesh = ({ activeAgents }: { activeAgents: string[] }) => {
+  const connections = React.useMemo(() => {
+    const pairs: [string, string][] = [];
+    for (let i = 0; i < activeAgents.length; i++) {
+      for (let j = i + 1; j < activeAgents.length; j++) {
+        pairs.push([activeAgents[i], activeAgents[j]]);
+      }
+    }
+    return pairs;
+  }, [activeAgents]);
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      <svg className="w-full h-full opacity-20">
+      <svg className="w-full h-full">
         <defs>
-          <linearGradient id="meshGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--nexus-accent)" stopOpacity="0" />
-            <stop offset="50%" stopColor="var(--nexus-accent)" stopOpacity="1" />
-            <stop offset="100%" stopColor="var(--nexus-accent)" stopOpacity="0" />
-          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
-        {activeAgents.length > 1 && activeAgents.map((id, i) => {
-          if (i === activeAgents.length - 1) return null;
+        
+        {/* Connection Lines */}
+        {connections.map(([from, to]) => {
+          const start = AGENT_POSITIONS[from];
+          const end = AGENT_POSITIONS[to];
+          if (!start || !end) return null;
+
           return (
-            <motion.line
-              key={`${id}-${activeAgents[i+1]}`}
-              x1="50%" y1={`${20 + i * 15}%`}
-              x2="50%" y2={`${20 + (i + 1) * 15}%`}
-              stroke="url(#meshGradient)"
-              strokeWidth="1"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 1, repeat: Infinity }}
-            />
+            <g key={`${from}-${to}`}>
+              <motion.line
+                x1={start.x} y1={start.y}
+                x2={end.x} y2={end.y}
+                stroke="var(--nexus-accent)"
+                strokeWidth="1"
+                strokeOpacity="0.15"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 1.5, ease: "easeInOut" }}
+              />
+              
+              {/* Data Particles */}
+              {[...Array(3)].map((_, i) => (
+                <motion.circle
+                  key={`${from}-${to}-p-${i}`}
+                  r="1.5"
+                  fill="var(--nexus-accent)"
+                  filter="url(#glow)"
+                  initial={{ offsetDistance: "0%", opacity: 0 }}
+                  animate={{ 
+                    offsetDistance: ["0%", "100%"],
+                    opacity: [0, 1, 1, 0],
+                    scale: [1, 1.5, 1]
+                  }}
+                  transition={{ 
+                    duration: 1.5 + Math.random() * 1.5,
+                    repeat: Infinity,
+                    delay: i * 0.8 + Math.random(),
+                    ease: "easeInOut"
+                  }}
+                  style={{
+                    offsetPath: `path('M ${start.x} ${start.y} L ${end.x} ${end.y}')`,
+                    position: 'absolute'
+                  } as any}
+                />
+              ))}
+              {[...Array(2)].map((_, i) => (
+                <motion.circle
+                  key={`${to}-${from}-p-${i}`}
+                  r="1"
+                  fill="var(--nexus-accent)"
+                  stroke="white"
+                  strokeWidth="0.5"
+                  strokeOpacity="0.5"
+                  initial={{ offsetDistance: "0%", opacity: 0 }}
+                  animate={{ 
+                    offsetDistance: ["0%", "100%"],
+                    opacity: [0, 0.8, 0.8, 0]
+                  }}
+                  transition={{ 
+                    duration: 2 + Math.random() * 2,
+                    repeat: Infinity,
+                    delay: i * 1.2 + Math.random(),
+                    ease: "linear"
+                  }}
+                  style={{
+                    offsetPath: `path('M ${end.x} ${end.y} L ${start.x} ${start.y}')`,
+                    position: 'absolute'
+                  } as any}
+                />
+              ))}
+            </g>
           );
         })}
       </svg>
+
+      {/* Pulsing Agent Nodes */}
       <AnimatePresence>
-        {activeAgents.map((id) => (
-          <motion.div
-            key={`pulse-${id}`}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [1, 2, 1], opacity: [0, 0.5, 0] }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-nexus-accent/30"
-            style={{ top: `${25 + activeAgents.indexOf(id) * 15}%` }}
-          />
-        ))}
+        {activeAgents.map((id) => {
+          const pos = AGENT_POSITIONS[id];
+          if (!pos) return null;
+          
+          return (
+            <React.Fragment key={`node-${id}`}>
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.4, 0.2] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute w-16 h-16 rounded-full bg-nexus-accent/10 border border-nexus-accent/20"
+                style={{ 
+                  left: pos.x, 
+                  top: pos.y, 
+                  transform: 'translate(-50%, -50%)' 
+                }}
+              />
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [1, 2.5, 1], opacity: [0.1, 0, 0.1] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="absolute w-24 h-24 rounded-full border border-nexus-accent/10"
+                style={{ 
+                  left: pos.x, 
+                  top: pos.y, 
+                  transform: 'translate(-50%, -50%)' 
+                }}
+              />
+            </React.Fragment>
+          );
+        })}
       </AnimatePresence>
     </div>
   );
@@ -366,7 +490,7 @@ export default function App() {
     activeTab, setActiveTab,
     files, setFiles,
     activeFile, setActiveFile,
-    agents, updateAgent,
+    agents, updateAgent, setAgents,
     logs, addLog,
     isAuthenticated, login,
     showPaywall, setShowPaywall, incrementUsage, usageCount, usageLimit,
@@ -378,8 +502,52 @@ export default function App() {
     setSubscription,
     deployTarget, setDeployTarget,
     previewMode, setPreviewMode,
-    reset
+    stagingUrl, setStagingUrl,
+    feedback, setFeedback,
+    userProfile, setUserProfile,
+    accentColor,
+    reset,
+    setDebugActive, setCurrentLine, setDebugVariables, addDebugLog, isPro
   } = useNexusStore();
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [buildStatus, setBuildStatus] = useState<string>('idle');
+  const [buildProgress, setBuildProgress] = useState<number>(0);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        useNexusStore.setState({ isAuthenticated: true });
+        const unsubscribeProfile = syncUserProfile(user, (profile) => {
+          setUserProfile(profile);
+        });
+        return () => unsubscribeProfile();
+      } else {
+        useNexusStore.setState({ isAuthenticated: false });
+        setUserProfile(null);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  const handleLogin = () => {
+    setShowAuthModal(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      addLog("System: Logged out successfully.");
+    } catch (error) {
+      addLog(`Error: Logout failed. ${error instanceof Error ? error.message : ''}`);
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--nexus-accent', accentColor);
+    document.documentElement.style.setProperty('--nexus-accent-contrast', getContrastColor(accentColor));
+  }, [accentColor]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -421,6 +589,37 @@ export default function App() {
     }
   }, [logs]);
 
+  const reportError = (error: any) => {
+    const message = error instanceof Error ? error.message : String(error);
+    let detailedMessage = `Error: ${message}`;
+    let advice = "";
+
+    if (message.includes("Rate Limit")) {
+      detailedMessage = "Gateway: Rate Limit Exceeded";
+      advice = "The NEXUS mesh is currently processing a high volume of requests. Please wait a few minutes or upgrade to NEXUS Pro for priority access.";
+    } else if (message.includes("Auth") || message.includes("unauthorized")) {
+      detailedMessage = "Security: Authentication Failure";
+      advice = "Your session may have expired. Please sign out and sign back in to re-establish a secure connection to the mesh.";
+    } else if (message.includes("AI Mesh Failure") || message.includes("Gemini")) {
+      detailedMessage = "AI Orchestration: Primary Mesh Outage";
+      advice = "The primary LLM mesh is unresponsive. We've attempted a failsafe fallback, but if the build still fails, try simplifying your prompt or checking the system status.";
+    } else if (message.includes("CI/CD") || message.includes("Generation failed")) {
+      detailedMessage = "Pipeline: Build Synthesis Failure";
+      advice = "The automated CI/CD pipeline encountered a conflict during code synthesis. Action: Try refining your prompt with clearer architectural constraints or use the 'Autonomous Debug' tool.";
+    } else if (message.includes("fetch") || message.includes("Network")) {
+      detailedMessage = "Connectivity: Gateway Unreachable";
+      advice = "Lost connection to the NEXUS backend. Please verify your network stability and ensure the gateway is online (check the health indicator in the footer).";
+    }
+
+    addLog(`[CRITICAL] ${detailedMessage}`);
+    if (advice) {
+      addLog(`[ADVICE] ${advice}`);
+    }
+    
+    setBuildStatus('failed');
+    agents.forEach(a => updateAgent(a.id, { status: 'error' }));
+  };
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     
@@ -432,48 +631,54 @@ export default function App() {
     }
     
     setIsGenerating(true);
-    addLog(`Starting generation for: ${prompt}`);
+    setBuildStatus('processing');
+    setBuildProgress(0);
+    addLog(`Starting generation for: ${prompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
-      // Phase 1: Architect
-      updateAgent('architect', { status: 'working', lastAction: 'Designing system architecture...' });
-      addLog("Architect Agent: Designing system structure...");
-      await new Promise(r => setTimeout(r, 1500));
+      const { result, plan } = await generateApp(prompt, agents, feedback, (status, progress) => {
+        setBuildStatus(status);
+        setBuildProgress(progress);
+        
+        // Update agent statuses based on CI/CD status
+        if (status === 'building') {
+          updateAgent('architect', { status: 'completed' });
+          updateAgent('devops', { status: 'working', lastAction: 'Building artifacts...' });
+        } else if (status === 'testing') {
+          updateAgent('devops', { status: 'working', lastAction: 'Running security scans...' });
+          updateAgent('debug', { status: 'working', lastAction: 'Testing build...' });
+        } else if (status === 'deploying') {
+          updateAgent('debug', { status: 'completed' });
+          updateAgent('devops', { status: 'working', lastAction: 'Deploying to staging...' });
+        }
+      });
       
-      // Phase 2: Frontend & Backend (Parallel)
-      updateAgent('architect', { status: 'completed' });
-      updateAgent('frontend', { status: 'working', lastAction: 'Building UI components...' });
-      updateAgent('backend', { status: 'working', lastAction: 'Setting up APIs...' });
-      addLog("Frontend Agent: Building UI components...");
-      addLog("Backend Agent: Setting up APIs...");
+      // Update UI with provisioned agents from backend
+      setAgents(plan.agents);
+      addLog(`Autoscaling Logic: Provisioned ${plan.agents.length} agents. Metrics: Complexity Score ${plan.complexity}, System Load ${plan.systemLoad}%, Concurrent Users ${plan.concurrentUsers || 0}. Detected features: ${plan.metrics?.join(', ') || 'none'}.`);
       
-      const result = await generateApp(prompt);
-      
+      // Update global state
       setProjectName(result.projectName);
       setFiles(result.files);
       if (result.files.length > 0) setActiveFile(result.files[0].path);
       
-      await new Promise(r => setTimeout(r, 2000));
-      updateAgent('frontend', { status: 'completed' });
-      updateAgent('backend', { status: 'completed' });
+      const finalStagingUrl = result.stagingUrl || `https://staging-${result.projectName.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(7)}.nexus-preview.app`;
+      setStagingUrl(finalStagingUrl);
+      addLog(`CD: Successfully deployed to staging: ${finalStagingUrl}`);
       
-      // Phase 3: Debug & DevOps
-      updateAgent('debug', { status: 'working', lastAction: 'Running security scans...' });
-      addLog("Debug Agent: Running security scans and performance checks...");
-      await new Promise(r => setTimeout(r, 1000));
-      updateAgent('debug', { status: 'completed' });
-      
-      updateAgent('devops', { status: 'working', lastAction: 'Preparing deployment...' });
-      addLog("DevOps Agent: Preparing instant deployment...");
-      await new Promise(r => setTimeout(r, 1000));
+      plan.agents.forEach((agent: any) => updateAgent(agent.id, { status: 'completed' }));
       updateAgent('devops', { status: 'completed' });
+      updateAgent('debug', { status: 'completed' });
       
       addLog(`Successfully generated ${result.projectName}!`);
       setActiveTab('preview');
       incrementUsage(); // Track usage for paywall
+      setBuildStatus('completed');
+      setBuildProgress(100);
+      setFeedback(''); // Clear feedback after successful integration
     } catch (error) {
-      addLog(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      updateAgent('architect', { status: 'error' });
+      console.error("Generation failed:", error);
+      reportError(error);
     } finally {
       setIsGenerating(false);
     }
@@ -500,12 +705,22 @@ export default function App() {
 
   const handleDebug = async () => {
     setIsGenerating(true);
-    addLog("Debug Agent: Scanning codebase for vulnerabilities and logic errors...");
-    updateAgent('debug', { status: 'working', lastAction: 'Analyzing AST...' });
-    await new Promise(r => setTimeout(r, 2000));
+    addLog("Debug Agent: Initializing runtime debugger...");
+    updateAgent('debug', { status: 'working', lastAction: 'Attaching debugger...' });
+    await new Promise(r => setTimeout(r, 1500));
     updateAgent('debug', { status: 'completed' });
-    addLog("Debug Agent: Codebase is 100% healthy. No patches required.");
+    addLog("Debug Agent: Debugger attached. Switching to Debug view.");
     setIsGenerating(false);
+    setActiveTab('debug');
+    setDebugActive(true);
+    setCurrentLine(1);
+    setDebugVariables({
+      projectName: projectName,
+      isPro: isPro,
+      agentsCount: agents.length,
+      timestamp: Date.now()
+    });
+    addDebugLog("Debugger: Runtime session started.");
   };
 
   const currentFile = files.find(f => f.path === activeFile);
@@ -543,6 +758,7 @@ export default function App() {
 
       <AnimatePresence>
         {showSettings && <Settings />}
+        {showAuthModal && <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -679,7 +895,7 @@ export default function App() {
                 onClick={() => setActiveTab('design')}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'design' ? "bg-nexus-accent text-black shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  activeTab === 'design' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
                 )}
               >
                 <Layers size={14} />
@@ -689,7 +905,7 @@ export default function App() {
                 onClick={() => setActiveTab('code')}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'code' ? "bg-nexus-accent text-black shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  activeTab === 'code' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
                 )}
               >
                 <Code2 size={14} />
@@ -699,11 +915,21 @@ export default function App() {
                 onClick={() => setActiveTab('preview')}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'preview' ? "bg-nexus-accent text-black shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  activeTab === 'preview' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
                 )}
               >
                 <Eye size={14} />
                 Preview
+              </button>
+              <button 
+                onClick={() => setActiveTab('debug')}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                  activeTab === 'debug' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                )}
+              >
+                <Bug size={14} />
+                Debug
               </button>
             </div>
           </div>
@@ -741,12 +967,44 @@ export default function App() {
                 <Play size={14} className="text-nexus-accent" />
               </button>
             </div>
+
+            {/* Usage Indicator */}
+            <div className="hidden lg:flex flex-col items-end mr-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">Builds</span>
+                <span className={cn(
+                  "text-[9px] font-bold px-1.5 py-0.5 rounded-md",
+                  usageCount >= usageLimit ? "bg-rose-500/20 text-rose-500" : "bg-nexus-accent/10 text-nexus-accent"
+                )}>
+                  {usageCount}/{usageLimit}
+                </span>
+              </div>
+              <div className="w-16 h-0.5 bg-white/5 rounded-full mt-1 overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (usageCount / usageLimit) * 100)}%` }}
+                  className={cn(
+                    "h-full rounded-full",
+                    usageCount >= usageLimit ? "bg-rose-500" : "bg-nexus-accent"
+                  )}
+                />
+              </div>
+            </div>
+
             <div 
-              className="w-8 h-8 rounded-full bg-nexus-accent/20 border border-nexus-accent/50 flex items-center justify-center text-[10px] font-bold text-nexus-accent cursor-pointer hover:bg-nexus-accent/30 transition-all"
-              onClick={() => setShowSettings(true)}
-              title="User Profile"
+              className="w-8 h-8 rounded-full bg-nexus-accent/20 border border-nexus-accent/50 flex items-center justify-center text-[10px] font-bold text-nexus-accent cursor-pointer hover:bg-nexus-accent/30 transition-all overflow-hidden"
+              onClick={() => isAuthenticated ? setShowSettings(true) : handleLogin()}
+              title={isAuthenticated ? "User Profile" : "Sign In"}
             >
-              {useNexusStore.getState().user?.email?.[0].toUpperCase()}
+              {isAuthenticated ? (
+                userProfile?.photoURL ? (
+                  <img src={userProfile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  userProfile?.displayName?.[0]?.toUpperCase() || auth.currentUser?.email?.[0]?.toUpperCase() || 'U'
+                )
+              ) : (
+                <User size={14} />
+              )}
             </div>
           </div>
         </div>
@@ -812,7 +1070,7 @@ export default function App() {
                               "flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all",
                               isGenerating || !prompt.trim() 
                                 ? "bg-white/5 text-white/20 cursor-not-allowed" 
-                                : "bg-nexus-accent text-black hover:scale-105 active:scale-95 glow-accent"
+                                : "bg-nexus-accent text-nexus-accent-contrast hover:scale-105 active:scale-95 glow-accent"
                             )}
                           >
                             {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
@@ -825,6 +1083,12 @@ export default function App() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Project Templates</span>
+                        <span 
+                          className="text-[10px] text-nexus-accent font-bold cursor-pointer hover:underline"
+                          onClick={() => setShowTemplateSearch(true)}
+                        >
+                          View All
+                        </span>
                       </div>
                       <ProjectTemplates onSelect={(p) => setPrompt(p)} />
                     </div>
@@ -874,11 +1138,29 @@ export default function App() {
                     <FileCode size={14} className="text-nexus-accent" />
                     <span className="text-xs font-mono text-white/60">{activeFile || 'No file selected'}</span>
                   </div>
-                  <div className="flex-1 overflow-auto p-4 font-mono text-sm bg-black/20">
+                  <div className="flex-1 overflow-auto bg-black/20">
                     {currentFile ? (
-                      <pre className="text-white/80 leading-relaxed">
-                        <code>{currentFile.content}</code>
-                      </pre>
+                      <SyntaxHighlighter
+                        language={currentFile.language || 'typescript'}
+                        style={vscDarkPlus}
+                        showLineNumbers={true}
+                        customStyle={{
+                          margin: 0,
+                          padding: '1.5rem',
+                          background: 'transparent',
+                          fontSize: '0.875rem',
+                          lineHeight: '1.6',
+                        }}
+                        lineNumberStyle={{
+                          minWidth: '3em',
+                          paddingRight: '1em',
+                          color: 'rgba(255, 255, 255, 0.2)',
+                          textAlign: 'right',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {currentFile.content}
+                      </SyntaxHighlighter>
                     ) : (
                       <div className="h-full flex items-center justify-center text-white/20 italic">
                         Select a file to view code
@@ -948,7 +1230,7 @@ export default function App() {
                                   </button>
                                   <button 
                                     onClick={() => setShowTaskModal(true)}
-                                    className="px-3 py-1.5 rounded-lg bg-nexus-accent text-black text-[10px] font-bold uppercase tracking-wider hover:bg-nexus-accent/80 transition-colors"
+                                    className="px-3 py-1.5 rounded-lg bg-nexus-accent text-nexus-accent-contrast text-[10px] font-bold uppercase tracking-wider hover:bg-nexus-accent/80 transition-colors"
                                   >
                                     New Task
                                   </button>
@@ -970,6 +1252,94 @@ export default function App() {
                                 </div>
                               </div>
                             </>
+                          )}
+                          
+                          {/* CI/CD Staging & Feedback Loop */}
+                          {stagingUrl && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="w-full space-y-6 pt-8 border-t border-white/5"
+                            >
+                              <div className="flex items-center justify-between p-4 rounded-2xl bg-nexus-accent/5 border border-nexus-accent/10">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-nexus-accent/20 flex items-center justify-center">
+                                    <Globe size={20} className="text-nexus-accent" />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-bold">Staging Environment Ready</h4>
+                                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">CI/CD Pipeline: Deployment Successful</p>
+                                  </div>
+                                </div>
+                                <a 
+                                  href={stagingUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="px-4 py-2 rounded-xl bg-nexus-accent text-nexus-accent-contrast text-[10px] font-bold uppercase tracking-widest hover:bg-nexus-accent/80 transition-all shadow-[0_0_15px_rgba(var(--nexus-accent-rgb),0.3)]"
+                                >
+                                  Open Staging App
+                                </a>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                  <MessageSquare size={16} className="text-nexus-accent" />
+                                  <h4 className="text-sm font-bold">User Feedback Loop</h4>
+                                </div>
+                                <div className="relative">
+                                  <textarea 
+                                    value={feedback}
+                                    onChange={(e) => setFeedback(e.target.value)}
+                                    placeholder="How can we improve this build? (e.g., 'Make the header sticky', 'Add a dark mode toggle')"
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all min-h-[100px] resize-none"
+                                  />
+                                  <button 
+                                    onClick={() => {
+                                      if (!feedback.trim()) return;
+                                      addLog(`User Feedback: ${feedback}`);
+                                      setPrompt(`${prompt}\n\nRefinement based on feedback: ${feedback}`);
+                                      setFeedback('');
+                                      addLog("System: Feedback received. Prompt updated for next iteration.");
+                                      setActiveTab('design');
+                                    }}
+                                    className="absolute bottom-4 right-4 px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/20 transition-all"
+                                  >
+                                    Submit & Refine
+                                  </button>
+                                </div>
+                                <div className="flex items-center justify-between p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center">
+                                      <AlertCircle size={20} className="text-rose-500" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-sm font-bold text-rose-400">Runtime Diagnostics</h4>
+                                      <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Simulate production errors to test resilience</p>
+                                    </div>
+                                  </div>
+                                  <button 
+                                    onClick={() => {
+                                      addLog("[CRITICAL] Runtime Exception: Uncaught TypeError: Cannot read property 'map' of undefined");
+                                      useNexusStore.setState((state) => ({
+                                        debugState: {
+                                          ...state.debugState,
+                                          isActive: true,
+                                          currentLine: 42, // Mock error line
+                                          error: "Uncaught TypeError: Cannot read property 'map' of undefined",
+                                          logs: [...state.debugState.logs, "Error: Uncaught TypeError: Cannot read property 'map' of undefined at line 42"],
+                                          variables: { ...state.debugState.variables, data: undefined }
+                                        },
+                                        activeTab: 'debug'
+                                      }));
+                                    }}
+                                    className="px-4 py-2 rounded-xl bg-rose-500/20 text-rose-400 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500/30 transition-all border border-rose-500/30"
+                                  >
+                                    Simulate Error
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-white/30 italic">Your feedback directly influences the next generation cycle of the AI agents.</p>
+                              </div>
+                            </motion.div>
                           )}
                         </div>
                       ) : (
@@ -1013,12 +1383,43 @@ export default function App() {
               </div>
               {!isTerminalMinimized && (
                 <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 font-mono text-[11px] space-y-1 text-white/60">
-                  {logs.map((log, i) => (
-                    <div key={i} className="flex gap-2">
-                      <span className="text-nexus-accent/50 shrink-0">➜</span>
-                      <span>{log}</span>
+                  {logs.map((log, i) => {
+                    const isCritical = log.startsWith('[CRITICAL]');
+                    const isAdvice = log.startsWith('[ADVICE]');
+                    const isUser = log.startsWith('User:');
+                    const isAI = log.startsWith('AI:');
+
+                    return (
+                      <div key={i} className="flex gap-2">
+                        <span className={cn(
+                          "shrink-0",
+                          isCritical ? "text-rose-500" : isAdvice ? "text-amber-400" : "text-nexus-accent/50"
+                        )}>➜</span>
+                        <span className={cn(
+                          isCritical ? "text-rose-400 font-bold" : 
+                          isAdvice ? "text-amber-200/80 italic" : 
+                          isUser ? "text-nexus-accent" :
+                          isAI ? "text-purple-300" : ""
+                        )}>
+                          {log}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {buildStatus === 'failed' && (
+                    <div className="mt-4 p-3 border border-rose-500/30 bg-rose-500/5 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-rose-400">
+                        <AlertCircle size={14} />
+                        <span>Build pipeline halted. Action required.</span>
+                      </div>
+                      <button 
+                        onClick={() => handleGenerate()}
+                        className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] font-bold uppercase tracking-wider rounded border border-rose-500/30 transition-all"
+                      >
+                        Retry Pipeline
+                      </button>
                     </div>
-                  ))}
+                  )}
                   {isGenerating && (
                     <div className="flex gap-2 text-nexus-accent animate-pulse">
                       <span className="shrink-0">➜</span>
@@ -1186,6 +1587,9 @@ export default function App() {
         </AnimatePresence>
       </div>
 
+      {/* --- Feedback Loop Widget --- */}
+      <FeedbackWidget />
+
       {/* --- Global Overlay for Generation --- */}
       <AnimatePresence>
         {isGenerating && (
@@ -1206,6 +1610,8 @@ export default function App() {
                 <h2 className="text-2xl font-black tracking-tight">Orchestrating AI Mesh</h2>
                 <p className="text-white/40 text-sm">Agents are communicating and sharing data to synthesize your application.</p>
               </div>
+
+              <CICDPipeline status={buildStatus} progress={buildProgress} />
               
               <div className="space-y-4">
                 {agents.map((agent, i) => (

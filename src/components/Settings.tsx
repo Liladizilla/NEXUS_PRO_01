@@ -1,8 +1,12 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard } from 'lucide-react';
+import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle } from 'lucide-react';
 import { useNexusStore } from '../store';
 import { cn } from '../lib/utils';
+import { UserProfile } from './UserProfile';
+import { auth } from '../firebase';
+import { signOut } from 'firebase/auth';
+import { LogOut } from 'lucide-react';
 
 export const Settings: React.FC = () => {
   const { 
@@ -30,11 +34,22 @@ export const Settings: React.FC = () => {
     projectFramework,
     setProjectFramework,
     projectLanguage,
-    setProjectLanguage
+    setProjectLanguage,
+    agents,
+    setAgentModel,
+    usageCount,
+    usageLimit
   } = useNexusStore();
-  const [activeSection, setActiveSection] = React.useState('account');
+  const [activeSection, setActiveSection] = React.useState('project');
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
   if (!showSettings) return null;
+
+  const handleDeleteProject = () => {
+    useNexusStore.getState().reset();
+    setShowSettings(false);
+    setShowDeleteConfirm(false);
+  };
 
   const sections = [
     { id: 'account', name: 'Account', icon: User },
@@ -96,114 +111,175 @@ export const Settings: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-8">
             {activeSection === 'account' && (
               <div className="space-y-8">
-                <div className="flex items-center gap-4 p-6 rounded-2xl bg-white/5 border border-white/5">
-                  <div className="w-16 h-16 rounded-2xl bg-nexus-accent/20 flex items-center justify-center text-nexus-accent text-2xl font-black">
-                    {user?.email?.[0].toUpperCase()}
+                <UserProfile />
+                
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-white/40">AI Build Usage</h5>
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                      usageCount >= usageLimit ? "bg-rose-500/20 text-rose-500" : "bg-nexus-accent/10 text-nexus-accent"
+                    )}>
+                      {usageCount} / {usageLimit} Builds Used
+                    </span>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-lg">{user?.email}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
-                        isEnterprise ? "bg-purple-500/20 text-purple-400" : 
-                        isPro ? "bg-nexus-accent/20 text-nexus-accent" : "bg-white/10 text-white/40"
-                      )}>
-                        {isEnterprise ? 'Enterprise' : isPro ? 'Pro' : 'Starter'}
-                      </span>
-                      <span className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Member since March 2026</span>
-                    </div>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, (usageCount / usageLimit) * 100)}%` }}
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        usageCount >= usageLimit ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-nexus-accent shadow-[0_0_10px_var(--nexus-accent)]"
+                      )}
+                    />
                   </div>
+                  <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">
+                    {usageCount >= usageLimit 
+                      ? "Plan limit reached. Upgrade to NEXUS Pro for unlimited builds." 
+                      : `You have ${usageLimit - usageCount} builds remaining in your current cycle.`}
+                  </p>
                 </div>
 
-                <div className="space-y-4">
-                  <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Profile Settings</h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Display Name</label>
-                      <input type="text" placeholder="Nexus User" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-nexus-accent/50 transition-colors" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Email Address</label>
-                      <input type="email" value={user?.email || ''} disabled className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm opacity-50 cursor-not-allowed" />
-                    </div>
-                  </div>
+                <div className="pt-4 border-t border-white/5">
+                  <button 
+                    onClick={() => signOut(auth)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold uppercase tracking-widest hover:bg-rose-500/20 transition-all"
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
                 </div>
               </div>
             )}
 
             {activeSection === 'project' && (
               <div className="space-y-8">
-                <div className="space-y-4">
-                  <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Project Configuration</h5>
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Project Name</label>
-                      <input 
-                        type="text" 
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-nexus-accent/50 transition-colors" 
-                      />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Project Configuration</h5>
+                    <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Manage your ecosystem's core identity</p>
+                  </div>
+                  <div className="px-3 py-1 rounded-full bg-nexus-accent/10 border border-nexus-accent/20 text-[8px] font-bold uppercase tracking-widest text-nexus-accent">
+                    Active Environment
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Project Name</label>
+                    <input 
+                      type="text" 
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      placeholder="Enter project name..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all placeholder:text-white/10" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Description</label>
+                    <textarea 
+                      value={projectDescription}
+                      onChange={(e) => setProjectDescription(e.target.value)}
+                      rows={3}
+                      placeholder="Describe the purpose of this ecosystem..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all resize-none placeholder:text-white/10" 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Framework Stack</label>
+                      <select 
+                        value={projectFramework}
+                        onChange={(e) => setProjectFramework(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all cursor-pointer"
+                      >
+                        <option>React + Vite</option>
+                        <option>Next.js (App Router)</option>
+                        <option>Vue + Vite</option>
+                        <option>Angular</option>
+                        <option>SvelteKit</option>
+                      </select>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Description</label>
-                      <textarea 
-                        value={projectDescription}
-                        onChange={(e) => setProjectDescription(e.target.value)}
-                        rows={3}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-nexus-accent/50 transition-colors resize-none" 
-                      />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Primary Language</label>
+                      <select 
+                        value={projectLanguage}
+                        onChange={(e) => setProjectLanguage(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all cursor-pointer"
+                      >
+                        <option>TypeScript</option>
+                        <option>JavaScript</option>
+                        <option>Rust (WASM)</option>
+                        <option>Python (PyScript)</option>
+                      </select>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Framework Stack</h5>
-                    <select 
-                      value={projectFramework}
-                      onChange={(e) => setProjectFramework(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-nexus-accent/50 transition-colors"
-                    >
-                      <option>React + Vite</option>
-                      <option>Next.js (App Router)</option>
-                      <option>Vue + Vite</option>
-                      <option>Angular</option>
-                      <option>SvelteKit</option>
-                    </select>
-                  </div>
-                  <div className="space-y-4">
-                    <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Primary Language</h5>
-                    <select 
-                      value={projectLanguage}
-                      onChange={(e) => setProjectLanguage(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-nexus-accent/50 transition-colors"
-                    >
-                      <option>TypeScript</option>
-                      <option>JavaScript</option>
-                      <option>Rust (WASM)</option>
-                      <option>Python (PyScript)</option>
-                    </select>
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                  <h5 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Ecosystem Metadata</h5>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <span className="block text-[8px] text-white/20 uppercase font-bold tracking-widest">Project ID</span>
+                      <span className="text-[10px] font-mono text-white/60">NX-{Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-[8px] text-white/20 uppercase font-bold tracking-widest">Created</span>
+                      <span className="text-[10px] font-mono text-white/60">{new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="block text-[8px] text-white/20 uppercase font-bold tracking-widest">Status</span>
+                      <span className="text-[10px] font-mono text-emerald-400">SYNCHRONIZED</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-rose-500/5 border border-rose-500/10 space-y-4">
-                  <h4 className="font-bold text-sm text-rose-500">Danger Zone</h4>
-                  <p className="text-xs text-white/40">Irreversible actions for this project ecosystem.</p>
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete all files? This cannot be undone.')) {
-                          useNexusStore.getState().reset();
-                          setShowSettings(false);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:bg-rose-500/20 transition-colors"
+                <div className="p-6 rounded-2xl bg-rose-500/5 border border-rose-500/10 space-y-4 relative overflow-hidden">
+                  <h4 className="font-bold text-sm text-rose-500 flex items-center gap-2">
+                    <Shield size={14} />
+                    Danger Zone
+                  </h4>
+                  <p className="text-xs text-white/40">Irreversible actions for this project ecosystem. Proceed with extreme caution.</p>
+                  
+                  {showDeleteConfirm ? (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-col gap-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20"
                     >
-                      Delete Project
-                    </button>
-                    <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Archive Ecosystem</button>
-                  </div>
+                      <div className="flex items-center gap-3">
+                        <AlertTriangle className="text-rose-500" size={18} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-rose-500">Confirm Deletion?</span>
+                      </div>
+                      <p className="text-[10px] text-white/60 uppercase font-bold tracking-widest">All files and configuration will be permanently purged.</p>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={handleDeleteProject}
+                          className="px-4 py-2 rounded-lg bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all"
+                        >
+                          Purge Ecosystem
+                        </button>
+                        <button 
+                          onClick={() => setShowDeleteConfirm(false)}
+                          className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:bg-rose-500/20 transition-all"
+                      >
+                        Delete Project
+                      </button>
+                      <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">Archive Ecosystem</button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -239,8 +315,8 @@ export const Settings: React.FC = () => {
 
                 <div className="space-y-4">
                   <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Accent Color</h5>
-                  <div className="flex items-center gap-3">
-                    {['#00F0FF', '#FF00FF', '#00FF00', '#FFD700', '#FF4500'].map(color => (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {['#00F0FF', '#FF00FF', '#00FF00', '#FFD700', '#FF4500', '#333333', '#1A1A1A', '#4F46E5'].map(color => (
                       <button
                         key={color}
                         onClick={() => setAccentColor(color)}
@@ -251,6 +327,15 @@ export const Settings: React.FC = () => {
                         style={{ backgroundColor: color }}
                       />
                     ))}
+                    {/* Custom Color Picker */}
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 hover:border-white/30 transition-all group">
+                      <input 
+                        type="color" 
+                        value={accentColor}
+                        onChange={(e) => setAccentColor(e.target.value)}
+                        className="absolute inset-0 w-[150%] h-[150%] -translate-x-1/4 -translate-y-1/4 cursor-pointer bg-transparent border-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -301,13 +386,22 @@ export const Settings: React.FC = () => {
                 <div className="space-y-4">
                   <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Agent Configuration</h5>
                   <div className="space-y-2">
-                    {['Architect', 'Frontend', 'Backend', 'Debug', 'DevOps'].map(agent => (
-                      <div key={agent} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                        <span className="text-xs font-medium">{agent} Agent</span>
-                        <select className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-nexus-accent focus:outline-none">
-                          <option>GPT-4o</option>
-                          <option>Claude 3.5 Sonnet</option>
-                          <option>Gemini 1.5 Pro</option>
+                    {agents.map(agent => (
+                      <div key={agent.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium">{agent.name} Agent</span>
+                          <span className="text-[10px] text-white/20 uppercase font-bold tracking-widest">{agent.role}</span>
+                        </div>
+                        <select 
+                          value={agent.model}
+                          onChange={(e) => setAgentModel(agent.id, e.target.value)}
+                          className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-nexus-accent focus:outline-none cursor-pointer"
+                        >
+                          <option value="GPT-4o">GPT-4o</option>
+                          <option value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</option>
+                          <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
+                          <option value="Llama 3.1 405B">Llama 3.1 405B</option>
+                          <option value="DeepSeek V3">DeepSeek V3</option>
                         </select>
                       </div>
                     ))}

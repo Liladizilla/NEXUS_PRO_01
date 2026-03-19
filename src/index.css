@@ -1,12 +1,18 @@
 @import "tailwindcss";
 
+:root {
+  --nexus-accent: #00f2ff;
+  --nexus-accent-contrast: black;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
   --color-nexus-bg: #050505;
   --color-nexus-panel: rgba(15, 15, 15, 0.7);
-  --color-nexus-accent: #00f2ff;
+  --color-nexus-accent: var(--nexus-accent);
+  --color-nexus-accent-contrast: var(--nexus-accent-contrast);
   --color-nexus-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -22,7 +28,7 @@
 }
 
 .glow-accent {
-  box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+  box-shadow: 0 0 15px var(--nexus-accent);
 }
 
 ::-webkit-scrollbar {
