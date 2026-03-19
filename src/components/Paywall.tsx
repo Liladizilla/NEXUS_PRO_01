@@ -118,7 +118,7 @@ export const Paywall: React.FC = () => {
                 )}
               >
                 {tier.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-nexus-accent text-black text-[10px] font-bold uppercase tracking-widest rounded-full">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-nexus-accent text-nexus-accent-contrast text-[10px] font-bold uppercase tracking-widest rounded-full">
                     Most Popular
                   </div>
                 )}
@@ -155,7 +155,7 @@ export const Paywall: React.FC = () => {
                   className={cn(
                     "w-full py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
                     tier.highlight
-                      ? "bg-nexus-accent text-black hover:bg-nexus-accent/90 shadow-lg shadow-nexus-accent/20"
+                      ? "bg-nexus-accent text-nexus-accent-contrast hover:bg-nexus-accent/90 shadow-lg shadow-nexus-accent/20"
                       : "bg-white/5 text-white/60 hover:bg-white/10 border border-white/5"
                   )}
                 >

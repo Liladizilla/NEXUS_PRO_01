@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "Stores user profile information like display name and avatar URL.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier for the user (Firebase Auth UID)."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's chosen display name."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "url",
+          "description": "The URL to the user's avatar image."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address (private)."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the last profile update."
+        }
+      },
+      "required": ["uid", "displayName", "email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "A collection of user profile documents, keyed by their Auth UID."
+    }
+  }
+}
