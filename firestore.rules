@@ -79,5 +79,11 @@ service cloud.firestore {
                     request.resource.data.uid == resource.data.uid && // Immutable UID
                     request.resource.data.email == resource.data.email; // Email usually immutable in this flow
     }
+
+    // Task Queue Persistence (Used by backend simulation)
+    // In a production app, this should be restricted to the backend service account
+    match /tasks/{taskId} {
+      allow read, write: if true;
+    }
   }
 }
