@@ -68,11 +68,15 @@ import {
   User,
   Bot,
   Palette,
-  Dumbbell
+  Dumbbell,
+  Check,
+  Wand,
+  Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProjectTemplates } from './components/features/ProjectTemplates';
 import { KanbanBoard } from './components/features/KanbanBoard';
+import { AIChat } from './components/features/AIChat';
 import { Paywall } from './components/features/Paywall';
 import { Settings } from './components/features/Settings';
 import { AuthModal } from './components/features/AuthModal';
@@ -81,7 +85,7 @@ import { Debugger } from './components/features/Debugger';
 import { useNexusStore, AgentStatus } from './core/store';
 import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
-import { auth, googleProvider, syncUserProfile } from './core/firebase';
+import { auth, googleProvider, syncUserProfile, syncApiKey } from './core/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -449,10 +453,16 @@ export default function App() {
     stagingUrl, setStagingUrl,
     feedback, setFeedback,
     userProfile, setUserProfile,
+    isHighThinking, setIsHighThinking,
     accentColor,
     reset,
     templates, fetchTemplates,
-    setDebugActive, setCurrentLine, setDebugVariables, addDebugLog, isPro
+    setDebugActive, setCurrentLine, setDebugVariables, addDebugLog, isPro,
+    lintResults, setLintResults,
+    isTerminalMinimized, setTerminalMinimized,
+    isTerminalMaximized, setTerminalMaximized,
+    isTerminalClosed, setTerminalClosed,
+    setApiKeyData
   } = useNexusStore();
 
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -466,10 +476,19 @@ export default function App() {
         const unsubscribeProfile = syncUserProfile(user, (profile) => {
           setUserProfile(profile);
         });
-        return () => unsubscribeProfile();
+        const unsubscribeApiKey = syncApiKey(user.uid, (keyData) => {
+          if (keyData) {
+            setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
+          }
+        });
+        return () => {
+          unsubscribeProfile();
+          unsubscribeApiKey();
+        };
       } else {
         useNexusStore.setState({ isAuthenticated: false });
         setUserProfile(null);
+        setApiKeyData(null, null);
       }
     });
 
@@ -509,7 +528,6 @@ export default function App() {
   const [chatInput, setChatInput] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
-  const [isTerminalMinimized, setIsTerminalMinimized] = useState(false);
   const [backendHealth, setBackendHealth] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -587,7 +605,7 @@ export default function App() {
     addLog(`Starting generation for: ${prompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
-      const { result, plan } = await generateApp(prompt, agents, feedback, (status, progress) => {
+      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress) => {
         setBuildStatus(status);
         setBuildProgress(progress);
         
@@ -641,8 +659,11 @@ export default function App() {
     
     const targetConfig = {
       'railway': { name: 'Railway', url: 'nexus-ai.run', action: 'Deploying to Railway...' },
+      'vercel': { name: 'Vercel', url: 'vercel.app', action: 'Deploying to Vercel Edge...' },
+      'netlify': { name: 'Netlify', url: 'netlify.app', action: 'Deploying to Netlify CDN...' },
       'aws-s3': { name: 'AWS S3', url: 's3-website.aws.com', action: 'Provisioning S3 Bucket & CloudFront...' },
-      'cloudflare-pages': { name: 'Cloudflare Pages', url: 'pages.dev', action: 'Syncing with Cloudflare Edge...' }
+      'cloudflare-pages': { name: 'Cloudflare Pages', url: 'pages.dev', action: 'Syncing with Cloudflare Edge...' },
+      'docker': { name: 'Docker Host', url: 'docker-container.local', action: 'Building Docker Image & Pushing to Registry...' }
     }[deployTarget];
 
     updateAgent('devops', { status: 'working', lastAction: targetConfig.action });
@@ -672,6 +693,96 @@ export default function App() {
       timestamp: Date.now()
     });
     addDebugLog("Debugger: Runtime session started.");
+  };
+
+  const handleFormat = () => {
+    if (!currentFile) return;
+    addLog(`System: Formatting ${currentFile.path}...`);
+    
+    let formatted = currentFile.content;
+    const lang = currentFile.language?.toLowerCase() || '';
+
+    // Basic regex-based formatter for demonstration
+    // In a real app, we'd use prettier or language-specific formatters
+    if (['javascript', 'typescript', 'json', 'css', 'html'].includes(lang)) {
+      // Simple indentation fix
+      let indent = 0;
+      formatted = currentFile.content
+        .split('\n')
+        .map(line => {
+          line = line.trim();
+          if (line.endsWith('}') || line.endsWith(']')) indent = Math.max(0, indent - 1);
+          const newLine = '  '.repeat(indent) + line;
+          if (line.endsWith('{') || line.endsWith('[')) indent++;
+          return newLine;
+        })
+        .join('\n');
+    } else if (lang === 'python') {
+      // Basic python cleanup
+      formatted = currentFile.content
+        .split('\n')
+        .map(line => line.trimEnd())
+        .join('\n');
+    }
+
+    const newFiles = files.map(f => f.path === activeFile ? { ...f, content: formatted } : f);
+    setFiles(newFiles);
+    addLog(`System: Formatted ${currentFile.path} successfully.`);
+  };
+
+  const handleLint = () => {
+    if (!currentFile) return;
+    addLog(`System: Linting ${currentFile.path}...`);
+    
+    const results: { line: number; message: string; severity: 'error' | 'warning' }[] = [];
+    const lines = currentFile.content.split('\n');
+    const lang = currentFile.language?.toLowerCase() || '';
+
+    lines.forEach((line, i) => {
+      const trimmed = line.trim();
+      
+      // Generic rules
+      if (line.length > 120) {
+        results.push({ line: i + 1, message: 'Line exceeds 120 characters', severity: 'warning' });
+      }
+      if (trimmed.includes('console.log')) {
+        results.push({ line: i + 1, message: 'Unexpected console statement', severity: 'warning' });
+      }
+      if (trimmed.includes('TODO')) {
+        results.push({ line: i + 1, message: 'Unresolved TODO comment', severity: 'warning' });
+      }
+
+      // Language specific rules
+      if (['javascript', 'typescript'].includes(lang)) {
+        if (trimmed.includes('==') && !trimmed.includes('===')) {
+          results.push({ line: i + 1, message: 'Use === instead of ==', severity: 'warning' });
+        }
+        if (trimmed.includes('var ')) {
+          results.push({ line: i + 1, message: 'Use let or const instead of var', severity: 'error' });
+        }
+      } else if (lang === 'python') {
+        if (trimmed.endsWith(';') && !trimmed.includes('#')) {
+          results.push({ line: i + 1, message: 'Unnecessary semicolon in Python', severity: 'warning' });
+        }
+        if (trimmed.startsWith('function ')) {
+          results.push({ line: i + 1, message: 'Use "def" instead of "function" in Python', severity: 'error' });
+        }
+      } else if (['c', 'cpp', 'rust', 'go'].includes(lang)) {
+        if (trimmed.includes('goto ')) {
+          results.push({ line: i + 1, message: 'Avoid using goto statements', severity: 'error' });
+        }
+      }
+    });
+
+    setLintResults(currentFile.path, results);
+    
+    if (results.length > 0) {
+      const errors = results.filter(r => r.severity === 'error').length;
+      const warnings = results.filter(r => r.severity === 'warning').length;
+      addLog(`Lint: Found ${errors} errors and ${warnings} warnings in ${currentFile.path}.`);
+    } else {
+      addLog(`Lint: No issues found in ${currentFile.path}.`);
+    }
   };
 
   const currentFile = files.find(f => f.path === activeFile);
@@ -970,7 +1081,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="flex-1 p-8 overflow-auto flex flex-col items-center justify-center text-center space-y-6"
+                  className="flex-1 p-8 overflow-auto flex flex-col items-center justify-start text-center space-y-12 pt-24"
                 >
                   <div className="max-w-2xl w-full space-y-8">
                     <div className="space-y-4">
@@ -1012,6 +1123,19 @@ export default function App() {
                               title="Search Templates"
                             >
                               <Search size={16} />
+                            </button>
+                            <button 
+                              onClick={() => setIsHighThinking(!isHighThinking)}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-widest",
+                                isHighThinking 
+                                  ? "bg-purple-500/20 border-purple-500 text-purple-400 glow-purple" 
+                                  : "bg-white/5 border-nexus-border text-white/40 hover:bg-white/10"
+                              )}
+                              title="Enable High Thinking Mode (Gemini 3.1 Pro)"
+                            >
+                              <Cpu size={14} className={isHighThinking ? "animate-pulse" : ""} />
+                              High Thinking
                             </button>
                           </div>
                           <button 
@@ -1111,33 +1235,80 @@ export default function App() {
                   exit={{ opacity: 0 }}
                   className="flex-1 flex flex-col overflow-hidden"
                 >
-                  <div className="flex items-center gap-2 px-4 py-2 bg-black/40 border-b border-nexus-border">
-                    <FileCode size={14} className="text-nexus-accent" />
-                    <span className="text-xs font-mono text-white/60">{activeFile || 'No file selected'}</span>
-                  </div>
-                  <div className="flex-1 overflow-auto bg-black/20">
-                    {currentFile ? (
-                      <SyntaxHighlighter
-                        language={currentFile.language || 'typescript'}
-                        style={vscDarkPlus}
-                        showLineNumbers={true}
-                        customStyle={{
-                          margin: 0,
-                          padding: '1.5rem',
-                          background: 'transparent',
-                          fontSize: '0.875rem',
-                          lineHeight: '1.6',
-                        }}
-                        lineNumberStyle={{
-                          minWidth: '3em',
-                          paddingRight: '1em',
-                          color: 'rgba(255, 255, 255, 0.2)',
-                          textAlign: 'right',
-                          userSelect: 'none',
-                        }}
+                  <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-nexus-border">
+                    <div className="flex items-center gap-2">
+                      <FileCode size={14} className="text-nexus-accent" />
+                      <span className="text-xs font-mono text-white/60">{activeFile || 'No file selected'}</span>
+                      {currentFile?.language && (
+                        <span className="text-[10px] uppercase bg-white/5 px-1.5 py-0.5 rounded border border-white/10 text-white/40 font-bold ml-2">
+                          {currentFile.language}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={handleLint}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/10"
                       >
-                        {currentFile.content}
-                      </SyntaxHighlighter>
+                        <Shield size={12} className="text-nexus-accent" />
+                        Lint
+                      </button>
+                      <button 
+                        onClick={handleFormat}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-[10px] font-bold uppercase tracking-wider transition-colors border border-white/10"
+                      >
+                        <Wand size={12} className="text-nexus-accent" />
+                        Format
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-auto bg-black/20 relative">
+                    {currentFile ? (
+                      <>
+                        <SyntaxHighlighter
+                          language={currentFile.language?.toLowerCase() || 'typescript'}
+                          style={vscDarkPlus}
+                          showLineNumbers={true}
+                          customStyle={{
+                            margin: 0,
+                            padding: '1.5rem',
+                            background: 'transparent',
+                            fontSize: '0.875rem',
+                            lineHeight: '1.6',
+                          }}
+                          lineNumberStyle={{
+                            minWidth: '3em',
+                            paddingRight: '1em',
+                            color: 'rgba(255, 255, 255, 0.2)',
+                            textAlign: 'right',
+                            userSelect: 'none',
+                          }}
+                        >
+                          {currentFile.content}
+                        </SyntaxHighlighter>
+                        
+                        {/* Lint Overlays */}
+                        {lintResults[currentFile.path]?.length > 0 && (
+                          <div className="absolute top-0 right-0 p-4 space-y-2 pointer-events-none max-w-xs">
+                            {lintResults[currentFile.path].map((err, idx) => (
+                              <motion.div 
+                                key={idx}
+                                initial={{ x: 20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                className={cn(
+                                  "p-2 rounded-lg border text-[10px] backdrop-blur-md flex items-start gap-2 shadow-lg",
+                                  err.severity === 'error' ? "bg-rose-500/20 border-rose-500/50 text-rose-200" : "bg-amber-500/20 border-amber-500/50 text-amber-200"
+                                )}
+                              >
+                                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                                <div>
+                                  <span className="font-bold">Line {err.line}:</span> {err.message}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="h-full flex items-center justify-center text-white/20 italic">
                         Select a file to view code
@@ -1334,32 +1505,50 @@ export default function App() {
             </AnimatePresence>
 
             {/* Bottom Panel (Terminal) */}
-            <div className={cn(
-              "border-t border-nexus-border bg-black/40 backdrop-blur-md flex flex-col transition-all duration-300",
-              isTerminalMinimized ? "h-10" : "h-48"
-            )}>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-nexus-border bg-white/5 cursor-pointer" onClick={() => setIsTerminalMinimized(!isTerminalMinimized)}>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-nexus-accent">
-                    <Terminal size={12} />
-                    Terminal
-                  </div>
-                  {!isTerminalMinimized && (
-                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
-                      <Activity size={12} />
-                      Logs
+            {!isTerminalClosed && (
+              <div className={cn(
+                "border-t border-nexus-border bg-black/40 backdrop-blur-md flex flex-col transition-all duration-300 relative z-50",
+                isTerminalMaximized ? "h-[80%]" : isTerminalMinimized ? "h-10" : "h-48"
+              )}>
+                <div className="flex items-center justify-between px-4 py-2 border-b border-nexus-border bg-white/5 cursor-pointer" onClick={() => setTerminalMinimized(!isTerminalMinimized)}>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-nexus-accent">
+                      <Terminal size={12} />
+                      Terminal
                     </div>
-                  )}
+                    {!isTerminalMinimized && (
+                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                        <Activity size={12} />
+                        Logs
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-white" 
+                      onClick={(e) => { e.stopPropagation(); setTerminalMinimized(!isTerminalMinimized); }}
+                      title={isTerminalMinimized ? "Expand" : "Minimize"}
+                    >
+                      <ChevronDown size={12} className={cn("transition-transform", isTerminalMinimized ? "rotate-180" : "")} />
+                    </button>
+                    <button 
+                      className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-white" 
+                      onClick={(e) => { e.stopPropagation(); setTerminalMaximized(!isTerminalMaximized); }}
+                      title={isTerminalMaximized ? "Restore" : "Maximize"}
+                    >
+                      <Maximize2 size={12} />
+                    </button>
+                    <button 
+                      className="p-1 hover:bg-rose-500/20 rounded transition-colors text-white/40 hover:text-rose-500" 
+                      onClick={(e) => { e.stopPropagation(); setTerminalClosed(true); }}
+                      title="Close"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-1 hover:bg-white/10 rounded transition-colors" onClick={(e) => { e.stopPropagation(); useNexusStore.setState({ logs: [] }); }}><X size={12} /></button>
-                  <button className="p-1 hover:bg-white/10 rounded transition-colors">
-                    {isTerminalMinimized ? <ChevronDown size={12} /> : <ChevronRight size={12} className="-rotate-90" />}
-                  </button>
-                </div>
-              </div>
-              {!isTerminalMinimized && (
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 font-mono text-[11px] space-y-1 text-white/60">
+                {!isTerminalMinimized && (
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 font-mono text-[11px] space-y-1 text-white/60">
                   {logs.map((log, i) => {
                     const isCritical = log.startsWith('[CRITICAL]');
                     const isAdvice = log.startsWith('[ADVICE]');
@@ -1406,7 +1595,8 @@ export default function App() {
                 </div>
               )}
             </div>
-          </div>
+          )}
+        </div>
 
           {/* --- Right Panel (Minimized AI Assistant) --- */}
           <motion.div 
@@ -1666,6 +1856,7 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      <AIChat />
     </div>
   );
 }

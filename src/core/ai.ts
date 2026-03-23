@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -22,6 +22,37 @@ export interface BuildResult {
     concurrentUsers?: number;
     metrics?: string[];
   };
+}
+
+export async function callGeminiChat(messages: { role: 'user' | 'model', parts: { text: string }[] }[], systemInstruction?: string) {
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: messages,
+    config: {
+      systemInstruction,
+      tools: [{ googleSearch: {} }],
+    }
+  });
+
+  return response.text;
+}
+
+export async function callGeminiComplex(prompt: string) {
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-pro-preview",
+    contents: prompt,
+    config: {
+      thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
+    }
+  });
+
+  return response.text;
 }
 
 async function callGemini(prompt: string): Promise<GeneratedApp> {
@@ -71,12 +102,12 @@ async function callFallbackAI(prompt: string): Promise<GeneratedApp> {
   return callGemini(prompt);
 }
 
-export async function generateApp(prompt: string, agents: any[], feedback?: string, onProgress?: (status: string, progress: number) => void): Promise<BuildResult> {
+export async function generateApp(prompt: string, agents: any[], feedback?: string, isHighThinking?: boolean, onProgress?: (status: string, progress: number) => void): Promise<BuildResult> {
   // 1. Submit task to queue
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, agents, feedback })
+    body: JSON.stringify({ prompt, agents, feedback, isHighThinking })
   });
   
   if (!res.ok) {

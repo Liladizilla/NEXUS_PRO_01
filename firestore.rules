@@ -15,6 +15,13 @@ service cloud.firestore {
     //   - email: string (required, email format) - User's email
     //   - updatedAt: timestamp (required) - Last update time
     //
+    // Collection: api_keys
+    // Document ID: {userId} (Auth UID)
+    // Fields:
+    //   - uid: string (required, immutable) - The Auth UID
+    //   - key: string (required) - The generated API key
+    //   - lastGeneratedAt: timestamp (required) - Last generation time
+    //
     // ===============================================================
 
     // ===============================================================
@@ -78,6 +85,20 @@ service cloud.firestore {
                     isValidUser(request.resource.data) && 
                     request.resource.data.uid == resource.data.uid && // Immutable UID
                     request.resource.data.email == resource.data.email; // Email usually immutable in this flow
+    }
+
+    match /api_keys/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+                    hasRequiredFields(['uid', 'key', 'lastGeneratedAt']) &&
+                    request.resource.data.uid == request.auth.uid &&
+                    request.resource.data.lastGeneratedAt == request.time;
+      allow update: if isOwner(userId) &&
+                    hasRequiredFields(['uid', 'key', 'lastGeneratedAt']) &&
+                    request.resource.data.uid == resource.data.uid &&
+                    request.resource.data.lastGeneratedAt == request.time &&
+                    // Ensure it's been at least 24 hours since the last generation
+                    (request.time >= resource.data.lastGeneratedAt + duration.value(24, 'h'));
     }
 
     // Task Queue Persistence (Used by backend simulation)

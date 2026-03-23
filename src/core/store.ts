@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getContrastColor } from '../lib/utils';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
-export type DeployTarget = 'railway' | 'aws-s3' | 'cloudflare-pages';
+export type DeployTarget = 'railway' | 'aws-s3' | 'cloudflare-pages' | 'vercel' | 'netlify' | 'docker';
 
 export interface Agent {
   id: string;
@@ -40,11 +40,17 @@ interface NexusState {
   showTemplateSearch: boolean;
   showTaskModal: boolean;
   showHistory: boolean;
+  isTerminalMinimized: boolean;
+  isTerminalMaximized: boolean;
+  isTerminalClosed: boolean;
+  freeApiKey: string | null;
+  lastApiKeyReset: number | null;
   deployTarget: DeployTarget;
   theme: 'dark' | 'light' | 'cyberpunk';
   accentColor: string;
   autonomousMode: boolean;
   parallelSynthesis: boolean;
+  isHighThinking: boolean;
   notificationsEnabled: boolean;
   previewMode: 'desktop' | 'mobile';
   projectDescription: string;
@@ -53,9 +59,13 @@ interface NexusState {
   stagingUrl: string | null;
   feedback: string;
   userProfile: any | null;
+  githubConnected: boolean;
+  githubUser: string | null;
+  avatar: string | null;
   templates: any[];
   templateFilter: string;
   selectedTemplate: any | null;
+  lintResults: Record<string, { line: number; message: string; severity: 'error' | 'warning' }[]>;
   
   // Debugger State
   debugState: {
@@ -75,6 +85,9 @@ interface NexusState {
   setStagingUrl: (url: string | null) => void;
   setFeedback: (feedback: string) => void;
   setUserProfile: (profile: any | null) => void;
+  setGithubConnected: (val: boolean) => void;
+  setGithubUser: (user: string | null) => void;
+  setAvatar: (avatar: string | null) => void;
   setPrompt: (prompt: string) => void;
   setIsGenerating: (val: boolean) => void;
   setActiveTab: (tab: 'design' | 'code' | 'preview' | 'debug') => void;
@@ -96,15 +109,22 @@ interface NexusState {
   setShowTemplateSearch: (val: boolean) => void;
   setShowTaskModal: (val: boolean) => void;
   setShowHistory: (val: boolean) => void;
+  setTerminalMinimized: (val: boolean) => void;
+  setTerminalMaximized: (val: boolean) => void;
+  setTerminalClosed: (val: boolean) => void;
+  setApiKeyData: (key: string | null, lastReset: number | null) => void;
+  generateFreeApiKey: () => Promise<void>;
   setTheme: (theme: 'dark' | 'light' | 'cyberpunk') => void;
   setAccentColor: (color: string) => void;
   setAutonomousMode: (val: boolean) => void;
   setParallelSynthesis: (val: boolean) => void;
+  setIsHighThinking: (val: boolean) => void;
   setNotificationsEnabled: (val: boolean) => void;
   setPreviewMode: (mode: 'desktop' | 'mobile') => void;
   setTemplates: (templates: any[]) => void;
   setTemplateFilter: (filter: string) => void;
   setSelectedTemplate: (template: any | null) => void;
+  setLintResults: (path: string, results: { line: number; message: string; severity: 'error' | 'warning' }[]) => void;
   fetchTemplates: () => Promise<void>;
   
   // Debugger Actions
@@ -149,11 +169,17 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   showTemplateSearch: false,
   showTaskModal: false,
   showHistory: false,
+  isTerminalMinimized: false,
+  isTerminalMaximized: false,
+  isTerminalClosed: false,
+  freeApiKey: null,
+  lastApiKeyReset: null,
   deployTarget: 'railway',
   theme: 'dark',
   accentColor: '#00F0FF',
   autonomousMode: true,
   parallelSynthesis: true,
+  isHighThinking: false,
   notificationsEnabled: true,
   previewMode: 'desktop',
   projectDescription: 'A high-performance Odyseus ecosystem.',
@@ -162,9 +188,13 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   stagingUrl: null,
   feedback: '',
   userProfile: null,
+  githubConnected: false,
+  githubUser: null,
+  avatar: null,
   templates: [],
   templateFilter: '',
   selectedTemplate: null,
+  lintResults: {},
   
   debugState: {
     isActive: false,
@@ -183,6 +213,9 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setStagingUrl: (url) => set({ stagingUrl: url }),
   setFeedback: (feedback) => set({ feedback }),
   setUserProfile: (profile) => set({ userProfile: profile }),
+  setGithubConnected: (val) => set({ githubConnected: val }),
+  setGithubUser: (user) => set({ githubUser: user }),
+  setAvatar: (avatar) => set({ avatar }),
   setPrompt: (prompt) => set({ prompt }),
   setIsGenerating: (val) => set({ isGenerating: val }),
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -220,6 +253,31 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setShowTemplateSearch: (val) => set({ showTemplateSearch: val }),
   setShowTaskModal: (val) => set({ showTaskModal: val }),
   setShowHistory: (val) => set({ showHistory: val }),
+  setTerminalMinimized: (val) => set({ isTerminalMinimized: val, isTerminalMaximized: false }),
+  setTerminalMaximized: (val) => set({ isTerminalMaximized: val, isTerminalMinimized: false }),
+  setTerminalClosed: (val) => set({ isTerminalClosed: val }),
+  setApiKeyData: (key, lastReset) => set({ freeApiKey: key, lastApiKeyReset: lastReset }),
+  generateFreeApiKey: async () => {
+    const { auth, generateUserApiKey } = await import('./firebase');
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const lastReset = get().lastApiKeyReset;
+    if (lastReset && Date.now() - lastReset < 24 * 60 * 60 * 1000) {
+      get().addLog("Security: You can only generate one API key every 24 hours.");
+      return;
+    }
+
+    try {
+      const newKey = await generateUserApiKey(user.uid);
+      if (newKey) {
+        set({ freeApiKey: newKey, lastApiKeyReset: Date.now() });
+        get().addLog("Security: New global API key generated successfully.");
+      }
+    } catch (error) {
+      get().addLog(`Security Error: ${error instanceof Error ? error.message : 'Failed to generate key'}`);
+    }
+  },
   setTheme: (theme) => set({ theme }),
   setAccentColor: (color) => {
     document.documentElement.style.setProperty('--nexus-accent', color);
@@ -228,11 +286,15 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   },
   setAutonomousMode: (val) => set({ autonomousMode: val }),
   setParallelSynthesis: (val) => set({ parallelSynthesis: val }),
+  setIsHighThinking: (val) => set({ isHighThinking: val }),
   setNotificationsEnabled: (val) => set({ notificationsEnabled: val }),
   setPreviewMode: (mode) => set({ previewMode: mode }),
   setTemplates: (templates) => set({ templates }),
   setTemplateFilter: (filter) => set({ templateFilter: filter }),
   setSelectedTemplate: (template) => set({ selectedTemplate: template }),
+  setLintResults: (path, results) => set((state) => ({
+    lintResults: { ...state.lintResults, [path]: results }
+  })),
   fetchTemplates: async () => {
     // Simulate API fetch
     await new Promise(r => setTimeout(r, 1000));
@@ -329,6 +391,57 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   }),
   evaluateExpression: (expr: string) => {
     const state = get();
+    const cmd = expr.trim().toLowerCase();
+    
+    // Handle Commands
+    if (cmd === 'help') {
+      set((state) => ({
+        debugState: { 
+          ...state.debugState, 
+          logs: [...state.debugState.logs, `> ${expr}`, "Available commands: help, clear, status, mesh, agents, build, deploy, lint, format, reset"] 
+        }
+      }));
+      return;
+    }
+    
+    if (cmd === 'clear') {
+      set((state) => ({
+        debugState: { ...state.debugState, logs: [] }
+      }));
+      return;
+    }
+
+    if (cmd === 'status') {
+      set((state) => ({
+        debugState: { 
+          ...state.debugState, 
+          logs: [...state.debugState.logs, `> ${expr}`, `System Status: STABLE | Mesh: ONLINE | Agents: ${state.agents.length} active`] 
+        }
+      }));
+      return;
+    }
+
+    if (cmd === 'mesh') {
+      set((state) => ({
+        debugState: { 
+          ...state.debugState, 
+          logs: [...state.debugState.logs, `> ${expr}`, "Mesh Connectivity: 100% | Latency: 12ms | Nodes: 5"] 
+        }
+      }));
+      return;
+    }
+
+    if (cmd === 'agents') {
+      const agentList = state.agents.map(a => `${a.name} (${a.status})`).join(', ');
+      set((state) => ({
+        debugState: { 
+          ...state.debugState, 
+          logs: [...state.debugState.logs, `> ${expr}`, `Active Agents: ${agentList}`] 
+        }
+      }));
+      return;
+    }
+
     try {
       // In a real app, we'd use a sandbox. Here we mock it.
       const result = state.debugState.variables[expr] !== undefined 
