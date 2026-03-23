@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Search, Plus, Image as ImageIcon, FileCode, Layout, History, CheckCircle2, Clock, AlertCircle, ShoppingBag, Users, LayoutDashboard, Bot, Palette, Dumbbell, Loader2 } from 'lucide-react';
+import { ProjectTemplates } from './ProjectTemplates';
 import { useNexusStore } from '../store';
 import { cn } from '../lib/utils';
 
@@ -50,89 +51,26 @@ export const AssetManager: React.FC = () => {
 };
 
 export const TemplateSearch: React.FC = () => {
-  const { 
-    showTemplateSearch, 
-    setShowTemplateSearch, 
-    templates, 
-    fetchTemplates, 
-    templateFilter, 
-    setTemplateFilter,
-    setPrompt,
-    setProjectName
-  } = useNexusStore();
-
-  React.useEffect(() => {
-    if (showTemplateSearch && templates.length === 0) {
-      fetchTemplates();
-    }
-  }, [showTemplateSearch, templates.length, fetchTemplates]);
+  const { showTemplateSearch, setShowTemplateSearch } = useNexusStore();
 
   if (!showTemplateSearch) return null;
 
-  const filteredTemplates = templates.filter(t => 
-    t.title.toLowerCase().includes(templateFilter.toLowerCase()) ||
-    t.category.toLowerCase().includes(templateFilter.toLowerCase())
-  );
-
-  const handleSelectTemplate = (template: any) => {
-    setPrompt(template.prompt);
-    setProjectName(template.title);
-    setShowTemplateSearch(false);
-  };
-
   return (
-    <Modal title="Ecosystem Templates" onClose={() => setShowTemplateSearch(false)}>
-      <div className="space-y-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
-          <input 
-            type="text" 
-            value={templateFilter}
-            onChange={(e) => setTemplateFilter(e.target.value)}
-            placeholder="Search ecosystem templates..." 
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-colors"
-          />
-        </div>
-
-        <div className="max-h-[400px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-          {templates.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <Loader2 size={32} className="text-nexus-accent animate-spin" />
-              <p className="text-xs text-white/40 uppercase font-bold tracking-widest">Fetching Templates...</p>
-            </div>
-          ) : filteredTemplates.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-sm text-white/40 italic">No templates found matching your search.</p>
-            </div>
-          ) : (
-            filteredTemplates.map((t) => {
-              const Icon = ICON_MAP[t.icon] || Layout;
-              return (
-                <div 
-                  key={t.id} 
-                  onClick={() => handleSelectTemplate(t)}
-                  className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-nexus-accent/30 cursor-pointer transition-all group hover:bg-white/[0.08]"
-                >
-                  <div className={cn(
-                    "w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center transition-colors",
-                    t.color.replace('text-', 'bg-').replace('400', '400/10'),
-                    "group-hover:bg-nexus-accent/20"
-                  )}>
-                    <Icon size={24} className={cn("text-white/40 group-hover:text-nexus-accent", t.color)} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm truncate">{t.title}</h4>
-                    <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest mb-1">{t.category}</p>
-                    <p className="text-[10px] text-white/40 line-clamp-1">{t.description}</p>
-                  </div>
-                  <Plus size={16} className="ml-auto text-white/20 group-hover:text-nexus-accent transition-transform group-hover:scale-125" />
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-    </Modal>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="relative w-full max-w-5xl bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+      >
+        <ProjectTemplates />
+      </motion.div>
+    </motion.div>
   );
 };
 
