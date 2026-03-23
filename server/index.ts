@@ -10,6 +10,9 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { readFileSync } from 'fs';
 
+import { AIService } from './services/ai.service.js';
+import { QueueService } from './services/queue.service.js';
+
 dotenv.config();
 
 // --- 0. FIREBASE INITIALIZATION ---
@@ -21,160 +24,18 @@ try {
   if (firebaseConfig && firebaseConfig.projectId) {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-    console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
+    console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
   }
 } catch (error) {
-  console.warn("\x1b[33m[NEXUS BACKEND]\x1b[0m Firebase config missing or invalid. Task persistence disabled.", error);
+  console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase config missing or invalid. Task persistence disabled.", error);
 }
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- 1. CORE BACKEND ARCHITECTURE (Service Simulation) ---
-
-class AIService {
-  private ai: GoogleGenAI;
-  
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("NEXUS MESH ERROR: GEMINI_API_KEY is not defined in the environment.");
-    }
-    this.ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
-  }
-
-  async generate(prompt: string): Promise<string> {
-    if (!process.env.GEMINI_API_KEY) {
-      return JSON.stringify({
-        projectName: "API Key Missing",
-        files: [{ path: "ERROR.md", content: "# Configuration Error\n\nGEMINI_API_KEY is not set in the environment variables. Please add it to your Vercel project settings." }]
-      });
-    }
-    try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          systemInstruction: "You are the NEXUS AI Orchestrator. Your goal is to synthesize high-quality software architectures. You must ALWAYS respond with a valid JSON object containing 'projectName' and 'files' (an array of {path, content} objects).",
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              projectName: { type: Type.STRING },
-              files: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    path: { type: Type.STRING },
-                    content: { type: Type.STRING }
-                  },
-                  required: ["path", "content"]
-                }
-              }
-            },
-            required: ["projectName", "files"]
-          }
-        }
-      });
-
-      if (!response.text) {
-        throw new Error("Empty response from Gemini Mesh");
-      }
-
-      return response.text;
-    } catch (error) {
-      console.error("AIService: Primary Gemini Mesh failed.", error);
-      console.warn("Switching to Secondary AI Mesh (Fallback Logic)...");
-      
-      // Fallback logic: Return a safe default structure
-      return JSON.stringify({
-        projectName: "Nexus Failsafe Project",
-        files: [
-          { 
-            path: "README.md", 
-            content: "# Nexus Failsafe\n\nThe primary AI mesh is currently experiencing high latency or an outage. This project was generated using the secondary mesh logic.\n\nOriginal Request: " + prompt 
-          }
-        ]
-      });
-    }
-  }
-}
-
-class QueueService {
-  private tasks: Map<string, { status: string, result?: any, progress: number, agents?: any[] }> = new Map();
-
-  async createTask() {
-    const id = uuidv4();
-    const initialTask = { status: 'queued', progress: 0, createdAt: new Date().toISOString() };
-    this.tasks.set(id, initialTask);
-    
-    if (db) {
-      try {
-        await setDoc(doc(db, 'tasks', id), initialTask);
-      } catch (e) {
-        console.error("Firestore Error (createTask):", e);
-      }
-    }
-    return id;
-  }
-
-  async updateTask(id: string, status: string, progress: number, result?: any, agents?: any[]) {
-    const task = this.tasks.get(id) || { status, progress };
-    const updatedTask = { ...task, status, progress, result, agents: agents || task.agents, updatedAt: new Date().toISOString() };
-    this.tasks.set(id, updatedTask);
-    
-    if (db) {
-      try {
-        await setDoc(doc(db, 'tasks', id), updatedTask, { merge: true });
-      } catch (e) {
-        console.error("Firestore Error (updateTask):", e);
-      }
-    }
-  }
-
-  async getTask(id: string) {
-    // Check local memory first (for speed)
-    if (this.tasks.has(id)) return this.tasks.get(id);
-    
-    // Fallback to Firestore (for serverless instances)
-    if (db) {
-      try {
-        const docRef = doc(db, 'tasks', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          this.tasks.set(id, data as any);
-          return data;
-        }
-      } catch (e) {
-        console.error("Firestore Error (getTask):", e);
-      }
-    }
-    return null;
-  }
-
-  async getActiveTasksCount() {
-    if (db) {
-      try {
-        const q = query(collection(db, 'tasks'), where('status', 'in', ['processing', 'queued']));
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.size;
-      } catch (e) {
-        console.error("Firestore Error (getActiveTasksCount):", e);
-      }
-    }
-    
-    let count = 0;
-    this.tasks.forEach(t => {
-      if (t.status === 'processing' || t.status === 'queued') count++;
-    });
-    return count;
-  }
-}
-
 const aiService = new AIService();
-const queueService = new QueueService();
+const queueService = new QueueService(db);
 
 // --- 2. AUTOSCALING LOGIC ---
 
@@ -325,7 +186,7 @@ app.post('/api/generate', async (req, res) => {
       await queueService.updateTask(taskId, 'deploying', 90, parsedResult);
       await delay(2000); // Deploy time
       
-      const stagingUrl = `https://staging-${taskId.slice(0, 8)}.nexus-mesh.ai`;
+      const stagingUrl = `https://staging-${taskId.slice(0, 8)}.odyseus-mesh.ai`;
       await queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
     } catch (error) {
       let errorMsg = "Pipeline: Generation failed during synthesis";
@@ -395,7 +256,7 @@ if (!isProd) {
     
     if (!process.env.VERCEL) {
       app.listen(PORT, '0.0.0.0', () => {
-        console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
       });
     }
   })();
@@ -413,7 +274,7 @@ if (!isProd) {
   // Only listen if not on Vercel
   if (!process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+      console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
     });
   }
 }

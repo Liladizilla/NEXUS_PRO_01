@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { CICDPipeline } from './components/CICDPipeline';
-import { FeedbackWidget } from './components/FeedbackWidget';
+import { CICDPipeline } from './components/features/CICDPipeline';
+import { FeedbackWidget } from './components/features/FeedbackWidget';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { 
@@ -71,17 +71,17 @@ import {
   Dumbbell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ProjectTemplates } from './components/ProjectTemplates';
-import { KanbanBoard } from './components/KanbanBoard';
-import { Paywall } from './components/Paywall';
-import { Settings } from './components/Settings';
-import { AuthModal } from './components/AuthModal';
-import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/Modals';
-import { Debugger } from './components/Debugger';
-import { useNexusStore, AgentStatus } from './store';
-import { generateApp } from './ai';
+import { ProjectTemplates } from './components/features/ProjectTemplates';
+import { KanbanBoard } from './components/features/KanbanBoard';
+import { Paywall } from './components/features/Paywall';
+import { Settings } from './components/features/Settings';
+import { AuthModal } from './components/features/AuthModal';
+import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
+import { Debugger } from './components/features/Debugger';
+import { useNexusStore, AgentStatus } from './core/store';
+import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
-import { auth, googleProvider, syncUserProfile } from './firebase';
+import { auth, googleProvider, syncUserProfile } from './core/firebase';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -119,7 +119,7 @@ const Intro = ({ onComplete }: { onComplete: () => void }) => {
         transition={{ delay: 0.5, duration: 1 }}
         className="mt-8 text-4xl font-black tracking-[0.2em] text-white uppercase"
       >
-        NEXUS AI
+        Odyseus AI
       </motion.h1>
       <motion.div 
         initial={{ width: 0 }}
@@ -145,7 +145,7 @@ const AuthPage = ({ onLogin }: { onLogin: (email: string) => void }) => {
     setTimeout(() => {
       setLoadingText(`Authenticating with ${provider} Identity...`);
       setTimeout(() => {
-        setLoadingText('Finalizing Nexus Handshake...');
+        setLoadingText('Finalizing Odyseus Handshake...');
         setTimeout(() => {
           onLogin(`${provider.toLowerCase()}-user@nexus.ai`);
           setIsLoading(false);
@@ -500,7 +500,7 @@ export default function App() {
       // In a real app, we'd verify the session on the backend
       // For this demo, we'll just set the subscription
       setSubscription('pro');
-      addLog("Subscription successful! Welcome to NEXUS Pro.");
+      addLog("Subscription successful! Welcome to Odyseus Pro.");
       window.history.replaceState({}, document.title, "/");
     }
   }, []);
@@ -547,7 +547,7 @@ export default function App() {
 
     if (message.includes("Rate Limit")) {
       detailedMessage = "Gateway: Rate Limit Exceeded";
-      advice = "The NEXUS mesh is currently processing a high volume of requests. Please wait a few minutes or upgrade to NEXUS Pro for priority access.";
+      advice = "The Odyseus mesh is currently processing a high volume of requests. Please wait a few minutes or upgrade to Odyseus Pro for priority access.";
     } else if (message.includes("Auth") || message.includes("unauthorized")) {
       detailedMessage = "Security: Authentication Failure";
       advice = "Your session may have expired. Please sign out and sign back in to re-establish a secure connection to the mesh.";
@@ -559,7 +559,7 @@ export default function App() {
       advice = "The automated CI/CD pipeline encountered a conflict during code synthesis. Action: Try refining your prompt with clearer architectural constraints or use the 'Autonomous Debug' tool.";
     } else if (message.includes("fetch") || message.includes("Network")) {
       detailedMessage = "Connectivity: Gateway Unreachable";
-      advice = "Lost connection to the NEXUS backend. Please verify your network stability and ensure the gateway is online (check the health indicator in the footer).";
+      advice = "Lost connection to the Odyseus backend. Please verify your network stability and ensure the gateway is online (check the health indicator in the footer).";
     }
 
     addLog(`[CRITICAL] ${detailedMessage}`);
@@ -738,7 +738,7 @@ export default function App() {
           <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50 glow-accent">
             <Zap size={18} className="text-nexus-accent" />
           </div>
-          {isSidebarOpen && <span className="font-bold tracking-tighter text-lg">NEXUS AI</span>}
+          {isSidebarOpen && <span className="font-bold tracking-tighter text-lg">Odyseus AI</span>}
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -978,7 +978,7 @@ export default function App() {
                         What are we building today?
                       </h1>
                       <p className="text-white/40 text-lg">
-                        Describe your vision. NEXUS AI will architect, build, and deploy it instantly.
+                        Describe your vision. Odyseus AI will architect, build, and deploy it instantly.
                       </p>
                     </div>
 
@@ -1434,7 +1434,7 @@ export default function App() {
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     <div className="bg-white/5 rounded-xl p-3 border border-white/5">
                       <p className="text-xs text-white/80 leading-relaxed">
-                        Hello! I'm the NEXUS AI Orchestrator. I've been minimized to give you more space for your ecosystem.
+                        Hello! I'm the Odyseus AI Orchestrator. I've been minimized to give you more space for your ecosystem.
                       </p>
                     </div>
                     {isGenerating && (

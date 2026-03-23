@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { MoreVertical, Plus, GripVertical, Calendar, User, Tag, Settings, Trash2, X, Check, Palette, Info } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface KanbanCard {
   id: string;
