@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle, CheckCircle2, Loader2, Layers, Server, Cloud, ExternalLink, Settings2, Copy, Clock, Key } from 'lucide-react';
 import { useNexusStore } from '../../core/store';
 import { cn } from '../../lib/utils';
 import { UserProfile } from './UserProfile';
@@ -40,7 +40,10 @@ export const Settings: React.FC = () => {
     agents,
     setAgentModel,
     usageCount,
-    usageLimit
+    usageLimit,
+    freeApiKey,
+    lastApiKeyReset,
+    generateFreeApiKey
   } = useNexusStore();
   
   const [activeSection, setActiveSection] = useState('project');
@@ -364,7 +367,81 @@ export const Settings: React.FC = () => {
               </div>
             )}
 
-            {activeSection === 'appearance' && (
+            {activeSection === 'security' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-white uppercase tracking-wider">Security & API Keys</h3>
+              <p className="text-xs text-white/40">Manage your access tokens and exclusive developer features.</p>
+            </div>
+
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-tight">Daily Free API Key</h4>
+                  <p className="text-xs text-white/40">Exclusive for Pro/Enterprise. Resets every 24 hours.</p>
+                </div>
+                <div className="px-2 py-1 rounded bg-nexus-accent/10 border border-nexus-accent/20 text-[10px] font-bold text-nexus-accent uppercase tracking-wider">
+                  Exclusive
+                </div>
+              </div>
+
+              {freeApiKey ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-black/40 border border-nexus-accent/20 flex items-center justify-between group">
+                    <code className="text-nexus-accent font-mono text-xs">{freeApiKey}</code>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(freeApiKey);
+                        // Show toast or feedback
+                      }}
+                      className="p-2 hover:bg-white/10 rounded transition-colors text-white/40 group-hover:text-white"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-white/30">
+                    <Clock size={12} />
+                    <span>Generated at: {new Date(lastApiKeyReset || 0).toLocaleString()}</span>
+                    <span className="text-nexus-accent/40">•</span>
+                    <span>Resets in: {Math.max(0, 24 - Math.floor((Date.now() - (lastApiKeyReset || 0)) / (1000 * 60 * 60)))} hours</span>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  onClick={generateFreeApiKey}
+                  className="w-full py-3 rounded-lg bg-nexus-accent text-black font-bold text-xs uppercase tracking-widest hover:bg-nexus-accent/90 transition-all flex items-center justify-center gap-2"
+                >
+                  <Key size={14} />
+                  Generate Daily Free Key
+                </button>
+              )}
+            </div>
+
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+              <h4 className="text-sm font-bold text-white uppercase tracking-tight">External API Integration</h4>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">OpenAI API Key</label>
+                  <input 
+                    type="password" 
+                    placeholder="sk-..." 
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-xs text-white focus:outline-none focus:border-nexus-accent/50 transition-colors"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Anthropic API Key</label>
+                  <input 
+                    type="password" 
+                    placeholder="sk-ant-..." 
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-xs text-white focus:outline-none focus:border-nexus-accent/50 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'appearance' && (
               <div className="space-y-8">
                 <div className="space-y-4">
                   <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Theme Selection</h5>
@@ -497,59 +574,107 @@ export const Settings: React.FC = () => {
                 <div className="grid grid-cols-3 gap-4">
                   {[
                     { id: 'railway', name: 'Railway', icon: Zap },
+                    { id: 'vercel', name: 'Vercel', icon: Cloud },
+                    { id: 'netlify', name: 'Netlify', icon: Layers },
                     { id: 'aws-s3', name: 'AWS S3', icon: Database },
-                    { id: 'cloudflare-pages', name: 'Cloudflare', icon: Globe }
+                    { id: 'cloudflare-pages', name: 'Cloudflare', icon: Globe },
+                    { id: 'docker', name: 'Docker', icon: Server }
                   ].map(target => (
                     <button
                       key={target.id}
                       onClick={() => setDeployTarget(target.id as any)}
                       className={cn(
-                        "p-6 rounded-2xl border flex flex-col items-center gap-3 transition-all",
+                        "p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all",
                         deployTarget === target.id 
-                          ? "bg-nexus-accent/10 border-nexus-accent text-nexus-accent" 
+                          ? "bg-nexus-accent/10 border-nexus-accent text-nexus-accent shadow-[0_0_15px_rgba(var(--nexus-accent-rgb),0.1)]" 
                           : "bg-white/5 border-white/5 text-white/40 hover:border-white/10"
                       )}
                     >
-                      <target.icon size={24} />
-                      <span className="text-xs font-bold uppercase tracking-widest">{target.name}</span>
+                      <target.icon size={20} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">{target.name}</span>
                     </button>
                   ))}
                 </div>
 
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
-                  <h4 className="font-bold text-sm">Automatic Deployment</h4>
-                  <p className="text-xs text-white/40">Automatically deploy to your chosen target after every successful build.</p>
-                  <div className="flex items-center gap-4">
-                    <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Configure Webhooks</button>
-                    <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Manage API Keys</button>
-                  </div>
-                </div>
-              </div>
-            )}
+                <AnimatePresence mode="wait">
+                  <motion.div 
+                    key={deployTarget}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-6"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-nexus-accent/10 text-nexus-accent">
+                          <Settings2 size={16} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-sm capitalize">{deployTarget.replace('-', ' ')} Configuration</h4>
+                          <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Configure your target-specific credentials</p>
+                        </div>
+                      </div>
+                      <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                        Ready to Connect
+                      </div>
+                    </div>
 
-            {activeSection === 'security' && (
-              <div className="space-y-6">
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-6">
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-sm">API Keys</h4>
-                    <p className="text-xs text-white/40">Manage your personal access tokens for the Odyseus API.</p>
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
-                    <code className="text-xs text-nexus-accent">od_live_••••••••••••••••</code>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">Revoke</button>
-                  </div>
-                  <button className="w-full py-3 rounded-xl bg-nexus-accent/10 border border-nexus-accent/20 text-nexus-accent text-[10px] font-bold uppercase tracking-widest hover:bg-nexus-accent/20 transition-all">
-                    Generate New API Key
-                  </button>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {deployTarget === 'docker' ? (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Host Address</label>
+                            <input type="text" placeholder="e.g. 192.168.1.100" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">SSH Port</label>
+                            <input type="text" placeholder="22" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Username</label>
+                            <input type="text" placeholder="root" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">SSH Key / Password</label>
+                            <input type="password" placeholder="••••••••" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-2">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">API Token / Secret Key</label>
+                            <input type="password" placeholder="Enter token..." className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Project ID / Slug</label>
+                            <input type="text" placeholder="Enter ID..." className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <button className="flex-1 py-2.5 rounded-xl bg-nexus-accent/10 border border-nexus-accent/20 text-nexus-accent text-[10px] font-bold uppercase tracking-widest hover:bg-nexus-accent/20 transition-all flex items-center justify-center gap-2">
+                        Test Connection
+                        <ExternalLink size={12} />
+                      </button>
+                      <button className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
+                        View Documentation
+                      </button>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
 
                 <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-sm">Two-Factor Authentication</h4>
-                      <p className="text-xs text-white/40">Add an extra layer of security to your account.</p>
+                      <h4 className="font-bold text-sm">Automatic Deployment</h4>
+                      <p className="text-xs text-white/40">Automatically deploy to your chosen target after every successful build.</p>
                     </div>
-                    <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Enable</button>
+                    <div className="flex items-center gap-4">
+                      <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Configure Webhooks</button>
+                    </div>
                   </div>
                 </div>
               </div>

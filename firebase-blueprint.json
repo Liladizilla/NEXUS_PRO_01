@@ -30,12 +30,37 @@
         }
       },
       "required": ["uid", "displayName", "email"]
+    },
+    "api_keys": {
+      "title": "API Key",
+      "description": "Stores a user's generated API key and its metadata.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier for the user (Firebase Auth UID)."
+        },
+        "key": {
+          "type": "string",
+          "description": "The generated API key."
+        },
+        "lastGeneratedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the last key generation."
+        }
+      },
+      "required": ["uid", "key", "lastGeneratedAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "users",
       "description": "A collection of user profile documents, keyed by their Auth UID."
+    },
+    "/api_keys/{userId}": {
+      "schema": "api_keys",
+      "description": "A collection of API keys, keyed by the user's Auth UID."
     }
   }
 }

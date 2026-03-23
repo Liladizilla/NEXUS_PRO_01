@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 export class AIService {
   private ai: GoogleGenAI;
@@ -11,7 +11,7 @@ export class AIService {
     this.ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
   }
 
-  async generate(prompt: string): Promise<string> {
+  async generate(prompt: string, isHighThinking: boolean = false): Promise<string> {
     if (!process.env.GEMINI_API_KEY) {
       return JSON.stringify({
         projectName: "API Key Missing",
@@ -19,41 +19,48 @@ export class AIService {
       });
     }
     try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          systemInstruction: `You are the Odyseus AI Orchestrator, a world-class software architect. 
-          Your goal is to synthesize high-quality, production-ready software architectures. 
-          
-          CRITICAL INSTRUCTIONS:
-          1. ALWAYS generate a complex, multi-tier architecture.
-          2. Include a modern frontend (React/Next.js), a robust backend (Node.js/Go/Rust), and infrastructure-as-code (Terraform/Docker/K8s).
-          3. Use multiple programming languages where appropriate (e.g., Rust for performance-critical parts, Go for microservices, TypeScript for frontend).
-          4. Ensure the file structure is professional (e.g., /src, /server, /infra, /core, /scripts).
-          5. Include detailed README.md and documentation.
-          
-          You must ALWAYS respond with a valid JSON object containing 'projectName' and 'files' (an array of {path, content} objects).`,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              projectName: { type: Type.STRING },
-              files: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    path: { type: Type.STRING },
-                    content: { type: Type.STRING }
-                  },
-                  required: ["path", "content"]
-                }
+      const model = isHighThinking ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
+      const config: any = {
+        systemInstruction: `You are the Odyseus AI Orchestrator, a world-class software architect. 
+        Your goal is to synthesize high-quality, production-ready software architectures. 
+        
+        CRITICAL INSTRUCTIONS:
+        1. ALWAYS generate a complex, multi-tier architecture.
+        2. Include a modern frontend (React/Next.js), a robust backend (Node.js/Go/Rust), and infrastructure-as-code (Terraform/Docker/K8s).
+        3. Use multiple programming languages where appropriate (e.g., Rust for performance-critical parts, Go for microservices, TypeScript for frontend).
+        4. Ensure the file structure is professional (e.g., /src, /server, /infra, /core, /scripts).
+        5. Include detailed README.md and documentation.
+        
+        You must ALWAYS respond with a valid JSON object containing 'projectName' and 'files' (an array of {path, content} objects).`,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            projectName: { type: Type.STRING },
+            files: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  path: { type: Type.STRING },
+                  content: { type: Type.STRING }
+                },
+                required: ["path", "content"]
               }
-            },
-            required: ["projectName", "files"]
-          }
+            }
+          },
+          required: ["projectName", "files"]
         }
+      };
+
+      if (isHighThinking) {
+        config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
+      }
+
+      const response = await this.ai.models.generateContent({
+        model,
+        contents: prompt,
+        config
       });
 
       if (!response.text) {

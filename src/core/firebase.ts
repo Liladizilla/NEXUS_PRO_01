@@ -93,6 +93,12 @@ export interface UserProfile {
   photoURL: string | null;
   email: string;
   updatedAt: Timestamp | any;
+  githubConnected?: boolean;
+  githubUser?: string | null;
+  avatar?: string | null;
+  bio?: string;
+  location?: string;
+  website?: string;
 }
 
 export const syncUserProfile = (user: User, callback: (profile: UserProfile | null) => void) => {
@@ -118,5 +124,39 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
     }, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${uid}`);
+  }
+};
+
+export interface UserApiKey {
+  uid: string;
+  key: string;
+  lastGeneratedAt: Timestamp | any;
+}
+
+export const syncApiKey = (uid: string, callback: (apiKey: UserApiKey | null) => void) => {
+  const keyRef = doc(db, 'api_keys', uid);
+  return onSnapshot(keyRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data() as UserApiKey);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    handleFirestoreError(error, OperationType.GET, `api_keys/${uid}`);
+  });
+};
+
+export const generateUserApiKey = async (uid: string) => {
+  const keyRef = doc(db, 'api_keys', uid);
+  const newKey = `od_live_${Math.random().toString(36).substr(2, 16)}_${Math.random().toString(36).substr(2, 16)}`;
+  try {
+    await setDoc(keyRef, {
+      uid,
+      key: newKey,
+      lastGeneratedAt: serverTimestamp()
+    }, { merge: true });
+    return newKey;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `api_keys/${uid}`);
   }
 };
