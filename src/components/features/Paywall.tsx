@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Zap, Rocket, Shield, X } from 'lucide-react';
-import { useNexusStore } from '../store';
-import { cn } from '../lib/utils';
+import { useNexusStore } from '../../core/store';
+import { cn } from '../../lib/utils';
 
 export const Paywall: React.FC = () => {
   const { showPaywall, setShowPaywall, usageCount, usageLimit } = useNexusStore();
@@ -26,7 +26,7 @@ export const Paywall: React.FC = () => {
       id: 'free',
       name: 'Starter',
       price: '$0',
-      description: 'Perfect for exploring NEXUS AI capabilities.',
+      description: 'Perfect for exploring Odyseus AI capabilities.',
       features: [
         '3 AI Builds per month',
         'Standard component library',
@@ -57,7 +57,7 @@ export const Paywall: React.FC = () => {
     },
     {
       id: 'enterprise',
-      name: 'Nexus Enterprise',
+      name: 'Odyseus Enterprise',
       price: '$150',
       period: '/mo',
       description: 'Full-scale autonomous development for teams.',
@@ -99,7 +99,7 @@ export const Paywall: React.FC = () => {
               Usage Limit Reached
             </div>
             <h2 className="text-4xl font-black tracking-tight text-white">
-              Unlock the Full Power of <span className="text-nexus-accent">NEXUS AI</span>
+              Unlock the Full Power of <span className="text-nexus-accent">Odyseus AI</span>
             </h2>
             <p className="text-white/40 max-w-2xl mx-auto">
               You've used {usageCount}/{usageLimit} of your free builds. Upgrade your orchestration mesh to continue building without limits.

@@ -2,8 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Search, Plus, Image as ImageIcon, FileCode, Layout, History, CheckCircle2, Clock, AlertCircle, ShoppingBag, Users, LayoutDashboard, Bot, Palette, Dumbbell, Loader2 } from 'lucide-react';
 import { ProjectTemplates } from './ProjectTemplates';
-import { useNexusStore } from '../store';
-import { cn } from '../lib/utils';
+import { useNexusStore } from '../../core/store';
+import { cn } from '../../lib/utils';
 
 const ICON_MAP: Record<string, any> = {
   ShoppingBag,

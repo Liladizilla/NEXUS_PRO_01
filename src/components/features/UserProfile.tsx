@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Camera, Save, Loader2, CheckCircle2, Mail, AlertTriangle } from 'lucide-react';
-import { useNexusStore } from '../store';
-import { auth, updateUserProfile, sendEmailVerification } from '../firebase';
+import { useNexusStore } from '../../core/store';
+import { auth, updateUserProfile, sendEmailVerification } from '../../core/firebase';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const UserProfile = () => {

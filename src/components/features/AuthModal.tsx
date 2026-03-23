@@ -22,8 +22,8 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   updateProfile
-} from '../firebase';
-import { cn } from '../lib/utils';
+} from '../../core/firebase';
+import { cn } from '../../lib/utils';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -131,7 +131,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               {mode === 'signin' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
             </h2>
             <p className="text-xs text-white/40 uppercase font-bold tracking-widest">
-              {mode === 'signin' ? 'Access your NEXUS ecosystem' : mode === 'signup' ? 'Join the NEXUS mesh' : 'Recover your access'}
+              {mode === 'signin' ? 'Access your Odyseus ecosystem' : mode === 'signup' ? 'Join the Odyseus mesh' : 'Recover your access'}
             </p>
           </div>
 
@@ -173,7 +173,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all"
-                    placeholder="Nexus Architect"
+                    placeholder="Odyseus Architect"
                   />
                   <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
                 </div>
@@ -187,7 +187,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all"
-                  placeholder="architect@nexus.ai"
+                  placeholder="architect@odyseus.ai"
                 />
                 <Mail size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
               </div>

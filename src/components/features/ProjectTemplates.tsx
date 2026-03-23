@@ -13,8 +13,8 @@ import {
   ArrowRight,
   Sparkles
 } from 'lucide-react';
-import { useNexusStore } from '../store';
-import { cn } from '../lib/utils';
+import { useNexusStore } from '../../core/store';
+import { cn } from '../../lib/utils';
 
 const iconMap: Record<string, any> = {
   ShoppingBag,

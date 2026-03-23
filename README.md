@@ -1,12 +1,12 @@
-# NEXUS AI: Autonomous Software Orchestration OS
+# Odyseus AI: Autonomous Software Orchestration OS
 
-NEXUS AI is a next-generation, autonomous development ecosystem designed to transform natural language prompts into production-ready software. By orchestrating a mesh of specialized AI agents, NEXUS AI handles the entire software development lifecycle—from architecture and UI design to backend logic, debugging, and multi-cloud deployment.
+Odyseus AI is a next-generation, autonomous development ecosystem designed to transform natural language prompts into production-ready software. By orchestrating a mesh of specialized AI agents, Odyseus AI handles the entire software development lifecycle—from architecture and UI design to backend logic, debugging, and multi-cloud deployment.
 
-## What NEXUS AI Does
+## What Odyseus AI Does
 
-NEXUS AI acts as a "Software Builder OS," providing a unified interface where users can collaborate with an autonomous team of AI agents. Instead of writing code manually, you describe your vision, and the system synthesizes the necessary components, infrastructure, and logic to bring it to life.
+Odyseus AI acts as a "Software Builder OS," providing a unified interface where users can collaborate with an autonomous team of AI agents. Instead of writing code manually, you describe your vision, and the system synthesizes the necessary components, infrastructure, and logic to bring it to life.
 
-## How to Use NEXUS AI
+## How to Use Odyseus AI
 
 1.  **Authentication**: Sign in via Google, Apple, or your corporate email to access your personal development workspace.
 2.  **Synthesis**: Enter a detailed prompt describing the application you want to build (e.g., "A real-time Kanban board with task persistence").
@@ -48,4 +48,4 @@ NEXUS AI acts as a "Software Builder OS," providing a unified interface where us
 
 ---
 
-*NEXUS AI — Building the future of software, autonomously.*
+*Odyseus AI — Building the future of software, autonomously.*

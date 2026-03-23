@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getContrastColor } from './lib/utils';
+import { getContrastColor } from '../lib/utils';
 
 export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
 export type DeployTarget = 'railway' | 'aws-s3' | 'cloudflare-pages';
@@ -123,7 +123,7 @@ interface NexusState {
 }
 
 export const useNexusStore = create<NexusState>((set, get) => ({
-  projectName: 'Untitled Project',
+  projectName: 'Odyseus Project',
   prompt: '',
   isGenerating: false,
   activeTab: 'design',
@@ -156,7 +156,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   parallelSynthesis: true,
   notificationsEnabled: true,
   previewMode: 'desktop',
-  projectDescription: 'A high-performance software ecosystem.',
+  projectDescription: 'A high-performance Odyseus ecosystem.',
   projectFramework: 'React + Vite',
   projectLanguage: 'TypeScript',
   stagingUrl: null,
@@ -345,8 +345,8 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   },
 
   reset: () => set({
-    projectName: 'Untitled Project',
-    projectDescription: 'A high-performance software ecosystem.',
+    projectName: 'Odyseus Project',
+    projectDescription: 'A high-performance Odyseus ecosystem.',
     projectFramework: 'React + Vite',
     projectLanguage: 'TypeScript',
     stagingUrl: null,

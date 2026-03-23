@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Send, X, CheckCircle2 } from 'lucide-react';
-import { useNexusStore } from '../store';
+import { useNexusStore } from '../../core/store';
 
 export const FeedbackWidget: React.FC = () => {
   const { feedback, setFeedback } = useNexusStore();
