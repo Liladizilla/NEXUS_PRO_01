@@ -159,118 +159,145 @@ function getAutoscalingPlan(prompt: string, activeTasksCount: number, baseAgents
 
 // --- 3. API GATEWAY (THE BOUNCER) ---
 
-async function startServer() {
-  const app = express();
-  const PORT = 3000;
+export const app = express();
+const PORT = 3000;
 
-  // Trust proxy for express-rate-limit (required when running behind Nginx/Cloud Run)
-  app.set('trust proxy', 1);
+// Trust proxy for express-rate-limit (required when running behind Nginx/Cloud Run/Vercel)
+app.set('trust proxy', 1);
 
-  app.use(express.json());
+app.use(express.json());
 
-  // Rate Limiting (Security)
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: { error: "Too many requests. Rate limit exceeded." },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    // Use the default key generator which handles IPv6 normalization correctly
-  });
-  app.use('/api/', limiter);
+// Rate Limiting (Security)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: "Too many requests. Rate limit exceeded." },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use('/api/', limiter);
 
-  // --- 3. AI ORCHESTRATION & TASK QUEUE FLOW ---
+// --- 3. AI ORCHESTRATION & TASK QUEUE FLOW ---
 
-  app.post('/api/generate', async (req, res) => {
-    const { prompt, agents, feedback } = req.body;
-    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+app.post('/api/generate', async (req, res) => {
+  const { prompt, agents, feedback } = req.body;
+  if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
-    const activeTasks = queueService.getActiveTasksCount();
-    const plan = getAutoscalingPlan(prompt, activeTasks, agents || []);
-    const taskId = queueService.createTask();
-    
-    // Process task asynchronously (Background Worker Simulation)
-    (async () => {
-      try {
-        queueService.updateTask(taskId, 'processing', 10, null, plan.agents);
-        
-        // Refine prompt with feedback
-        const finalPrompt = feedback 
-          ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
-          : prompt;
+  const activeTasks = queueService.getActiveTasksCount();
+  const plan = getAutoscalingPlan(prompt, activeTasks, agents || []);
+  const taskId = queueService.createTask();
+  
+  // Process task asynchronously (Background Worker Simulation)
+  (async () => {
+    try {
+      queueService.updateTask(taskId, 'processing', 10, null, plan.agents);
+      
+      // Refine prompt with feedback
+      const finalPrompt = feedback 
+        ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
+        : prompt;
 
-        // Simulate AI Orchestration
-        const result = await aiService.generate(finalPrompt);
-        const parsedResult = JSON.parse(result);
-        
-        // --- CI/CD PIPELINE SIMULATION ---
-        queueService.updateTask(taskId, 'building', 40, parsedResult);
-        await new Promise(r => setTimeout(r, 2000)); // Build time
-        
-        queueService.updateTask(taskId, 'testing', 70, parsedResult);
-        await new Promise(r => setTimeout(r, 2000)); // Test time
-        
-        queueService.updateTask(taskId, 'deploying', 90, parsedResult);
-        await new Promise(r => setTimeout(r, 2000)); // Deploy time
-        
-        const stagingUrl = `https://staging-${taskId.slice(0, 8)}.nexus-mesh.ai`;
-        queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
-      } catch (error) {
-        let errorMsg = "Pipeline: Generation failed during synthesis";
-        if (error instanceof SyntaxError) {
-          errorMsg = "AI Mesh Failure: LLM output malformed or incomplete";
-        } else if (error instanceof Error && error.message.includes('timeout')) {
-          errorMsg = "CI/CD Failure: Build pipeline timed out during deployment";
-        }
-        queueService.updateTask(taskId, 'failed', 0, { error: errorMsg });
+      // Simulation delay helper
+      const delay = (ms: number) => new Promise(r => setTimeout(r, process.env.VERCEL ? ms / 4 : ms));
+
+      queueService.updateTask(taskId, 'synthesizing', 20);
+      
+      // Simulate AI Orchestration
+      const result = await aiService.generate(finalPrompt);
+      const parsedResult = JSON.parse(result);
+      
+      // --- CI/CD PIPELINE SIMULATION ---
+      queueService.updateTask(taskId, 'building', 40, parsedResult);
+      await delay(2000); // Build time
+      
+      queueService.updateTask(taskId, 'testing', 70, parsedResult);
+      await delay(2000); // Test time
+      
+      queueService.updateTask(taskId, 'deploying', 90, parsedResult);
+      await delay(2000); // Deploy time
+      
+      const stagingUrl = `https://staging-${taskId.slice(0, 8)}.nexus-mesh.ai`;
+      queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
+    } catch (error) {
+      let errorMsg = "Pipeline: Generation failed during synthesis";
+      if (error instanceof SyntaxError) {
+        errorMsg = "AI Mesh Failure: LLM output malformed or incomplete";
+      } else if (error instanceof Error && error.message.includes('timeout')) {
+        errorMsg = "CI/CD Failure: Build pipeline timed out during deployment";
       }
-    })();
+      queueService.updateTask(taskId, 'failed', 0, { error: errorMsg });
+    }
+  })();
 
-    res.json({ taskId, plan });
+  // On Vercel, we need to wait a bit to ensure the task starts or even finishes
+  // but we can't wait too long. The polling will handle the rest if it's still running.
+  // However, Vercel will kill the process after response.
+  // So for Vercel, we actually SHOULD wait for completion if possible.
+  if (process.env.VERCEL) {
+    // Wait up to 8 seconds for completion (Vercel limit is 10s)
+    let elapsed = 0;
+    while (elapsed < 8000) {
+      const task = queueService.getTask(taskId);
+      if (task?.status === 'completed' || task?.status === 'failed') break;
+      await new Promise(r => setTimeout(r, 500));
+      elapsed += 500;
+    }
+  }
+
+  res.json({ taskId, plan });
+});
+
+app.get('/api/tasks/:id', (req, res) => {
+  const task = queueService.getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: "Task not found" });
+  res.json(task);
+});
+
+// Health Check (Monitoring)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: "ok", 
+    services: {
+      ai: "online",
+      queue: "online",
+      auth: "online",
+      storage: "online"
+    },
+    mesh: "stable",
+    uptime: process.uptime()
   });
+});
 
-  app.get('/api/tasks/:id', (req, res) => {
-    const task = queueService.getTask(req.params.id);
-    if (!task) return res.status(404).json({ error: "Task not found" });
-    res.json(task);
-  });
+// --- 4. SERVER INITIALIZATION ---
 
-  // Health Check (Monitoring)
-  app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: "ok", 
-      services: {
-        ai: "online",
-        queue: "online",
-        auth: "online",
-        storage: "online"
-      },
-      mesh: "stable",
-      uptime: process.uptime()
-    });
-  });
+const isProd = process.env.NODE_ENV === 'production';
 
-  // --- 4. VITE MIDDLEWARE ---
-
-  if (process.env.NODE_ENV !== 'production') {
+if (!isProd) {
+  // Only use Vite in development
+  (async () => {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    
+    if (!process.env.VERCEL) {
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+      });
+    }
+  })();
+} else {
+  // In production (including Vercel), serve static files
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  
+  // Only listen if not on Vercel
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
     });
   }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
-    console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m AI Orchestration Engine: \x1b[32mACTIVE\x1b[0m`);
-    console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Background Workers: \x1b[32mREADY\x1b[0m`);
-  });
 }
 
-startServer();
+export default app;
