@@ -71,6 +71,7 @@ import {
   Dumbbell
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ProjectTemplates } from './components/ProjectTemplates';
 import { KanbanBoard } from './components/KanbanBoard';
 import { Paywall } from './components/Paywall';
 import { Settings } from './components/Settings';
@@ -230,63 +231,6 @@ const AuthPage = ({ onLogin }: { onLogin: (email: string) => void }) => {
         </p>
       </div>
     </motion.div>
-  );
-};
-
-const ProjectTemplates = ({ onSelect }: { onSelect: (prompt: string) => void }) => {
-  const { templates, fetchTemplates } = useNexusStore();
-
-  React.useEffect(() => {
-    if (templates.length === 0) {
-      fetchTemplates();
-    }
-  }, [templates.length, fetchTemplates]);
-
-  const displayTemplates = templates.slice(0, 3);
-
-  const ICON_MAP: Record<string, any> = {
-    ShoppingBag,
-    Users,
-    LayoutDashboard,
-    Bot,
-    Palette,
-    Dumbbell
-  };
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-4">
-      {templates.length === 0 ? (
-        Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="glass p-6 rounded-2xl border-white/5 animate-pulse">
-            <div className="w-12 h-12 rounded-xl bg-white/5 mb-4" />
-            <div className="h-4 bg-white/5 rounded w-3/4 mb-2" />
-            <div className="h-3 bg-white/5 rounded w-full" />
-          </div>
-        ))
-      ) : (
-        displayTemplates.map((template) => {
-          const Icon = ICON_MAP[template.icon] || Layout;
-          return (
-            <motion.div
-              key={template.id}
-              whileHover={{ y: -5, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onSelect(template.prompt)}
-              className="glass p-6 rounded-2xl text-left cursor-pointer border-white/5 hover:border-nexus-accent/30 transition-colors group"
-            >
-              <div className={cn(
-                "w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors",
-                template.color.replace('text-', 'bg-').replace('400', '400/10')
-              )}>
-                <Icon size={24} className={template.color} />
-              </div>
-              <h3 className="text-lg font-bold mb-2 group-hover:text-nexus-accent transition-colors">{template.title}</h3>
-              <p className="text-xs text-white/40 leading-relaxed line-clamp-2">{template.description}</p>
-            </motion.div>
-          );
-        })
-      )}
-    </div>
   );
 };
 
@@ -507,6 +451,7 @@ export default function App() {
     userProfile, setUserProfile,
     accentColor,
     reset,
+    templates, fetchTemplates,
     setDebugActive, setCurrentLine, setDebugVariables, addDebugLog, isPro
   } = useNexusStore();
 
@@ -567,6 +512,12 @@ export default function App() {
   const [isTerminalMinimized, setIsTerminalMinimized] = useState(false);
   const [backendHealth, setBackendHealth] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (templates.length === 0) {
+      fetchTemplates();
+    }
+  }, [templates.length, fetchTemplates]);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -1090,7 +1041,33 @@ export default function App() {
                           View All
                         </span>
                       </div>
-                      <ProjectTemplates onSelect={(p) => setPrompt(p)} />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-4">
+                        {templates.slice(0, 3).map((template) => {
+                          const Icon = (template.icon === 'ShoppingBag' ? ShoppingBag : 
+                                       template.icon === 'Users' ? Users : 
+                                       template.icon === 'LayoutDashboard' ? LayoutDashboard : 
+                                       template.icon === 'Bot' ? Bot : 
+                                       template.icon === 'Palette' ? Palette : Dumbbell);
+                          return (
+                            <motion.div
+                              key={template.id}
+                              whileHover={{ y: -5, scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => setPrompt(template.prompt)}
+                              className="glass p-6 rounded-2xl text-left cursor-pointer border-white/5 hover:border-nexus-accent/30 transition-colors group"
+                            >
+                              <div className={cn(
+                                "w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors",
+                                template.color.replace('text-', 'bg-').replace('400', '400/10')
+                              )}>
+                                <Icon size={24} className={cn("text-white/40 group-hover:text-nexus-accent", template.color)} />
+                              </div>
+                              <h4 className="font-bold text-sm mb-1 group-hover:text-nexus-accent transition-colors">{template.title}</h4>
+                              <p className="text-[10px] text-white/40 line-clamp-2">{template.description}</p>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div className="space-y-4 pt-4">
