@@ -4,10 +4,28 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from 'dotenv';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { readFileSync } from 'fs';
 
 dotenv.config();
+
+// --- 0. FIREBASE INITIALIZATION ---
+let db: any = null;
+try {
+  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+  const firebaseConfig = JSON.parse(readFileSync(configPath, 'utf8'));
+  
+  if (firebaseConfig && firebaseConfig.projectId) {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    console.log(`\x1b[36m[NEXUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
+  }
+} catch (error) {
+  console.warn("\x1b[33m[NEXUS BACKEND]\x1b[0m Firebase config missing or invalid. Task persistence disabled.", error);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,28 +36,66 @@ class AIService {
   private ai: GoogleGenAI;
   
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("NEXUS MESH ERROR: GEMINI_API_KEY is not defined in the environment.");
+    }
+    this.ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
   }
 
-  async generate(prompt: string, fallback = false): Promise<string> {
+  async generate(prompt: string): Promise<string> {
+    if (!process.env.GEMINI_API_KEY) {
+      return JSON.stringify({
+        projectName: "API Key Missing",
+        files: [{ path: "ERROR.md", content: "# Configuration Error\n\nGEMINI_API_KEY is not set in the environment variables. Please add it to your Vercel project settings." }]
+      });
+    }
     try {
-      if (fallback) throw new Error("Primary AI Mesh Failure Simulation");
-      
       const response = await this.ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
-          responseMimeType: "application/json"
+          systemInstruction: "You are the NEXUS AI Orchestrator. Your goal is to synthesize high-quality software architectures. You must ALWAYS respond with a valid JSON object containing 'projectName' and 'files' (an array of {path, content} objects).",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              projectName: { type: Type.STRING },
+              files: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    path: { type: Type.STRING },
+                    content: { type: Type.STRING }
+                  },
+                  required: ["path", "content"]
+                }
+              }
+            },
+            required: ["projectName", "files"]
+          }
         }
       });
+
+      if (!response.text) {
+        throw new Error("Empty response from Gemini Mesh");
+      }
+
       return response.text;
     } catch (error) {
-      console.warn("AIService: Primary Gemini Mesh failed. Switching to Secondary AI Mesh (Fallback Logic)...");
-      // Fallback logic: In a real app, this would call OpenAI or Anthropic
-      // Here we simulate a successful fallback response
+      console.error("AIService: Primary Gemini Mesh failed.", error);
+      console.warn("Switching to Secondary AI Mesh (Fallback Logic)...");
+      
+      // Fallback logic: Return a safe default structure
       return JSON.stringify({
-        projectName: "Fallback Project",
-        files: [{ path: "fallback.txt", content: "Generated via Secondary AI Mesh due to primary outage." }]
+        projectName: "Nexus Failsafe Project",
+        files: [
+          { 
+            path: "README.md", 
+            content: "# Nexus Failsafe\n\nThe primary AI mesh is currently experiencing high latency or an outage. This project was generated using the secondary mesh logic.\n\nOriginal Request: " + prompt 
+          }
+        ]
       });
     }
   }
@@ -48,24 +104,67 @@ class AIService {
 class QueueService {
   private tasks: Map<string, { status: string, result?: any, progress: number, agents?: any[] }> = new Map();
 
-  createTask() {
+  async createTask() {
     const id = uuidv4();
-    this.tasks.set(id, { status: 'queued', progress: 0 });
+    const initialTask = { status: 'queued', progress: 0, createdAt: new Date().toISOString() };
+    this.tasks.set(id, initialTask);
+    
+    if (db) {
+      try {
+        await setDoc(doc(db, 'tasks', id), initialTask);
+      } catch (e) {
+        console.error("Firestore Error (createTask):", e);
+      }
+    }
     return id;
   }
 
-  updateTask(id: string, status: string, progress: number, result?: any, agents?: any[]) {
-    const task = this.tasks.get(id);
-    if (task) {
-      this.tasks.set(id, { ...task, status, progress, result, agents: agents || task.agents });
+  async updateTask(id: string, status: string, progress: number, result?: any, agents?: any[]) {
+    const task = this.tasks.get(id) || { status, progress };
+    const updatedTask = { ...task, status, progress, result, agents: agents || task.agents, updatedAt: new Date().toISOString() };
+    this.tasks.set(id, updatedTask);
+    
+    if (db) {
+      try {
+        await setDoc(doc(db, 'tasks', id), updatedTask, { merge: true });
+      } catch (e) {
+        console.error("Firestore Error (updateTask):", e);
+      }
     }
   }
 
-  getTask(id: string) {
-    return this.tasks.get(id);
+  async getTask(id: string) {
+    // Check local memory first (for speed)
+    if (this.tasks.has(id)) return this.tasks.get(id);
+    
+    // Fallback to Firestore (for serverless instances)
+    if (db) {
+      try {
+        const docRef = doc(db, 'tasks', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          this.tasks.set(id, data as any);
+          return data;
+        }
+      } catch (e) {
+        console.error("Firestore Error (getTask):", e);
+      }
+    }
+    return null;
   }
 
-  getActiveTasksCount() {
+  async getActiveTasksCount() {
+    if (db) {
+      try {
+        const q = query(collection(db, 'tasks'), where('status', 'in', ['processing', 'queued']));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.size;
+      } catch (e) {
+        console.error("Firestore Error (getActiveTasksCount):", e);
+      }
+    }
+    
     let count = 0;
     this.tasks.forEach(t => {
       if (t.status === 'processing' || t.status === 'queued') count++;
@@ -177,20 +276,30 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Unhandled Server Error:", err);
+  res.status(500).json({ 
+    error: "Internal Server Error", 
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 // --- 3. AI ORCHESTRATION & TASK QUEUE FLOW ---
 
 app.post('/api/generate', async (req, res) => {
   const { prompt, agents, feedback } = req.body;
   if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
-  const activeTasks = queueService.getActiveTasksCount();
+  const activeTasks = await queueService.getActiveTasksCount();
   const plan = getAutoscalingPlan(prompt, activeTasks, agents || []);
-  const taskId = queueService.createTask();
+  const taskId = await queueService.createTask();
   
   // Process task asynchronously (Background Worker Simulation)
-  (async () => {
+  const processTask = async () => {
     try {
-      queueService.updateTask(taskId, 'processing', 10, null, plan.agents);
+      await queueService.updateTask(taskId, 'processing', 10, null, plan.agents);
       
       // Refine prompt with feedback
       const finalPrompt = feedback 
@@ -200,24 +309,24 @@ app.post('/api/generate', async (req, res) => {
       // Simulation delay helper
       const delay = (ms: number) => new Promise(r => setTimeout(r, process.env.VERCEL ? ms / 4 : ms));
 
-      queueService.updateTask(taskId, 'synthesizing', 20);
+      await queueService.updateTask(taskId, 'synthesizing', 20);
       
       // Simulate AI Orchestration
       const result = await aiService.generate(finalPrompt);
       const parsedResult = JSON.parse(result);
       
       // --- CI/CD PIPELINE SIMULATION ---
-      queueService.updateTask(taskId, 'building', 40, parsedResult);
+      await queueService.updateTask(taskId, 'building', 40, parsedResult);
       await delay(2000); // Build time
       
-      queueService.updateTask(taskId, 'testing', 70, parsedResult);
+      await queueService.updateTask(taskId, 'testing', 70, parsedResult);
       await delay(2000); // Test time
       
-      queueService.updateTask(taskId, 'deploying', 90, parsedResult);
+      await queueService.updateTask(taskId, 'deploying', 90, parsedResult);
       await delay(2000); // Deploy time
       
       const stagingUrl = `https://staging-${taskId.slice(0, 8)}.nexus-mesh.ai`;
-      queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
+      await queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
     } catch (error) {
       let errorMsg = "Pipeline: Generation failed during synthesis";
       if (error instanceof SyntaxError) {
@@ -225,9 +334,12 @@ app.post('/api/generate', async (req, res) => {
       } else if (error instanceof Error && error.message.includes('timeout')) {
         errorMsg = "CI/CD Failure: Build pipeline timed out during deployment";
       }
-      queueService.updateTask(taskId, 'failed', 0, { error: errorMsg });
+      await queueService.updateTask(taskId, 'failed', 0, { error: errorMsg });
     }
-  })();
+  };
+
+  // Start processing
+  processTask();
 
   // On Vercel, we need to wait a bit to ensure the task starts or even finishes
   // but we can't wait too long. The polling will handle the rest if it's still running.
@@ -237,7 +349,7 @@ app.post('/api/generate', async (req, res) => {
     // Wait up to 8 seconds for completion (Vercel limit is 10s)
     let elapsed = 0;
     while (elapsed < 8000) {
-      const task = queueService.getTask(taskId);
+      const task = await queueService.getTask(taskId);
       if (task?.status === 'completed' || task?.status === 'failed') break;
       await new Promise(r => setTimeout(r, 500));
       elapsed += 500;
@@ -247,8 +359,8 @@ app.post('/api/generate', async (req, res) => {
   res.json({ taskId, plan });
 });
 
-app.get('/api/tasks/:id', (req, res) => {
-  const task = queueService.getTask(req.params.id);
+app.get('/api/tasks/:id', async (req, res) => {
+  const task = await queueService.getTask(req.params.id);
   if (!task) return res.status(404).json({ error: "Task not found" });
   res.json(task);
 });
@@ -291,6 +403,12 @@ if (!isProd) {
   // In production (including Vercel), serve static files
   const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
+  
+  // SPA Fallback: Serve index.html for any non-API routes
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
   
   // Only listen if not on Vercel
   if (!process.env.VERCEL) {
