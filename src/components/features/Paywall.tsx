@@ -10,15 +10,13 @@ export const Paywall: React.FC = () => {
   if (!showPaywall) return null;
 
   const handleUpgrade = (tier: 'pro' | 'enterprise') => {
-    const url = tier === 'pro' 
-      ? (import.meta as any).env.VITE_GUMROAD_PRO_URL 
-      : (import.meta as any).env.VITE_GUMROAD_ENTERPRISE_URL;
+    // Redirect to Stripe Checkout (Mock URLs)
+    const stripeUrls = {
+      pro: 'https://buy.stripe.com/test_pro_checkout',
+      enterprise: 'https://buy.stripe.com/test_enterprise_checkout'
+    };
     
-    if (url) {
-      window.open(url, '_blank');
-    } else {
-      alert(`Gumroad URL for ${tier} tier is not configured in environment variables.`);
-    }
+    window.open(stripeUrls[tier], '_blank');
   };
 
   const tiers = [
@@ -45,8 +43,9 @@ export const Paywall: React.FC = () => {
       description: 'For power users building production-ready apps.',
       features: [
         '100 AI Builds per month',
+        'Daily Free API Keys (Reset 24h)',
+        'Vercel & Netlify Deployment',
         'Advanced UI Widget Library',
-        'Multi-cloud deployment (AWS, CF)',
         'Priority AI Mesh access',
         'Custom domain support'
       ],
@@ -63,6 +62,7 @@ export const Paywall: React.FC = () => {
       description: 'Full-scale autonomous development for teams.',
       features: [
         'Unlimited AI Builds',
+        'Custom Docker Host Deployment',
         'White-label orchestration',
         'Dedicated GPU instances',
         'Custom AI model fine-tuning',

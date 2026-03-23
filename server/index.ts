@@ -149,8 +149,76 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // --- 3. AI ORCHESTRATION & TASK QUEUE FLOW ---
 
+// --- 3.1 GITHUB OAUTH FLOW ---
+app.get('/api/auth/github/url', (req, res) => {
+  const redirectUri = `${process.env.APP_URL || 'http://localhost:3000'}/api/auth/github/callback`;
+  const params = new URLSearchParams({
+    client_id: process.env.GITHUB_CLIENT_ID || '',
+    redirect_uri: redirectUri,
+    scope: 'repo,user',
+    state: uuidv4(),
+  });
+  res.json({ url: `https://github.com/login/oauth/authorize?${params}` });
+});
+
+app.get('/api/auth/github/callback', async (req, res) => {
+  const { code } = req.query;
+  if (!code) return res.status(400).send('Code is required');
+
+  try {
+    const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
+
+    const tokenData: any = await tokenRes.json();
+    if (tokenData.error) throw new Error(tokenData.error_description);
+
+    const userRes = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `token ${tokenData.access_token}`,
+        'Accept': 'application/json',
+      },
+    });
+    const userData: any = await userRes.json();
+
+    // In a real app, you'd store the token in Firestore associated with the user
+    // For this prototype, we'll just send a success message to the parent window
+    res.send(`
+      <html>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ 
+                type: 'OAUTH_AUTH_SUCCESS', 
+                provider: 'github',
+                user: '${userData.login}'
+              }, '*');
+              window.close();
+            } else {
+              window.location.href = '/';
+            }
+          </script>
+          <p>GitHub connected successfully. This window should close automatically.</p>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('GitHub OAuth Error:', error);
+    res.status(500).send('Authentication failed');
+  }
+});
+
 app.post('/api/generate', async (req, res) => {
-  const { prompt, agents, feedback } = req.body;
+  const { prompt, agents, feedback, isHighThinking } = req.body;
   if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
   const activeTasks = await queueService.getActiveTasksCount();
@@ -173,7 +241,7 @@ app.post('/api/generate', async (req, res) => {
       await queueService.updateTask(taskId, 'synthesizing', 20);
       
       // Simulate AI Orchestration
-      const result = await aiService.generate(finalPrompt);
+      const result = await aiService.generate(finalPrompt, isHighThinking);
       const parsedResult = JSON.parse(result);
       
       // --- CI/CD PIPELINE SIMULATION ---

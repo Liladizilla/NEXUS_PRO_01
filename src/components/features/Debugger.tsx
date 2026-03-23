@@ -21,7 +21,14 @@ export const Debugger: React.FC = () => {
   } = useNexusStore();
 
   const [consoleInput, setConsoleInput] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionIndex, setSuggestionIndex] = useState(-1);
   const consoleEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const COMMON_COMMANDS = [
+    'help', 'clear', 'status', 'mesh', 'agents', 'build', 'deploy', 'lint', 'format', 'reset'
+  ];
 
   const currentFile = files.find(f => f.path === activeFile) || files[0];
   const code = currentFile?.content || '// No file selected';
@@ -30,12 +37,61 @@ export const Debugger: React.FC = () => {
     consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [debugState.logs]);
 
+  useEffect(() => {
+    if (consoleInput.trim()) {
+      const lastWord = consoleInput.split(' ').pop() || '';
+      if (lastWord.length > 0) {
+        const allOptions = [...COMMON_COMMANDS, ...Object.keys(debugState.variables)];
+        const filtered = allOptions.filter(opt => 
+          opt.toLowerCase().startsWith(lastWord.toLowerCase()) && opt !== lastWord
+        );
+        setSuggestions(filtered);
+      } else {
+        setSuggestions([]);
+      }
+    } else {
+      setSuggestions([]);
+    }
+    setSuggestionIndex(-1);
+  }, [consoleInput, debugState.variables]);
+
   const handleConsoleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (consoleInput.trim()) {
       evaluateExpression(consoleInput);
       setConsoleInput('');
+      setSuggestions([]);
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSuggestionIndex(prev => (prev + 1) % suggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        if (suggestionIndex >= 0) {
+          e.preventDefault();
+          applySuggestion(suggestions[suggestionIndex]);
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          applySuggestion(suggestions[0]);
+        }
+      } else if (e.key === 'Escape') {
+        setSuggestions([]);
+      }
+    }
+  };
+
+  const applySuggestion = (suggestion: string) => {
+    const words = consoleInput.split(' ');
+    words[words.length - 1] = suggestion;
+    setConsoleInput(words.join(' ') + ' ');
+    setSuggestions([]);
+    inputRef.current?.focus();
   };
 
   return (
@@ -226,18 +282,41 @@ export const Debugger: React.FC = () => {
             )}
             <div ref={consoleEndRef} />
           </div>
-          <form onSubmit={handleConsoleSubmit} className="p-2 border-t border-white/5 bg-black/40">
-            <div className="flex items-center gap-2 text-white/40">
-              <span className="text-[10px]">›</span>
-              <input 
-                type="text" 
-                value={consoleInput}
-                onChange={(e) => setConsoleInput(e.target.value)}
-                placeholder="Evaluate expression..." 
-                className="bg-transparent border-none focus:ring-0 w-full p-0 text-[10px] font-mono"
-              />
-            </div>
-          </form>
+          
+          <div className="relative">
+            {suggestions.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 bg-nexus-bg border-t border-white/5 p-1 shadow-2xl z-50">
+                {suggestions.map((s, i) => (
+                  <div 
+                    key={s}
+                    onClick={() => applySuggestion(s)}
+                    onMouseEnter={() => setSuggestionIndex(i)}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-mono cursor-pointer rounded flex items-center justify-between",
+                      i === suggestionIndex ? "bg-nexus-accent text-nexus-accent-contrast" : "text-white/60 hover:bg-white/5"
+                    )}
+                  >
+                    <span>{s}</span>
+                    <span className="opacity-40 text-[8px] uppercase">{COMMON_COMMANDS.includes(s) ? 'command' : 'variable'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <form onSubmit={handleConsoleSubmit} className="p-2 border-t border-white/5 bg-black/40">
+              <div className="flex items-center gap-2 text-white/40">
+                <span className="text-[10px]">›</span>
+                <input 
+                  ref={inputRef}
+                  type="text" 
+                  value={consoleInput}
+                  onChange={(e) => setConsoleInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Evaluate expression..." 
+                  className="bg-transparent border-none focus:ring-0 w-full p-0 text-[10px] font-mono"
+                />
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
