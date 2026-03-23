@@ -1,12 +1,14 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle } from 'lucide-react';
-import { useNexusStore } from '../store';
-import { cn } from '../lib/utils';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { useNexusStore } from '../../core/store';
+import { cn } from '../../lib/utils';
 import { UserProfile } from './UserProfile';
-import { auth } from '../firebase';
+import { auth } from '../../core/firebase';
 import { signOut } from 'firebase/auth';
 import { LogOut } from 'lucide-react';
+
+type SaveStatus = 'idle' | 'saving' | 'saved';
 
 export const Settings: React.FC = () => {
   const { 
@@ -40,8 +42,58 @@ export const Settings: React.FC = () => {
     usageCount,
     usageLimit
   } = useNexusStore();
-  const [activeSection, setActiveSection] = React.useState('project');
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  
+  const [activeSection, setActiveSection] = useState('project');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+
+  // Auto-save logic
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    setSaveStatus('saving');
+    
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    projectName, 
+    projectDescription, 
+    projectFramework, 
+    projectLanguage, 
+    theme, 
+    accentColor, 
+    autonomousMode, 
+    parallelSynthesis, 
+    notificationsEnabled, 
+    deployTarget
+  ]);
+
+  const handleBlur = () => {
+    if (saveStatus === 'saving') {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }
+  };
 
   if (!showSettings) return null;
 
@@ -99,7 +151,31 @@ export const Settings: React.FC = () => {
         {/* Content */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="p-6 border-b border-white/5 flex items-center justify-between">
-            <h3 className="text-lg font-bold capitalize">{activeSection}</h3>
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-bold capitalize">{activeSection}</h3>
+              <AnimatePresence mode="wait">
+                {saveStatus !== 'idle' && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10"
+                  >
+                    {saveStatus === 'saving' ? (
+                      <>
+                        <Loader2 size={10} className="text-nexus-accent animate-spin" />
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-white/40">Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={10} className="text-emerald-400" />
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-400">Changes Saved</span>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button 
               onClick={() => setShowSettings(false)}
               className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
@@ -135,7 +211,7 @@ export const Settings: React.FC = () => {
                   </div>
                   <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">
                     {usageCount >= usageLimit 
-                      ? "Plan limit reached. Upgrade to NEXUS Pro for unlimited builds." 
+                      ? "Plan limit reached. Upgrade to Odyseus Pro for unlimited builds." 
                       : `You have ${usageLimit - usageCount} builds remaining in your current cycle.`}
                   </p>
                 </div>
@@ -171,6 +247,7 @@ export const Settings: React.FC = () => {
                       type="text" 
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
+                      onBlur={handleBlur}
                       placeholder="Enter project name..."
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all placeholder:text-white/10" 
                     />
@@ -181,6 +258,7 @@ export const Settings: React.FC = () => {
                     <textarea 
                       value={projectDescription}
                       onChange={(e) => setProjectDescription(e.target.value)}
+                      onBlur={handleBlur}
                       rows={3}
                       placeholder="Describe the purpose of this ecosystem..."
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all resize-none placeholder:text-white/10" 
@@ -193,6 +271,7 @@ export const Settings: React.FC = () => {
                       <select 
                         value={projectFramework}
                         onChange={(e) => setProjectFramework(e.target.value)}
+                        onBlur={handleBlur}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all cursor-pointer"
                       >
                         <option>React + Vite</option>
@@ -207,6 +286,7 @@ export const Settings: React.FC = () => {
                       <select 
                         value={projectLanguage}
                         onChange={(e) => setProjectLanguage(e.target.value)}
+                        onBlur={handleBlur}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all cursor-pointer"
                       >
                         <option>TypeScript</option>
@@ -223,7 +303,7 @@ export const Settings: React.FC = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1">
                       <span className="block text-[8px] text-white/20 uppercase font-bold tracking-widest">Project ID</span>
-                      <span className="text-[10px] font-mono text-white/60">NX-{Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+                      <span className="text-[10px] font-mono text-white/60">OD-{Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
                     </div>
                     <div className="space-y-1">
                       <span className="block text-[8px] text-white/20 uppercase font-bold tracking-widest">Created</span>
@@ -333,6 +413,7 @@ export const Settings: React.FC = () => {
                         type="color" 
                         value={accentColor}
                         onChange={(e) => setAccentColor(e.target.value)}
+                        onBlur={handleBlur}
                         className="absolute inset-0 w-[150%] h-[150%] -translate-x-1/4 -translate-y-1/4 cursor-pointer bg-transparent border-none"
                       />
                     </div>
@@ -392,9 +473,10 @@ export const Settings: React.FC = () => {
                           <span className="text-xs font-medium">{agent.name} Agent</span>
                           <span className="text-[10px] text-white/20 uppercase font-bold tracking-widest">{agent.role}</span>
                         </div>
-                        <select 
+                      <select 
                           value={agent.model}
                           onChange={(e) => setAgentModel(agent.id, e.target.value)}
+                          onBlur={handleBlur}
                           className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-nexus-accent focus:outline-none cursor-pointer"
                         >
                           <option value="GPT-4o">GPT-4o</option>
@@ -450,10 +532,10 @@ export const Settings: React.FC = () => {
                 <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-6">
                   <div className="space-y-2">
                     <h4 className="font-bold text-sm">API Keys</h4>
-                    <p className="text-xs text-white/40">Manage your personal access tokens for the Nexus API.</p>
+                    <p className="text-xs text-white/40">Manage your personal access tokens for the Odyseus API.</p>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
-                    <code className="text-xs text-nexus-accent">nx_live_••••••••••••••••</code>
+                    <code className="text-xs text-nexus-accent">od_live_••••••••••••••••</code>
                     <button className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">Revoke</button>
                   </div>
                   <button className="w-full py-3 rounded-xl bg-nexus-accent/10 border border-nexus-accent/20 text-nexus-accent text-[10px] font-bold uppercase tracking-widest hover:bg-nexus-accent/20 transition-all">

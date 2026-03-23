@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Play, StepForward, ArrowDownLeft, ArrowUpRight, Square, Circle, Bug, Terminal, List, Variable, ChevronRight, AlertCircle } from 'lucide-react';
-import { useNexusStore } from '../store';
-import { cn } from '../lib/utils';
+import { useNexusStore } from '../../core/store';
+import { cn } from '../../lib/utils';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 

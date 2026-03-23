@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-white">System Error</h2>
               <p className="text-sm text-white/40">
-                {errorDetails ? `Firestore ${errorDetails.operationType} failed at ${errorDetails.path}` : 'An unexpected error occurred in the NEXUS mesh.'}
+                {errorDetails ? `Firestore ${errorDetails.operationType} failed at ${errorDetails.path}` : 'An unexpected error occurred in the Odyseus mesh.'}
               </p>
             </div>
             {errorDetails && (

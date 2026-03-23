@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odyseus-gateway
+  namespace: odyseus-mesh
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: odyseus-gateway
+  template:
+    metadata:
+      labels:
+        app: odyseus-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: odyseus/gateway:v1.2.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: odyseus-secrets
+              key: gemini-api-key
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odyseus-gateway-svc
+  namespace: odyseus-mesh
+spec:
+  selector:
+    app: odyseus-gateway
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
