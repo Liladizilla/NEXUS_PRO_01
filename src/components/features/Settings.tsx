@@ -124,21 +124,21 @@ export const Settings: React.FC = () => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
     >
-      <div className="relative w-full max-w-4xl h-[600px] bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex">
+      <div className="relative w-full max-w-5xl lg:h-[700px] h-full max-h-[90vh] bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row">
         {/* Sidebar */}
-        <div className="w-64 border-r border-white/5 bg-black/20 p-6 space-y-6">
-          <div className="flex items-center gap-2 px-2">
+        <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-white/5 bg-black/20 p-4 lg:p-6 flex lg:flex-col overflow-x-auto lg:overflow-y-auto no-scrollbar shrink-0">
+          <div className="hidden lg:flex items-center gap-2 px-2 mb-6">
             <SettingsIcon size={18} className="text-nexus-accent" />
             <span className="font-bold text-sm tracking-tight">Settings</span>
           </div>
           
-          <nav className="space-y-1">
+          <nav className="flex lg:flex-col gap-1 w-full">
             {sections.map((section) => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all",
+                  "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium whitespace-nowrap lg:w-full",
                   activeSection === section.id 
                     ? "bg-nexus-accent/10 text-nexus-accent border border-nexus-accent/20" 
                     : "text-white/40 hover:text-white/80 hover:bg-white/5"
@@ -152,8 +152,8 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="p-6 border-b border-white/5 flex items-center justify-between">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="p-4 lg:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
               <h3 className="text-lg font-bold capitalize">{activeSection}</h3>
               <AnimatePresence mode="wait">
@@ -556,11 +556,10 @@ export const Settings: React.FC = () => {
                           onBlur={handleBlur}
                           className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-nexus-accent focus:outline-none cursor-pointer"
                         >
-                          <option value="GPT-4o">GPT-4o</option>
-                          <option value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</option>
-                          <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
-                          <option value="Llama 3.1 405B">Llama 3.1 405B</option>
-                          <option value="DeepSeek V3">DeepSeek V3</option>
+                          <option value="Gemini 3 Flash">Gemini 3 Flash</option>
+                          <option value="Gemini 3.1 Pro">Gemini 3.1 Pro</option>
+                          <option value="GPT-4o">GPT-4o (Legacy)</option>
+                          <option value="Claude 3.5 Sonnet">Claude 3.5 (Legacy)</option>
                         </select>
                       </div>
                     ))}

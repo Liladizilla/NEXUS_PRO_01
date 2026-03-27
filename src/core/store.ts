@@ -59,6 +59,7 @@ interface NexusState {
   stagingUrl: string | null;
   feedback: string;
   userProfile: any | null;
+  isAuthLoading: boolean;
   githubConnected: boolean;
   githubUser: string | null;
   avatar: string | null;
@@ -85,6 +86,7 @@ interface NexusState {
   setStagingUrl: (url: string | null) => void;
   setFeedback: (feedback: string) => void;
   setUserProfile: (profile: any | null) => void;
+  setIsAuthLoading: (val: boolean) => void;
   setGithubConnected: (val: boolean) => void;
   setGithubUser: (user: string | null) => void;
   setAvatar: (avatar: string | null) => void;
@@ -150,11 +152,11 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   files: [],
   activeFile: null,
   agents: [
-    { id: 'architect', name: 'Architect', role: 'System Design', status: 'idle', model: 'Gemini 1.5 Pro' },
-    { id: 'frontend', name: 'Frontend', role: 'UI/UX Builder', status: 'idle', model: 'Claude 3.5 Sonnet' },
-    { id: 'backend', name: 'Backend', role: 'API & Logic', status: 'idle', model: 'GPT-4o' },
-    { id: 'debug', name: 'Debug', role: 'Error Correction', status: 'idle', model: 'Claude 3.5 Sonnet' },
-    { id: 'devops', name: 'DevOps', role: 'Deployment', status: 'idle', model: 'GPT-4o' },
+    { id: 'architect', name: 'Architect', role: 'System Design', status: 'idle', model: 'Gemini 3.1 Pro' },
+    { id: 'frontend', name: 'Frontend', role: 'UI/UX Builder', status: 'idle', model: 'Gemini 3 Flash' },
+    { id: 'backend', name: 'Backend', role: 'API & Logic', status: 'idle', model: 'Gemini 3.1 Pro' },
+    { id: 'debug', name: 'Debug', role: 'Error Correction', status: 'idle', model: 'Gemini 3 Flash' },
+    { id: 'devops', name: 'DevOps', role: 'Deployment', status: 'idle', model: 'Gemini 3.1 Pro' },
   ],
   logs: ['System initialized. Ready for input.'],
   isAuthenticated: false,
@@ -188,6 +190,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   stagingUrl: null,
   feedback: '',
   userProfile: null,
+  isAuthLoading: true,
   githubConnected: false,
   githubUser: null,
   avatar: null,
@@ -213,6 +216,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setStagingUrl: (url) => set({ stagingUrl: url }),
   setFeedback: (feedback) => set({ feedback }),
   setUserProfile: (profile) => set({ userProfile: profile }),
+  setIsAuthLoading: (val) => set({ isAuthLoading: val }),
   setGithubConnected: (val) => set({ githubConnected: val }),
   setGithubUser: (user) => set({ githubUser: user }),
   setAvatar: (avatar) => set({ avatar }),

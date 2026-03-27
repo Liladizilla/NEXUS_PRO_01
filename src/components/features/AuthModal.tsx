@@ -50,7 +50,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       await signInWithPopup(auth, provider);
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      console.error("Social login error:", err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('The sign-in popup was closed before completion. Please try again and ensure popups and third-party cookies are allowed in your browser.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError('Only one sign-in popup can be open at a time.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setError('The sign-in popup was blocked by your browser. Please allow popups for this site.');
+      } else {
+        setError(err.message || 'An unexpected error occurred during social login.');
+      }
     } finally {
       setLoading(false);
     }
