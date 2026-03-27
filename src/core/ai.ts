@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
 export interface GeneratedApp {
   projectName: string;
