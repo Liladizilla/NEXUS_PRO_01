@@ -48,7 +48,18 @@ export class QueueService {
       }
     }
 
-    const updatedTask = { ...task, status, progress, result, agents: agents || task.agents, updatedAt: new Date().toISOString() };
+    const updatedTask: any = { 
+      ...task, 
+      status, 
+      progress, 
+      agents: agents || task.agents || [], 
+      updatedAt: new Date().toISOString() 
+    };
+    
+    if (result !== undefined) {
+      updatedTask.result = result;
+    }
+
     this.tasks.set(id, updatedTask);
     this.evictCache();
     

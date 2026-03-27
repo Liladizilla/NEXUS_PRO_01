@@ -49,8 +49,35 @@ export const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState('project');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [hasSelectedApiKey, setHasSelectedApiKey] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
+
+  // Check for AI Studio API Key
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio?.hasSelectedApiKey) {
+        try {
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          setHasSelectedApiKey(hasKey);
+        } catch (err) {
+          console.error("Failed to check API key status:", err);
+        }
+      }
+    };
+    checkKey();
+  }, [showSettings]);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio?.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        setHasSelectedApiKey(true);
+      } catch (err) {
+        console.error("Failed to open key selection dialog:", err);
+      }
+    }
+  };
 
   // Auto-save logic
   useEffect(() => {
@@ -373,6 +400,44 @@ export const Settings: React.FC = () => {
               <h3 className="text-lg font-bold text-white uppercase tracking-wider">Security & API Keys</h3>
               <p className="text-xs text-white/40">Manage your access tokens and exclusive developer features.</p>
             </div>
+
+            {/* AI Studio Key Selection */}
+            {window.aistudio && (
+              <div className="p-6 rounded-xl bg-nexus-accent/5 border border-nexus-accent/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Gemini API Key (AI Studio)</h4>
+                    <p className="text-xs text-white/40">Required for high-reasoning models like Gemini 3.1 Pro.</p>
+                  </div>
+                  <div className={cn(
+                    "px-2 py-1 rounded text-[8px] font-bold uppercase tracking-wider",
+                    hasSelectedApiKey ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                  )}>
+                    {hasSelectedApiKey ? 'Key Selected' : 'No Key Selected'}
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-lg bg-black/40 border border-white/5 text-[10px] text-white/60 leading-relaxed">
+                  To use advanced orchestration features, you must select a valid Gemini API key from a paid Google Cloud project. 
+                  <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-nexus-accent hover:underline ml-1 inline-flex items-center gap-0.5">
+                    Learn about billing <ExternalLink size={8} />
+                  </a>
+                </div>
+
+                <button 
+                  onClick={handleSelectKey}
+                  className={cn(
+                    "w-full py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    hasSelectedApiKey 
+                      ? "bg-white/5 border border-white/10 text-white hover:bg-white/10" 
+                      : "bg-nexus-accent text-black hover:bg-nexus-accent/90"
+                  )}
+                >
+                  <Key size={14} />
+                  {hasSelectedApiKey ? 'Change Selected Key' : 'Select Gemini API Key'}
+                </button>
+              </div>
+            )}
 
             <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-6">
               <div className="flex items-center justify-between">

@@ -5,18 +5,19 @@ export class AIService {
   private ai: GoogleGenAI;
   
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
-      console.error("ODYSEUS MESH ERROR: GEMINI_API_KEY is not defined in the environment.");
+      console.error("ODYSEUS MESH ERROR: Neither GEMINI_API_KEY nor API_KEY is defined in the environment.");
     }
     this.ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
   }
 
   async generate(prompt: string, isHighThinking: boolean = false, agentModels?: Record<string, string>): Promise<string> {
-    if (!process.env.GEMINI_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) {
       return JSON.stringify({
         projectName: "API Key Missing",
-        files: [{ path: "ERROR.md", content: "# Configuration Error\n\nGEMINI_API_KEY is not set in the environment variables. Please add it to your Vercel project settings." }]
+        files: [{ path: "ERROR.md", content: "# Configuration Error\n\nNeither GEMINI_API_KEY nor API_KEY is set in the environment variables. Please add it to your project settings." }]
       });
     }
     try {
