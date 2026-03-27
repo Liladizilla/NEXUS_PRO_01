@@ -4,15 +4,24 @@ import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase
 export class QueueService {
   private tasks: Map<string, { status: string, result?: any, progress: number, agents?: any[] }> = new Map();
   private db: any;
+  private readonly MAX_CACHE_SIZE = 100;
 
   constructor(db: any) {
     this.db = db;
+  }
+
+  private evictCache() {
+    if (this.tasks.size > this.MAX_CACHE_SIZE) {
+      const firstKey = this.tasks.keys().next().value;
+      if (firstKey) this.tasks.delete(firstKey);
+    }
   }
 
   async createTask() {
     const id = uuidv4();
     const initialTask = { status: 'queued', progress: 0, createdAt: new Date().toISOString() };
     this.tasks.set(id, initialTask);
+    this.evictCache();
     
     if (this.db) {
       try {
@@ -26,8 +35,22 @@ export class QueueService {
 
   async updateTask(id: string, status: string, progress: number, result?: any, agents?: any[]) {
     const task = this.tasks.get(id) || { status, progress };
+    
+    // Space Check: Firestore has a 1MB limit per document.
+    if (result) {
+      const size = Buffer.byteLength(JSON.stringify(result));
+      if (size > 800000) { // ~800KB warning
+        console.warn(`\x1b[33m[ODYSEUS QUEUE]\x1b[0m Task ${id} result size (${(size / 1024).toFixed(2)} KB) is approaching Firestore 1MB limit.`);
+        if (size > 1000000) {
+          console.error(`\x1b[31m[ODYSEUS QUEUE]\x1b[0m Task ${id} result size exceeds 1MB. Storage will fail.`);
+          // In a real app, we would offload to Firebase Storage here.
+        }
+      }
+    }
+
     const updatedTask = { ...task, status, progress, result, agents: agents || task.agents, updatedAt: new Date().toISOString() };
     this.tasks.set(id, updatedTask);
+    this.evictCache();
     
     if (this.db) {
       try {
