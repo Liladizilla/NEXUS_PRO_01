@@ -80,13 +80,30 @@ import { AIChat } from './components/features/AIChat';
 import { Paywall } from './components/features/Paywall';
 import { Settings } from './components/features/Settings';
 import { AuthModal } from './components/features/AuthModal';
+import { AuthPage } from './components/features/AuthPage';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
 import { Debugger } from './components/features/Debugger';
 import { useNexusStore, AgentStatus } from './core/store';
 import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
-import { auth, googleProvider, syncUserProfile, syncApiKey } from './core/firebase';
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  auth, 
+  googleProvider, 
+  githubProvider,
+  syncUserProfile, 
+  syncApiKey,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  signOut,
+  doc,
+  db,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from './core/firebase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
@@ -100,6 +117,11 @@ function cn(...inputs: ClassValue[]) {
 // --- Components ---
 
 const Intro = ({ onComplete }: { onComplete: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 4500); // Fallback if animation fails
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
   return (
     <motion.div 
       initial={{ opacity: 1 }}
@@ -131,109 +153,6 @@ const Intro = ({ onComplete }: { onComplete: () => void }) => {
         transition={{ delay: 1, duration: 2 }}
         className="h-0.5 bg-nexus-accent mt-4 rounded-full"
       />
-    </motion.div>
-  );
-};
-
-const AuthPage = ({ onLogin }: { onLogin: (email: string) => void }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('');
-
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true);
-    setLoadingText(`Connecting to ${provider} Gateway...`);
-    
-    setTimeout(() => {
-      setLoadingText(`Authenticating with ${provider} Identity...`);
-      setTimeout(() => {
-        setLoadingText('Finalizing Odyseus Handshake...');
-        setTimeout(() => {
-          onLogin(`${provider.toLowerCase()}-user@nexus.ai`);
-          setIsLoading(false);
-        }, 800);
-      }, 1000);
-    }, 1200);
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="fixed inset-0 z-[150] bg-nexus-bg flex items-center justify-center p-6"
-    >
-      <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 border-nexus-accent/20 relative overflow-hidden">
-        {isLoading && (
-          <div className="absolute inset-0 z-50 bg-nexus-bg/80 backdrop-blur-md flex flex-col items-center justify-center space-y-4">
-            <div className="w-12 h-12 border-4 border-nexus-accent/20 border-t-nexus-accent rounded-full animate-spin"></div>
-            <p className="text-nexus-accent font-bold text-xs tracking-widest uppercase animate-pulse">{loadingText}</p>
-          </div>
-        )}
-
-        <div className="text-center space-y-2">
-          <Zap size={40} className="text-nexus-accent mx-auto mb-4" />
-          <h2 className="text-3xl font-black tracking-tight">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p className="text-white/40 text-sm">Access the world's most stable software builder OS</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Email Address</label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-white/5 border border-nexus-border rounded-xl px-4 py-3 text-sm focus:border-nexus-accent/50 transition-colors"
-              placeholder="name@company.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white/5 border border-nexus-border rounded-xl px-4 py-3 text-sm focus:border-nexus-accent/50 transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
-          <button 
-            onClick={() => onLogin(email || 'user@nexus.ai')}
-            className="w-full bg-nexus-accent text-nexus-accent-contrast font-bold py-3 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all glow-accent"
-          >
-            {isLogin ? 'Sign In' : 'Create Account'}
-          </button>
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-nexus-border"></div></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-nexus-bg px-2 text-white/20">Or continue with</span></div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <button 
-            onClick={() => handleSocialLogin('Google')}
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
-          >
-            <Globe size={14} /> Google
-          </button>
-          <button 
-            onClick={() => handleSocialLogin('Apple')}
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
-          >
-            <Smartphone size={14} /> Apple
-          </button>
-        </div>
-
-        <p className="text-center text-xs text-white/40">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-          <button onClick={() => setIsLogin(!isLogin)} className="text-nexus-accent font-bold hover:underline">
-            {isLogin ? 'Sign Up' : 'Log In'}
-          </button>
-        </p>
-      </div>
     </motion.div>
   );
 };
@@ -453,6 +372,7 @@ export default function App() {
     stagingUrl, setStagingUrl,
     feedback, setFeedback,
     userProfile, setUserProfile,
+    isAuthLoading, setIsAuthLoading,
     isHighThinking, setIsHighThinking,
     accentColor,
     reset,
@@ -465,34 +385,67 @@ export default function App() {
     setApiKeyData
   } = useNexusStore();
 
+  const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        useNexusStore.setState({ isAuthenticated: true });
-        const unsubscribeProfile = syncUserProfile(user, (profile) => {
-          setUserProfile(profile);
-        });
-        const unsubscribeApiKey = syncApiKey(user.uid, (keyData) => {
-          if (keyData) {
-            setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
+    let unsubscribeProfile: (() => void) | null = null;
+    let unsubscribeApiKey: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth State Changed:", user ? `Logged in as ${user.email}` : "Logged out");
+      setIsAuthLoading(true);
+      
+      try {
+        // Clean up existing listeners if user changes
+        if (unsubscribeProfile) unsubscribeProfile();
+        if (unsubscribeApiKey) unsubscribeApiKey();
+        unsubscribeProfile = null;
+        unsubscribeApiKey = null;
+
+        if (user) {
+          // Ensure user profile exists in Firestore
+          const userRef = doc(db, 'users', user.uid);
+          const snapshot = await getDoc(userRef);
+          if (!snapshot.exists()) {
+            await setDoc(userRef, {
+              uid: user.uid,
+              displayName: user.displayName || user.email?.split('@')[0] || 'Odyseus Architect',
+              email: user.email || '',
+              photoURL: user.photoURL || null,
+              updatedAt: serverTimestamp()
+            });
           }
-        });
-        return () => {
-          unsubscribeProfile();
-          unsubscribeApiKey();
-        };
-      } else {
-        useNexusStore.setState({ isAuthenticated: false });
-        setUserProfile(null);
-        setApiKeyData(null, null);
+
+          useNexusStore.getState().login(user.email || 'user@odyseus.ai');
+          
+          unsubscribeProfile = syncUserProfile(user, (profile) => {
+            setUserProfile(profile);
+          });
+          unsubscribeApiKey = syncApiKey(user.uid, (keyData) => {
+            if (keyData) {
+              setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
+            }
+          });
+        } else {
+          useNexusStore.getState().logout();
+          setUserProfile(null);
+          setApiKeyData(null, null);
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      } finally {
+        setIsAuthLoading(false);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+      if (unsubscribeApiKey) unsubscribeApiKey();
+    };
   }, []);
 
   const handleLogin = () => {
@@ -605,6 +558,12 @@ export default function App() {
     addLog(`Starting generation for: ${prompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
+      // Derive agent models for orchestration
+      const agentModels = agents.reduce((acc, agent) => {
+        acc[agent.id] = agent.model;
+        return acc;
+      }, {} as Record<string, string>);
+
       const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress) => {
         setBuildStatus(status);
         setBuildProgress(progress);
@@ -620,7 +579,7 @@ export default function App() {
           updateAgent('debug', { status: 'completed' });
           updateAgent('devops', { status: 'working', lastAction: 'Deploying to staging...' });
         }
-      });
+      }, agentModels);
       
       // Update UI with provisioned agents from backend
       setAgents(plan.agents);
@@ -631,7 +590,7 @@ export default function App() {
       setFiles(result.files);
       if (result.files.length > 0) setActiveFile(result.files[0].path);
       
-      const finalStagingUrl = result.stagingUrl || `https://staging-${result.projectName.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(7)}.nexus-preview.app`;
+      const finalStagingUrl = result.stagingUrl || `${window.location.origin}/staging/${result.projectName.toLowerCase().replace(/\s+/g, '-')}`;
       setStagingUrl(finalStagingUrl);
       addLog(`CD: Successfully deployed to staging: ${finalStagingUrl}`);
       
@@ -676,116 +635,100 @@ export default function App() {
   };
 
   const handleDebug = async () => {
+    if (!currentFile) return;
     setIsGenerating(true);
-    addLog("Debug Agent: Initializing runtime debugger...");
-    updateAgent('debug', { status: 'working', lastAction: 'Attaching debugger...' });
-    await new Promise(r => setTimeout(r, 1500));
-    updateAgent('debug', { status: 'completed' });
-    addLog("Debug Agent: Debugger attached. Switching to Debug view.");
-    setIsGenerating(false);
-    setActiveTab('debug');
-    setDebugActive(true);
-    setCurrentLine(1);
-    setDebugVariables({
-      projectName: projectName,
-      isPro: isPro,
-      agentsCount: agents.length,
-      timestamp: Date.now()
-    });
-    addDebugLog("Debugger: Runtime session started.");
-  };
-
-  const handleFormat = () => {
-    if (!currentFile) return;
-    addLog(`System: Formatting ${currentFile.path}...`);
+    addLog(`Debug Agent: Analyzing ${currentFile.path} for potential issues...`);
+    updateAgent('debug', { status: 'working', lastAction: 'Analyzing code...' });
     
-    let formatted = currentFile.content;
-    const lang = currentFile.language?.toLowerCase() || '';
-
-    // Basic regex-based formatter for demonstration
-    // In a real app, we'd use prettier or language-specific formatters
-    if (['javascript', 'typescript', 'json', 'css', 'html'].includes(lang)) {
-      // Simple indentation fix
-      let indent = 0;
-      formatted = currentFile.content
-        .split('\n')
-        .map(line => {
-          line = line.trim();
-          if (line.endsWith('}') || line.endsWith(']')) indent = Math.max(0, indent - 1);
-          const newLine = '  '.repeat(indent) + line;
-          if (line.endsWith('{') || line.endsWith('[')) indent++;
-          return newLine;
-        })
-        .join('\n');
-    } else if (lang === 'python') {
-      // Basic python cleanup
-      formatted = currentFile.content
-        .split('\n')
-        .map(line => line.trimEnd())
-        .join('\n');
-    }
-
-    const newFiles = files.map(f => f.path === activeFile ? { ...f, content: formatted } : f);
-    setFiles(newFiles);
-    addLog(`System: Formatted ${currentFile.path} successfully.`);
-  };
-
-  const handleLint = () => {
-    if (!currentFile) return;
-    addLog(`System: Linting ${currentFile.path}...`);
-    
-    const results: { line: number; message: string; severity: 'error' | 'warning' }[] = [];
-    const lines = currentFile.content.split('\n');
-    const lang = currentFile.language?.toLowerCase() || '';
-
-    lines.forEach((line, i) => {
-      const trimmed = line.trim();
+    try {
+      const res = await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: currentFile.content })
+      });
       
-      // Generic rules
-      if (line.length > 120) {
-        results.push({ line: i + 1, message: 'Line exceeds 120 characters', severity: 'warning' });
+      const { issues } = await res.json();
+      
+      if (issues && issues.length > 0) {
+        addLog(`Debug Agent: Found ${issues.length} potential issues.`);
+        setDebugVariables({ issues });
+        issues.forEach((issue: any) => {
+          addDebugLog(`[${issue.severity.toUpperCase()}] Line ${issue.line}: ${issue.message} | Fix: ${issue.fix}`);
+        });
+      } else {
+        addLog("Debug Agent: No critical issues detected in current scope.");
       }
-      if (trimmed.includes('console.log')) {
-        results.push({ line: i + 1, message: 'Unexpected console statement', severity: 'warning' });
-      }
-      if (trimmed.includes('TODO')) {
-        results.push({ line: i + 1, message: 'Unresolved TODO comment', severity: 'warning' });
-      }
-
-      // Language specific rules
-      if (['javascript', 'typescript'].includes(lang)) {
-        if (trimmed.includes('==') && !trimmed.includes('===')) {
-          results.push({ line: i + 1, message: 'Use === instead of ==', severity: 'warning' });
-        }
-        if (trimmed.includes('var ')) {
-          results.push({ line: i + 1, message: 'Use let or const instead of var', severity: 'error' });
-        }
-      } else if (lang === 'python') {
-        if (trimmed.endsWith(';') && !trimmed.includes('#')) {
-          results.push({ line: i + 1, message: 'Unnecessary semicolon in Python', severity: 'warning' });
-        }
-        if (trimmed.startsWith('function ')) {
-          results.push({ line: i + 1, message: 'Use "def" instead of "function" in Python', severity: 'error' });
-        }
-      } else if (['c', 'cpp', 'rust', 'go'].includes(lang)) {
-        if (trimmed.includes('goto ')) {
-          results.push({ line: i + 1, message: 'Avoid using goto statements', severity: 'error' });
-        }
-      }
-    });
-
-    setLintResults(currentFile.path, results);
-    
-    if (results.length > 0) {
-      const errors = results.filter(r => r.severity === 'error').length;
-      const warnings = results.filter(r => r.severity === 'warning').length;
-      addLog(`Lint: Found ${errors} errors and ${warnings} warnings in ${currentFile.path}.`);
-    } else {
-      addLog(`Lint: No issues found in ${currentFile.path}.`);
+      
+      updateAgent('debug', { status: 'completed' });
+      setActiveTab('debug');
+      setDebugActive(true);
+      setCurrentLine(issues?.[0]?.line || 1);
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const currentFile = files.find(f => f.path === activeFile);
+  const handleFormat = async () => {
+    if (!currentFile) return;
+    setIsGenerating(true);
+    addLog(`System: Formatting ${currentFile.path} using AI Mesh...`);
+    
+    try {
+      const response = await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          code: currentFile.content, 
+          error: "Format this code perfectly according to industry standards. Return the formatted code in a 'fix' field of a single issue." 
+        })
+      });
+      
+      const { issues } = await response.json();
+      if (issues && issues[0]?.fix) {
+        const formatted = issues[0].fix;
+        const newFiles = files.map(f => f.path === activeFile ? { ...f, content: formatted } : f);
+        setFiles(newFiles);
+        addLog(`System: Formatted ${currentFile.path} successfully.`);
+      } else {
+        addLog("System: Formatting failed or no changes needed.");
+      }
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleLint = async () => {
+    if (!currentFile) return;
+    setIsGenerating(true);
+    addLog(`System: Linting ${currentFile.path} using AI Mesh...`);
+    
+    try {
+      const res = await fetch('/api/lint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: currentFile.content, language: currentFile.language })
+      });
+      
+      const { results } = await res.json();
+      setLintResults(currentFile.path, results || []);
+      
+      if (results && results.length > 0) {
+        const errors = results.filter((r: any) => r.severity === 'error').length;
+        const warnings = results.filter((r: any) => r.severity === 'warning').length;
+        addLog(`Lint: Found ${errors} errors and ${warnings} warnings in ${currentFile.path}.`);
+      } else {
+        addLog(`Lint: No issues found in ${currentFile.path}.`);
+      }
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const widgetLibrary = [
     { id: 'auth-form', name: 'Auth Form', category: 'Forms', icon: Shield, desc: 'Login/Signup with OAuth' },
@@ -807,12 +750,19 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-nexus-bg text-white selection:bg-nexus-accent/30">
+    <div className="flex h-screen w-full bg-nexus-bg text-white selection:bg-nexus-accent/30 overflow-hidden">
       <AnimatePresence>
         {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
       </AnimatePresence>
 
-      {!showIntro && !isAuthenticated && <AuthPage onLogin={login} />}
+      {!showIntro && isAuthLoading && (
+        <div className="fixed inset-0 z-[150] bg-nexus-bg flex flex-col items-center justify-center space-y-4">
+          <div className="w-12 h-12 border-4 border-nexus-accent/20 border-t-nexus-accent rounded-full animate-spin"></div>
+          <p className="text-nexus-accent font-bold text-xs tracking-widest uppercase animate-pulse">Initializing Nexus OS...</p>
+        </div>
+      )}
+
+      {!showIntro && !isAuthLoading && !isAuthenticated && <AuthPage />}
       
       <AnimatePresence>
         {showPaywall && <Paywall />}
@@ -839,17 +789,46 @@ export default function App() {
         {showHistory && <HistoryModal />}
       </AnimatePresence>
 
+      {/* --- Mobile Header --- */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-nexus-border z-[60] flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50">
+            <Zap size={18} className="text-nexus-accent" />
+          </div>
+          <span className="font-bold tracking-tighter">Odyseus</span>
+        </div>
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 rounded-lg bg-white/5 border border-nexus-border"
+        >
+          {isSidebarOpen ? <X size={20} /> : <Layout size={20} />}
+        </button>
+      </div>
+
       {/* --- Left Sidebar --- */}
       <motion.div 
         initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 60 }}
-        className="flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-20"
+        animate={{ 
+          width: isSidebarOpen ? 280 : 60,
+          x: (window.innerWidth < 1024 && !isSidebarOpen) ? -280 : 0
+        }}
+        className={cn(
+          "flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-[70] lg:z-20",
+          "fixed lg:relative inset-y-0 left-0 lg:translate-x-0 transition-transform lg:transition-none",
+          !isSidebarOpen && "lg:w-[60px]"
+        )}
       >
-        <div className="flex items-center gap-3 p-4 border-b border-nexus-border h-14">
+        <div className="hidden lg:flex items-center gap-3 p-4 border-b border-nexus-border h-14">
           <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50 glow-accent">
             <Zap size={18} className="text-nexus-accent" />
           </div>
           {isSidebarOpen && <span className="font-bold tracking-tighter text-lg">Odyseus AI</span>}
+        </div>
+        
+        {/* Mobile Sidebar Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-nexus-border">
+          <span className="font-bold tracking-tighter">Navigation</span>
+          <button onClick={() => setIsSidebarOpen(false)}><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -948,10 +927,10 @@ export default function App() {
       </motion.div>
 
       {/* --- Main Content --- */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div className="flex-1 flex flex-col min-w-0 relative pt-14 lg:pt-0">
         {/* Header / Tabs */}
-        <div className="h-14 border-b border-nexus-border flex items-center justify-between px-6 bg-black/10 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
+        <div className="h-14 border-b border-nexus-border flex items-center justify-between px-4 lg:px-6 bg-black/10 backdrop-blur-sm overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex bg-white/5 p-1 rounded-lg border border-nexus-border">
               <button 
                 onClick={() => setActiveTab('design')}
@@ -996,8 +975,8 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Live System
             </div>
@@ -1165,7 +1144,7 @@ export default function App() {
                           View All
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-4xl mt-4">
                         {templates.slice(0, 3).map((template) => {
                           const Icon = (template.icon === 'ShoppingBag' ? ShoppingBag : 
                                        template.icon === 'Users' ? Users : 
@@ -1204,7 +1183,7 @@ export default function App() {
                           View All
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {widgetLibrary.map(widget => (
                           <div 
                             key={widget.id} 
