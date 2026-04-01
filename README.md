@@ -1,4 +1,5 @@
 ODYSEUS AI – AI THAT BUILDS SOFTWARE WITH YOU
+
 Odyseus AI is a development platform that turns ideas into working software in real time.
 
 Instead of writing everything manually, you describe what you want to build, and a team of AI agents starts working on it immediately. Each agent handles a different part of the process, including system design, frontend, backend, debugging, and deployment.
