@@ -113,33 +113,67 @@ export const TaskModal: React.FC = () => {
 };
 
 export const HistoryModal: React.FC = () => {
-  const { showHistory, setShowHistory } = useNexusStore();
+  const { showHistory, setShowHistory, userProjects, loadProject, currentProjectId } = useNexusStore();
+  
   if (!showHistory) return null;
 
   return (
-    <Modal title="Project History" onClose={() => setShowHistory(false)}>
-      <div className="space-y-4">
-        {[
-          { time: '2 mins ago', action: 'Synthesis Completed', status: 'success', icon: CheckCircle2 },
-          { time: '15 mins ago', action: 'Agent Mesh Optimized', status: 'success', icon: CheckCircle2 },
-          { time: '1 hour ago', action: 'Build Failed: Dependency Conflict', status: 'error', icon: AlertCircle },
-          { time: '3 hours ago', action: 'New Project Initialized', status: 'pending', icon: Clock },
-        ].map((h, i) => (
-          <div key={i} className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
-            <div className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center",
-              h.status === 'success' ? "bg-emerald-500/20 text-emerald-500" :
-              h.status === 'error' ? "bg-rose-500/20 text-rose-500" : "bg-white/10 text-white/40"
-            )}>
-              <h.icon size={20} />
+    <Modal title="My Projects" onClose={() => setShowHistory(false)}>
+      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+        {userProjects.length === 0 ? (
+          <div className="text-center py-12 space-y-4">
+            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto">
+              <History size={32} className="text-white/20" />
             </div>
-            <div>
-              <h4 className="font-bold text-sm">{h.action}</h4>
-              <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">{h.time}</p>
-            </div>
-            <button className="ml-auto text-[10px] font-bold uppercase tracking-widest text-nexus-accent hover:underline">Restore</button>
+            <p className="text-xs text-white/40 uppercase font-bold tracking-widest">No projects found in your ecosystem.</p>
           </div>
-        ))}
+        ) : (
+          userProjects.map((project) => (
+            <div 
+              key={project.id} 
+              className={cn(
+                "flex items-center gap-4 p-4 rounded-2xl border transition-all group",
+                currentProjectId === project.id 
+                  ? "bg-nexus-accent/10 border-nexus-accent/30 shadow-[0_0_15px_rgba(0,240,255,0.1)]" 
+                  : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10"
+              )}
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center",
+                currentProjectId === project.id ? "bg-nexus-accent/20 text-nexus-accent" : "bg-white/10 text-white/40"
+              )}>
+                <LayoutDashboard size={20} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-sm truncate">{project.name}</h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[8px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 font-bold uppercase tracking-widest border border-white/5">
+                    {project.framework}
+                  </span>
+                  <span className="text-[8px] text-white/20 uppercase font-bold tracking-widest">
+                    {new Date(project.updatedAt?.seconds * 1000 || Date.now()).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              {currentProjectId === project.id ? (
+                <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-nexus-accent">
+                  <CheckCircle2 size={12} />
+                  Active
+                </div>
+              ) : (
+                <button 
+                  onClick={() => {
+                    loadProject(project.id);
+                    setShowHistory(false);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-nexus-accent/10 border border-nexus-accent/20 text-[10px] font-bold uppercase tracking-widest text-nexus-accent hover:bg-nexus-accent hover:text-nexus-accent-contrast transition-all opacity-0 group-hover:opacity-100"
+                >
+                  Load
+                </button>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </Modal>
   );

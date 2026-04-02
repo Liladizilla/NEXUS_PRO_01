@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --nexus-accent: #00f2ff;
-  --nexus-accent-contrast: black;
+  --nexus-accent: #3b82f6;
+  --nexus-accent-contrast: white;
 }
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-nexus-bg: #050505;
-  --color-nexus-panel: rgba(15, 15, 15, 0.7);
+  --color-nexus-bg: #000000;
+  --color-nexus-panel: rgba(10, 10, 10, 0.8);
   --color-nexus-accent: var(--nexus-accent);
   --color-nexus-accent-contrast: var(--nexus-accent-contrast);
-  --color-nexus-border: rgba(255, 255, 255, 0.1);
+  --color-nexus-border: rgba(255, 255, 255, 0.08);
 }
 
 @layer base {
@@ -24,11 +24,15 @@
 }
 
 .glass {
-  @apply bg-nexus-panel backdrop-blur-xl border border-nexus-border;
+  @apply bg-nexus-panel backdrop-blur-2xl border border-nexus-border;
 }
 
 .glow-accent {
-  box-shadow: 0 0 15px var(--nexus-accent);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
 }
 
 ::-webkit-scrollbar {
@@ -41,5 +45,29 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+  @apply bg-white/5 rounded-full hover:bg-white/10 transition-colors;
+}
+
+.markdown-body {
+  @apply text-sm leading-relaxed text-white/80;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  @apply font-bold text-white mt-4 mb-2;
+}
+
+.markdown-body p {
+  @apply mb-4;
+}
+
+.markdown-body code {
+  @apply bg-white/5 px-1.5 py-0.5 rounded font-mono text-xs text-nexus-accent;
+}
+
+.markdown-body pre {
+  @apply bg-white/5 p-4 rounded-xl border border-white/5 my-4 overflow-x-auto;
+}
+
+.markdown-body ul, .markdown-body ol {
+  @apply pl-4 mb-4 list-disc;
 }

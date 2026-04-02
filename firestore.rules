@@ -72,6 +72,11 @@ service cloud.firestore {
     // ===============================================================
     // Rules
     // ===============================================================
+    
+    // Connection Test Collection
+    match /test/connection {
+      allow read: if true;
+    }
 
     match /users/{userId} {
       // Only the owner can read their own profile (PII protection)
@@ -99,6 +104,25 @@ service cloud.firestore {
                     request.resource.data.lastGeneratedAt == request.time &&
                     // Ensure it's been at least 24 hours since the last generation
                     (request.time >= resource.data.lastGeneratedAt + duration.value(24, 'h'));
+    }
+
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      allow create: if isAuthenticated() && 
+                    request.resource.data.ownerId == request.auth.uid &&
+                    hasRequiredFields(['id', 'ownerId', 'name']) &&
+                    request.resource.data.createdAt == request.time &&
+                    request.resource.data.updatedAt == request.time;
+      allow update: if isAuthenticated() && 
+                    resource.data.ownerId == request.auth.uid &&
+                    request.resource.data.ownerId == resource.data.ownerId &&
+                    request.resource.data.updatedAt == request.time;
+      allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+
+      match /files/{fileId} {
+        allow read: if isAuthenticated() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+        allow write: if isAuthenticated() && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+      }
     }
 
     // Task Queue Persistence (Used by backend simulation)
