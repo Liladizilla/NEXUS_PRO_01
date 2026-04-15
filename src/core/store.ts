@@ -278,8 +278,22 @@ export const useNexusStore = create<NexusState>((set, get) => ({
       get().addLog(`Security Error: ${error instanceof Error ? error.message : 'Failed to generate key'}`);
     }
   },
-  setTheme: (theme) => set({ theme }),
+  setTheme: (theme) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    set({ theme });
+  },
   setAccentColor: (color) => {
+    // Map color to CSS variable name
+    const colorMap: Record<string, string> = {
+      '#00f2ff': 'cyan',
+      '#a855f7': 'purple',
+      '#ec4899': 'pink',
+      '#3b82f6': 'blue',
+      '#10b981': 'green',
+    };
+    
+    const colorName = colorMap[color.toLowerCase()] || 'cyan';
+    document.documentElement.setAttribute('data-accent-color', colorName);
     document.documentElement.style.setProperty('--nexus-accent', color);
     document.documentElement.style.setProperty('--nexus-accent-contrast', getContrastColor(color));
     set({ accentColor: color });

@@ -1,25 +1,39 @@
 @import "tailwindcss";
 
 :root {
+  /* Accent color - can be overridden dynamically */
   --nexus-accent: #00f2ff;
   --nexus-accent-contrast: black;
+  --nexus-accent-rgb: 0, 242, 255;
+  
+  /* Dark theme (default) */
+  --nexus-bg: #050505;
+  --nexus-bg-secondary: #0a0a0a;
+  --nexus-panel: rgba(15, 15, 15, 0.7);
+  --nexus-border: rgba(255, 255, 255, 0.1);
+  --nexus-text: #ffffff;
+  --nexus-text-muted: rgba(255, 255, 255, 0.6);
 }
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-nexus-bg: #050505;
-  --color-nexus-panel: rgba(15, 15, 15, 0.7);
+  --color-nexus-bg: var(--nexus-bg);
+  --color-nexus-bg-secondary: var(--nexus-bg-secondary);
+  --color-nexus-panel: var(--nexus-panel);
   --color-nexus-accent: var(--nexus-accent);
   --color-nexus-accent-contrast: var(--nexus-accent-contrast);
-  --color-nexus-border: rgba(255, 255, 255, 0.1);
+  --color-nexus-border: var(--nexus-border);
+  --color-nexus-text: var(--nexus-text);
+  --color-nexus-text-muted: var(--nexus-text-muted);
 }
 
 @layer base {
   body {
-    @apply bg-nexus-bg text-white antialiased overflow-hidden;
+    @apply bg-nexus-bg text-nexus-text antialiased overflow-hidden;
     font-family: var(--font-sans);
+    color: var(--nexus-text);
   }
 }
 
@@ -29,6 +43,42 @@
 
 .glow-accent {
   box-shadow: 0 0 15px var(--nexus-accent);
+}
+
+/* Support for light theme */
+[data-theme="light"] {
+  --nexus-bg: #f5f5f5;
+  --nexus-bg-secondary: #efefef;
+  --nexus-panel: rgba(255, 255, 255, 0.9);
+  --nexus-border: rgba(0, 0, 0, 0.1);
+  --nexus-text: #1a1a1a;
+  --nexus-text-muted: rgba(0, 0, 0, 0.6);
+}
+
+/* Accent color variants */
+[data-accent-color="cyan"] {
+  --nexus-accent: #00f2ff;
+  --nexus-accent-contrast: black;
+}
+
+[data-accent-color="purple"] {
+  --nexus-accent: #a855f7;
+  --nexus-accent-contrast: white;
+}
+
+[data-accent-color="pink"] {
+  --nexus-accent: #ec4899;
+  --nexus-accent-contrast: white;
+}
+
+[data-accent-color="blue"] {
+  --nexus-accent: #3b82f6;
+  --nexus-accent-contrast: white;
+}
+
+[data-accent-color="green"] {
+  --nexus-accent: #10b981;
+  --nexus-accent-contrast: white;
 }
 
 ::-webkit-scrollbar {
@@ -42,4 +92,23 @@
 
 ::-webkit-scrollbar-thumb {
   @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+  background: rgba(var(--nexus-accent-rgb), 0.3);
+  
+  &:hover {
+    background: rgba(var(--nexus-accent-rgb), 0.5);
+  }
+}
+
+/* Color picker styling */
+.color-picker-wrapper {
+  overflow: hidden;
+  border-radius: 9999px;
+}
+
+.color-picker-input {
+  @apply absolute inset-0 w-[150%] h-[150%] -translate-x-1/4 -translate-y-1/4 cursor-pointer bg-transparent border-none;
+}
+
+.color-preset-button {
+  /* Preset button styling handled by Tailwind classes */
 }
