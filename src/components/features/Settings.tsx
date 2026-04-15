@@ -122,7 +122,7 @@ export const Settings: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+      className="fixed inset-0 z-110 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
     >
       <div className="relative w-full max-w-4xl h-[600px] bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex">
         {/* Sidebar */}
@@ -137,6 +137,7 @@ export const Settings: React.FC = () => {
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
+                title={`Navigate to ${section.name} settings`}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all",
                   activeSection === section.id 
@@ -181,6 +182,7 @@ export const Settings: React.FC = () => {
             </div>
             <button 
               onClick={() => setShowSettings(false)}
+              title="Close settings"
               className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
             >
               <X size={20} />
@@ -192,7 +194,7 @@ export const Settings: React.FC = () => {
               <div className="space-y-8">
                 <UserProfile />
                 
-                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="p-6 rounded-2xl bg-white/2 border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h5 className="text-[10px] font-bold uppercase tracking-widest text-white/40">AI Build Usage</h5>
                     <span className={cn(
@@ -275,6 +277,7 @@ export const Settings: React.FC = () => {
                         value={projectFramework}
                         onChange={(e) => setProjectFramework(e.target.value)}
                         onBlur={handleBlur}
+                        title="Select project framework"
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all cursor-pointer"
                       >
                         <option>React + Vite</option>
@@ -290,6 +293,7 @@ export const Settings: React.FC = () => {
                         value={projectLanguage}
                         onChange={(e) => setProjectLanguage(e.target.value)}
                         onBlur={handleBlur}
+                        title="Select primary language"
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all cursor-pointer"
                       >
                         <option>TypeScript</option>
@@ -301,7 +305,7 @@ export const Settings: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-4">
+                <div className="p-6 rounded-2xl bg-white/2 border border-white/5 space-y-4">
                   <h5 className="text-[10px] font-bold uppercase tracking-widest text-white/40">Ecosystem Metadata</h5>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-1">
@@ -394,6 +398,7 @@ export const Settings: React.FC = () => {
                         navigator.clipboard.writeText(freeApiKey);
                         // Show toast or feedback
                       }}
+                      title="Copy API key"
                       className="p-2 hover:bg-white/10 rounded transition-colors text-white/40 group-hover:text-white"
                     >
                       <Copy size={14} />
@@ -473,25 +478,31 @@ export const Settings: React.FC = () => {
                 <div className="space-y-4">
                   <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Accent Color</h5>
                   <div className="flex items-center gap-3 flex-wrap">
-                    {['#00F0FF', '#FF00FF', '#00FF00', '#FFD700', '#FF4500', '#333333', '#1A1A1A', '#4F46E5'].map(color => (
+                    {['#00f2ff', '#a855f7', '#ec4899', '#3b82f6', '#10b981'].map(color => (
                       <button
                         key={color}
                         onClick={() => setAccentColor(color)}
                         className={cn(
                           "w-10 h-10 rounded-full border-2 transition-all",
-                          accentColor === color ? "border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-transparent hover:scale-105"
+                          accentColor.toLowerCase() === color.toLowerCase() ? "border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "border-transparent hover:scale-105",
+                          "color-preset-button"
                         )}
+                        // eslint-disable-next-line jsx-a11y/no-static-element-interactions
                         style={{ backgroundColor: color }}
+                        title={`Select accent color ${color}`}
+                        aria-label={`Select accent color ${color}`}
                       />
                     ))}
                     {/* Custom Color Picker */}
-                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 hover:border-white/30 transition-all group">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 hover:border-white/30 transition-all group color-picker-wrapper">
                       <input 
                         type="color" 
                         value={accentColor}
                         onChange={(e) => setAccentColor(e.target.value)}
                         onBlur={handleBlur}
-                        className="absolute inset-0 w-[150%] h-[150%] -translate-x-1/4 -translate-y-1/4 cursor-pointer bg-transparent border-none"
+                        className="color-picker-input"
+                        title="Open custom color picker"
+                        aria-label="Custom accent color picker"
                       />
                     </div>
                   </div>
@@ -501,7 +512,7 @@ export const Settings: React.FC = () => {
 
             {activeSection === 'orchestration' && (
               <div className="space-y-6">
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                <div className="p-6 rounded-2xl bg-white/2 border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-bold text-sm">Autonomous Mode</h4>
@@ -545,7 +556,7 @@ export const Settings: React.FC = () => {
                   <h5 className="text-xs font-bold uppercase tracking-widest text-white/40">Agent Configuration</h5>
                   <div className="space-y-2">
                     {agents.map(agent => (
-                      <div key={agent.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                      <div key={agent.id} className="flex items-center justify-between p-3 rounded-xl bg-white/2 border border-white/5">
                         <div className="flex flex-col">
                           <span className="text-xs font-medium">{agent.name} Agent</span>
                           <span className="text-[10px] text-white/20 uppercase font-bold tracking-widest">{agent.role}</span>
@@ -554,6 +565,7 @@ export const Settings: React.FC = () => {
                           value={agent.model}
                           onChange={(e) => setAgentModel(agent.id, e.target.value)}
                           onBlur={handleBlur}
+                          title={`Select model for ${agent.name} agent`}
                           className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-nexus-accent focus:outline-none cursor-pointer"
                         >
                           <option value="GPT-4o">GPT-4o</option>
@@ -602,7 +614,7 @@ export const Settings: React.FC = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-6"
+                    className="p-6 rounded-2xl bg-white/2 border border-white/5 space-y-6"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

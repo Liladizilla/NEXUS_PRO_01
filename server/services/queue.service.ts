@@ -1,4 +1,8 @@
+// @ts-ignore - Server-side dependencies not needed in client builds
 import { v4 as uuidv4 } from 'uuid';
+// @ts-ignore - Server-side Firebase SDK
+import type { Firestore } from 'firebase/firestore';
+// @ts-ignore - Server-side Firebase SDK
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export class QueueService {
