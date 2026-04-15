@@ -127,15 +127,41 @@ app.set('trust proxy', 1);
 
 app.use(express.json());
 
-// Rate Limiting (Security)
-const limiter = rateLimit({
+// Rate Limiting (Security) - Tiered Approach
+// Global rate limiter - stricter
+const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 30, // limit each IP to 30 requests per 15 min (~2 per minute)
   message: { error: "Too many requests. Rate limit exceeded." },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health', // Skip health checks
 });
-app.use('/api/', limiter);
+
+// Strict limiter for expensive operations
+const generateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: 5, // limit each IP to 5 requests per minute for /api/generate
+  message: { error: "Too many generation requests. Please wait before requesting another generation." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Standard limiter for other APIs
+const standardLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute for standard endpoints
+  message: { error: "Rate limit exceeded. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply global limiter to all /api routes except health
+app.use('/api/', globalLimiter);
+// Apply strict limiter to expensive generation endpoint
+app.use('/api/generate', generateLimiter);
+// Apply standard limiter to task queries
+app.use('/api/tasks/', standardLimiter);
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

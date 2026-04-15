@@ -103,12 +103,14 @@ export const AIChat = () => {
               <div className="flex items-center gap-1">
                 <button 
                   onClick={() => setIsMinimized(!isMinimized)}
+                  title={isMinimized ? 'Maximize' : 'Minimize'}
                   className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
                 >
                   {isMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)}
+                  title="Close chat"
                   className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
                 >
                   <X size={14} />
@@ -131,7 +133,7 @@ export const AIChat = () => {
                       className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div className={`max-w-[85%] flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div className={`w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center ${msg.role === 'user' ? 'bg-white/10' : 'bg-nexus-accent/20'}`}>
+                        <div className={`w-6 h-6 rounded-lg shrink-0 flex items-center justify-center ${msg.role === 'user' ? 'bg-white/10' : 'bg-nexus-accent/20'}`}>
                           {msg.role === 'user' ? <User size={12} className="text-white/60" /> : <Bot size={12} className="text-nexus-accent" />}
                         </div>
                         <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-nexus-accent text-nexus-accent-contrast font-medium' : 'bg-white/5 text-white/80 border border-white/5'}`}>
@@ -171,6 +173,7 @@ export const AIChat = () => {
                     <button
                       onClick={handleSend}
                       disabled={!input.trim() || isLoading}
+                      title="Send message"
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-nexus-accent hover:text-white transition-colors disabled:opacity-50"
                     >
                       <Send size={16} />
