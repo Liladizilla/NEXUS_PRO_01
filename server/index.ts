@@ -1,4 +1,6 @@
 import express from 'express';
+import helmet from 'helmet';
+import compression from 'compression';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -86,7 +88,7 @@ function getAutoscalingPlan(prompt: string, activeTasksCount: number, baseAgents
   }
 
   // Rule 2: Backend-heavy keywords or High Load -> Scale Backend
-  const isBackendHeavy = complexityMetrics.some(m => ['database', 'auth', 'api', 'integration'].includes(m));
+  const isBackendHeavy = complexityMetrics.some(m => m === 'database' || m === 'auth' || m === 'api' || m === 'integration');
   if (isBackendHeavy || systemLoad > 60 || complexityScore > 80) {
     provisionedAgents.push({
       id: `backend-autoscaled-${uuidv4().slice(0, 4)}`,
@@ -125,7 +127,41 @@ const PORT = 3000;
 // Trust proxy for express-rate-limit (required when running behind Nginx/Cloud Run/Vercel)
 app.set('trust proxy', 1);
 
-app.use(express.json());
+// Security Headers (Helmet + Custom)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://apis.google.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://*.firebaseapp.com", "https://*.google.com"],
+      connectSrc: ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.google.com", "wss://*.run.app", "https://*.run.app", "https://api.github.com"],
+      imgSrc: ["'self'", "data:", "https:", "https://*.picsum.photos", "https://*.googleusercontent.com", "https://*.githubusercontent.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      frameSrc: ["'self'", "https://*.firebaseapp.com", "https://*.google.com"],
+      frameAncestors: ["'self'", "https://*.google.com", "https://*.run.app"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xFrameOptions: { action: 'sameorigin' },
+  xContentTypeOptions: true,
+}));
+
+// Additional custom security headers
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self), fullscreen=(self), payment=()');
+  next();
+});
+
+// Performance: Enable compression
+app.use(compression());
+
+// Performance: Increase body parser limits for larger project structures
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Rate Limiting (Security) - Tiered Approach
 // Global rate limiter - stricter
@@ -244,7 +280,7 @@ app.get('/api/auth/github/callback', async (req, res) => {
 });
 
 app.post('/api/generate', async (req, res) => {
-  const { prompt, agents, feedback, isHighThinking } = req.body;
+  const { prompt, agents, feedback, isHighThinking, agentModels } = req.body;
   if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
   const activeTasks = await queueService.getActiveTasksCount();
@@ -267,7 +303,7 @@ app.post('/api/generate', async (req, res) => {
       await queueService.updateTask(taskId, 'synthesizing', 20);
       
       // Simulate AI Orchestration
-      const result = await aiService.generate(finalPrompt, isHighThinking);
+      const result = await aiService.generate(finalPrompt, isHighThinking, agentModels);
       const parsedResult = JSON.parse(result);
       
       // --- CI/CD PIPELINE SIMULATION ---
@@ -280,7 +316,7 @@ app.post('/api/generate', async (req, res) => {
       await queueService.updateTask(taskId, 'deploying', 90, parsedResult);
       await delay(2000); // Deploy time
       
-      const stagingUrl = `https://staging-${taskId.slice(0, 8)}.odyseus-mesh.ai`;
+      const stagingUrl = `${process.env.APP_URL || 'http://localhost:3000'}/staging/${taskId}`;
       await queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
     } catch (error) {
       let errorMsg = "Pipeline: Generation failed during synthesis";
@@ -320,6 +356,64 @@ app.get('/api/tasks/:id', async (req, res) => {
   res.json(task);
 });
 
+app.post('/api/debug', async (req, res) => {
+  const { code, error } = req.body;
+  if (!code) return res.status(400).json({ error: "Code is required" });
+  const result = await aiService.debug(code, error);
+  res.json(result);
+});
+
+app.post('/api/lint', async (req, res) => {
+  const { code, language } = req.body;
+  if (!code) return res.status(400).json({ error: "Code is required" });
+  const result = await aiService.lint(code, language || 'typescript');
+  res.json(result);
+});
+
+app.post('/api/format', async (req, res) => {
+  const { code, language } = req.body;
+  if (!code) return res.status(400).json({ error: "Code is required" });
+  const formatted = await aiService.format(code, language || 'typescript');
+  res.json({ formatted });
+});
+
+// --- 3.2 STAGING SERVER (THE SANDBOX) ---
+app.get('/staging/:taskId/*', async (req, res) => {
+  const { taskId } = req.params;
+  const filePath = req.params[0] || 'index.html';
+  
+  const task = await queueService.getTask(taskId);
+  if (!task || task.status !== 'completed' || !task.result) {
+    return res.status(404).send('Staging environment not ready or task not found.');
+  }
+
+  const files = task.result.files || [];
+  const file = files.find((f: any) => f.path === filePath || f.path === `/${filePath}` || f.path.endsWith(filePath));
+
+  if (!file) {
+    // If it's a directory request, try index.html
+    const indexFile = files.find((f: any) => f.path.endsWith('index.html'));
+    if (indexFile) {
+      return res.type('html').send(indexFile.content);
+    }
+    return res.status(404).send('File not found in staging environment.');
+  }
+
+  // Set content type based on extension
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    '.html': 'text/html',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
+  };
+
+  res.type(mimeTypes[ext] || 'text/plain').send(file.content);
+});
+
 // Health Check (Monitoring)
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -357,7 +451,19 @@ if (!isProd) {
 } else {
   // In production (including Vercel), serve static files
   const distPath = path.join(process.cwd(), 'dist');
-  app.use(express.static(distPath));
+  
+  // Performance: Cache static assets (1 year for hashed files)
+  app.use(express.static(distPath, {
+    maxAge: '1y',
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html')) {
+        // Don't cache HTML files
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
   
   // SPA Fallback: Serve index.html for any non-API routes
   app.get('*', (req, res, next) => {
@@ -367,9 +473,26 @@ if (!isProd) {
   
   // Only listen if not on Vercel
   if (!process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
     });
+
+    // Graceful Shutdown
+    const shutdown = () => {
+      console.log('\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...');
+      server.close(() => {
+        console.log('\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.');
+        process.exit(0);
+      });
+      // Force close after 10s
+      setTimeout(() => {
+        console.error('\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   }
 }
 
