@@ -10,13 +10,11 @@ export const Paywall: React.FC = () => {
   if (!showPaywall) return null;
 
   const handleUpgrade = (tier: 'pro' | 'enterprise') => {
-    // Redirect to Stripe Checkout (Mock URLs)
-    const stripeUrls = {
-      pro: 'https://buy.stripe.com/test_pro_checkout',
-      enterprise: 'https://buy.stripe.com/test_enterprise_checkout'
-    };
-    
-    window.open(stripeUrls[tier], '_blank');
+    // In a real app, this would redirect to Stripe
+    // For this demo, we'll simulate a successful upgrade
+    useNexusStore.getState().setSubscription(tier);
+    useNexusStore.getState().addLog(`Subscription: Upgraded to ${tier.toUpperCase()} tier.`);
+    setShowPaywall(false);
   };
 
   const tiers = [
@@ -96,13 +94,15 @@ export const Paywall: React.FC = () => {
           <div className="text-center space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nexus-accent/10 border border-nexus-accent/20 text-nexus-accent text-[10px] font-bold uppercase tracking-wider">
               <Shield size={12} />
-              Usage Limit Reached
+              {usageCount >= usageLimit ? 'Usage Limit Reached' : 'Exclusive Feature'}
             </div>
             <h2 className="text-4xl font-black tracking-tight text-white">
               Unlock the Full Power of <span className="text-nexus-accent">Odyseus AI</span>
             </h2>
             <p className="text-white/40 max-w-2xl mx-auto">
-              You've used {usageCount}/{usageLimit} of your free builds. Upgrade your orchestration mesh to continue building without limits.
+              {usageCount >= usageLimit 
+                ? `You've used ${usageCount}/${usageLimit} of your free builds. Upgrade your orchestration mesh to continue building without limits.`
+                : "This advanced feature is exclusive to our Pro and Enterprise tiers. Upgrade now to unlock the complete autonomous development suite."}
             </p>
           </div>
 

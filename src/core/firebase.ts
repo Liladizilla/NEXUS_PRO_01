@@ -13,7 +13,7 @@ import {
   updateProfile,
   signOut
 } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp, collection, query, where, orderBy, limit, getDocFromServer } from 'firebase/firestore';
 
 // Import the Firebase configuration
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -21,6 +21,21 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Firestore connection successful");
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Firestore Error: The client is offline. Please check your Firebase configuration.");
+    } else {
+      console.error("Firestore Connection Test Error:", error);
+    }
+  }
+}
+testConnection();
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
@@ -33,7 +48,17 @@ export {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
-  signOut
+  signOut,
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  serverTimestamp,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit
 };
 
 export enum OperationType {
@@ -158,5 +183,66 @@ export const generateUserApiKey = async (uid: string) => {
     return newKey;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `api_keys/${uid}`);
+  }
+};
+
+// --- Project Persistence ---
+
+export interface ProjectMetadata {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  framework: string;
+  language: string;
+  createdAt: Timestamp | any;
+  updatedAt: Timestamp | any;
+}
+
+export const saveProject = async (metadata: ProjectMetadata) => {
+  const projectRef = doc(db, 'projects', metadata.id);
+  try {
+    await setDoc(projectRef, {
+      ...metadata,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `projects/${metadata.id}`);
+  }
+};
+
+export const saveProjectFile = async (projectId: string, file: { path: string; content: string; language: string }) => {
+  // Use a hash or encoded path as document ID to avoid issues with slashes in paths
+  const fileId = btoa(file.path).replace(/\//g, '_').replace(/\+/g, '-');
+  const fileRef = doc(db, 'projects', projectId, 'files', fileId);
+  try {
+    await setDoc(fileRef, {
+      ...file,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `projects/${projectId}/files/${fileId}`);
+  }
+};
+
+export const syncProjects = (ownerId: string, callback: (projects: ProjectMetadata[]) => void) => {
+  const q = query(collection(db, 'projects'), where('ownerId', '==', ownerId), orderBy('updatedAt', 'desc'));
+  return onSnapshot(q, (snapshot) => {
+    const projects = snapshot.docs.map(doc => doc.data() as ProjectMetadata);
+    callback(projects);
+  }, (error) => {
+    handleFirestoreError(error, OperationType.LIST, 'projects');
+  });
+};
+
+export const loadProjectFiles = async (projectId: string) => {
+  const { getDocs } = await import('firebase/firestore');
+  const filesRef = collection(db, 'projects', projectId, 'files');
+  try {
+    const snapshot = await getDocs(filesRef);
+    return snapshot.docs.map(doc => doc.data() as { path: string; content: string; language: string });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, `projects/${projectId}/files`);
+    return [];
   }
 };

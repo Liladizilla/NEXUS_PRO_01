@@ -49,8 +49,35 @@ export const Settings: React.FC = () => {
   const [activeSection, setActiveSection] = useState('project');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [hasSelectedApiKey, setHasSelectedApiKey] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
+
+  // Check for AI Studio API Key
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio?.hasSelectedApiKey) {
+        try {
+          const hasKey = await window.aistudio.hasSelectedApiKey();
+          setHasSelectedApiKey(hasKey);
+        } catch (err) {
+          console.error("Failed to check API key status:", err);
+        }
+      }
+    };
+    checkKey();
+  }, [showSettings]);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio?.openSelectKey) {
+      try {
+        await window.aistudio.openSelectKey();
+        setHasSelectedApiKey(true);
+      } catch (err) {
+        console.error("Failed to open key selection dialog:", err);
+      }
+    }
+  };
 
   // Auto-save logic
   useEffect(() => {
@@ -124,22 +151,22 @@ export const Settings: React.FC = () => {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-110 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
     >
-      <div className="relative w-full max-w-4xl h-[600px] bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex">
+      <div className="relative w-full max-w-5xl lg:h-[700px] h-full max-h-[90vh] bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row">
         {/* Sidebar */}
-        <div className="w-64 border-r border-white/5 bg-black/20 p-6 space-y-6">
-          <div className="flex items-center gap-2 px-2">
+        <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-white/5 bg-black/20 p-4 lg:p-6 flex lg:flex-col overflow-x-auto lg:overflow-y-auto no-scrollbar shrink-0">
+          <div className="hidden lg:flex items-center gap-2 px-2 mb-6">
             <SettingsIcon size={18} className="text-nexus-accent" />
             <span className="font-bold text-sm tracking-tight">Settings</span>
           </div>
           
-          <nav className="space-y-1">
+          <nav className="flex lg:flex-col gap-1 w-full">
             {sections.map((section) => (
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
                 title={`Navigate to ${section.name} settings`}
                 className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all",
+                  "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm font-medium whitespace-nowrap lg:w-full",
                   activeSection === section.id 
                     ? "bg-nexus-accent/10 text-nexus-accent border border-nexus-accent/20" 
                     : "text-white/40 hover:text-white/80 hover:bg-white/5"
@@ -153,8 +180,8 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="p-6 border-b border-white/5 flex items-center justify-between">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <div className="p-4 lg:p-6 border-b border-white/5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
               <h3 className="text-lg font-bold capitalize">{activeSection}</h3>
               <AnimatePresence mode="wait">
@@ -219,6 +246,15 @@ export const Settings: React.FC = () => {
                       ? "Plan limit reached. Upgrade to Odyseus Pro for unlimited builds." 
                       : `You have ${usageLimit - usageCount} builds remaining in your current cycle.`}
                   </p>
+                  
+                  {(!isPro && !isEnterprise) && (
+                    <button 
+                      onClick={() => useNexusStore.getState().setShowPaywall(true)}
+                      className="w-full py-2 rounded-xl bg-nexus-accent text-black text-[10px] font-bold uppercase tracking-widest hover:bg-nexus-accent/90 transition-all mt-2"
+                    >
+                      Upgrade to Pro
+                    </button>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-white/5">
@@ -272,7 +308,7 @@ export const Settings: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Framework Stack</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-white/30 ml-1">Framework Project</label>
                       <select 
                         value={projectFramework}
                         onChange={(e) => setProjectFramework(e.target.value)}
@@ -378,11 +414,66 @@ export const Settings: React.FC = () => {
               <p className="text-xs text-white/40">Manage your access tokens and exclusive developer features.</p>
             </div>
 
+            {/* AI Studio Key Selection */}
+            {window.aistudio && (
+              <div className="p-6 rounded-xl bg-nexus-accent/5 border border-nexus-accent/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-tight">Gemini API Key (AI Studio)</h4>
+                    <p className="text-xs text-white/40">Required for high-reasoning models like Gemini 3.1 Pro.</p>
+                  </div>
+                  <div className={cn(
+                    "px-2 py-1 rounded text-[8px] font-bold uppercase tracking-wider",
+                    hasSelectedApiKey ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                  )}>
+                    {hasSelectedApiKey ? 'Key Selected' : 'No Key Selected'}
+                  </div>
+                </div>
+                
+                <div className="p-4 rounded-lg bg-black/40 border border-white/5 text-[10px] text-white/60 leading-relaxed">
+                  To use advanced orchestration features, you must select a valid Gemini API key from a paid Google Cloud project. 
+                  <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="text-nexus-accent hover:underline ml-1 inline-flex items-center gap-0.5">
+                    Learn about billing <ExternalLink size={8} />
+                  </a>
+                </div>
+
+                <button 
+                  onClick={handleSelectKey}
+                  className={cn(
+                    "w-full py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    hasSelectedApiKey 
+                      ? "bg-white/5 border border-white/10 text-white hover:bg-white/10" 
+                      : "bg-nexus-accent text-black hover:bg-nexus-accent/90"
+                  )}
+                >
+                  <Key size={14} />
+                  {hasSelectedApiKey ? 'Change Selected Key' : 'Select Gemini API Key'}
+                </button>
+              </div>
+            )}
+
             <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold text-white uppercase tracking-tight">Daily Free API Key</h4>
                   <p className="text-xs text-white/40">Exclusive for Pro/Enterprise. Resets every 24 hours.</p>
+                  {(!isPro && !isEnterprise) ? (
+                    <button 
+                      onClick={() => setActiveSection('account')}
+                      className="text-[10px] font-bold text-nexus-accent uppercase tracking-widest hover:underline mt-1 flex items-center gap-1"
+                    >
+                      <Zap size={10} />
+                      Upgrade Plan to Unlock
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setActiveSection('account')}
+                      className="text-[10px] font-bold text-nexus-accent/60 uppercase tracking-widest hover:underline mt-1 flex items-center gap-1"
+                    >
+                      <User size={10} />
+                      Manage Subscription
+                    </button>
+                  )}
                 </div>
                 <div className="px-2 py-1 rounded bg-nexus-accent/10 border border-nexus-accent/20 text-[10px] font-bold text-nexus-accent uppercase tracking-wider">
                   Exclusive
@@ -393,23 +484,45 @@ export const Settings: React.FC = () => {
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg bg-black/40 border border-nexus-accent/20 flex items-center justify-between group">
                     <code className="text-nexus-accent font-mono text-xs">{freeApiKey}</code>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(freeApiKey);
-                        // Show toast or feedback
-                      }}
-                      title="Copy API key"
-                      className="p-2 hover:bg-white/10 rounded transition-colors text-white/40 group-hover:text-white"
-                    >
-                      <Copy size={14} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(freeApiKey);
+                          // Show toast or feedback
+                        }}
+                        className="p-2 hover:bg-white/10 rounded transition-colors text-white/40 group-hover:text-white"
+                        title="Copy to clipboard"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <button 
+                        onClick={() => useNexusStore.getState().revokeApiKey()}
+                        className="p-2 hover:bg-rose-500/20 rounded transition-colors text-white/40 hover:text-rose-500"
+                        title="Revoke key"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] text-white/30">
-                    <Clock size={12} />
-                    <span>Generated at: {new Date(lastApiKeyReset || 0).toLocaleString()}</span>
-                    <span className="text-nexus-accent/40">•</span>
-                    <span>Resets in: {Math.max(0, 24 - Math.floor((Date.now() - (lastApiKeyReset || 0)) / (1000 * 60 * 60)))} hours</span>
+                  <div className="flex items-center justify-between text-[10px] text-white/30">
+                    <div className="flex items-center gap-2">
+                      <Clock size={12} />
+                      <span>Generated at: {new Date(lastApiKeyReset || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-nexus-accent/40">•</span>
+                      <span>Resets in: {Math.max(0, 24 - Math.floor((Date.now() - (lastApiKeyReset || 0)) / (1000 * 60 * 60)))} hours</span>
+                    </div>
                   </div>
+                  
+                   {Date.now() - (lastApiKeyReset || 0) >= 24 * 60 * 60 * 1000 && (
+                     <button 
+                       onClick={generateFreeApiKey}
+                       className="w-full py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                     >
+                       Regenerate Key
+                     </button>
+                   )}
                 </div>
               ) : (
                 <button 
@@ -420,6 +533,31 @@ export const Settings: React.FC = () => {
                   Generate Daily Free Key
                 </button>
               )}
+            </div>
+
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-white uppercase tracking-tight">Security Logs</h4>
+                <button className="text-[10px] text-nexus-accent hover:underline uppercase font-bold tracking-widest">View Full History</button>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { event: 'API Key Generated', time: '2 hours ago', status: 'SUCCESS' },
+                  { event: 'New Login Detected', time: '5 hours ago', status: 'WARNING' },
+                  { event: 'Password Changed', time: '2 days ago', status: 'SUCCESS' },
+                ].map((log, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/5">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-medium text-white/80">{log.event}</span>
+                      <span className="text-[8px] text-white/30 uppercase font-bold tracking-widest">{log.time}</span>
+                    </div>
+                    <span className={cn(
+                      "text-[8px] font-bold uppercase tracking-widest",
+                      log.status === 'SUCCESS' ? "text-emerald-400" : "text-rose-500"
+                    )}>{log.status}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
@@ -519,7 +657,13 @@ export const Settings: React.FC = () => {
                       <p className="text-xs text-white/40">Allow agents to make architectural decisions without confirmation.</p>
                     </div>
                     <button 
-                      onClick={() => setAutonomousMode(!autonomousMode)}
+                      onClick={() => {
+                        if (!isPro && !isEnterprise) {
+                          useNexusStore.getState().setShowPaywall(true);
+                          return;
+                        }
+                        setAutonomousMode(!autonomousMode);
+                      }}
                       className={cn(
                         "w-10 h-5 rounded-full relative transition-colors",
                         autonomousMode ? "bg-nexus-accent" : "bg-white/10"
@@ -538,7 +682,13 @@ export const Settings: React.FC = () => {
                       <p className="text-xs text-white/40">Run frontend and backend agents simultaneously for 2x speed.</p>
                     </div>
                     <button 
-                      onClick={() => setParallelSynthesis(!parallelSynthesis)}
+                      onClick={() => {
+                        if (!isPro && !isEnterprise) {
+                          useNexusStore.getState().setShowPaywall(true);
+                          return;
+                        }
+                        setParallelSynthesis(!parallelSynthesis);
+                      }}
                       className={cn(
                         "w-10 h-5 rounded-full relative transition-colors",
                         parallelSynthesis ? "bg-nexus-accent" : "bg-white/10"
@@ -563,16 +713,24 @@ export const Settings: React.FC = () => {
                         </div>
                       <select 
                           value={agent.model}
-                          onChange={(e) => setAgentModel(agent.id, e.target.value)}
+                          onChange={(e) => {
+                            const newModel = e.target.value;
+                            if (newModel.includes('Pro') || newModel.includes('GPT-4o') || newModel.includes('Claude')) {
+                              if (!isPro && !isEnterprise) {
+                                useNexusStore.getState().setShowPaywall(true);
+                                return;
+                              }
+                            }
+                            setAgentModel(agent.id, newModel);
+                          }}
                           onBlur={handleBlur}
                           title={`Select model for ${agent.name} agent`}
                           className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-nexus-accent focus:outline-none cursor-pointer"
                         >
-                          <option value="GPT-4o">GPT-4o</option>
-                          <option value="Claude 3.5 Sonnet">Claude 3.5 Sonnet</option>
-                          <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
-                          <option value="Llama 3.1 405B">Llama 3.1 405B</option>
-                          <option value="DeepSeek V3">DeepSeek V3</option>
+                          <option value="Gemini 3 Flash">Gemini 3 Flash</option>
+                          <option value="Gemini 3.1 Pro">Gemini 3.1 Pro</option>
+                          <option value="GPT-4o">GPT-4o (Legacy)</option>
+                          <option value="Claude 3.5 Sonnet">Claude 3.5 (Legacy)</option>
                         </select>
                       </div>
                     ))}
@@ -594,7 +752,15 @@ export const Settings: React.FC = () => {
                   ].map(target => (
                     <button
                       key={target.id}
-                      onClick={() => setDeployTarget(target.id as any)}
+                      onClick={() => {
+                        if (target.id !== 'railway') {
+                          if (!isPro && !isEnterprise) {
+                            useNexusStore.getState().setShowPaywall(true);
+                            return;
+                          }
+                        }
+                        setDeployTarget(target.id as any);
+                      }}
                       className={cn(
                         "p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all",
                         deployTarget === target.id 

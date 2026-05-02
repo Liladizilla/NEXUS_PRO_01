@@ -59,6 +59,9 @@ interface NexusState {
   stagingUrl: string | null;
   feedback: string;
   userProfile: any | null;
+  currentProjectId: string | null;
+  userProjects: any[];
+  isAuthLoading: boolean;
   githubConnected: boolean;
   githubUser: string | null;
   avatar: string | null;
@@ -85,10 +88,15 @@ interface NexusState {
   setStagingUrl: (url: string | null) => void;
   setFeedback: (feedback: string) => void;
   setUserProfile: (profile: any | null) => void;
+  setCurrentProjectId: (id: string | null) => void;
+  setUserProjects: (projects: any[]) => void;
+  saveCurrentProject: () => Promise<void>;
+  loadProject: (id: string) => Promise<void>;
+  setIsAuthLoading: (val: boolean) => void;
   setGithubConnected: (val: boolean) => void;
   setGithubUser: (user: string | null) => void;
   setAvatar: (avatar: string | null) => void;
-  setPrompt: (prompt: string) => void;
+  setPrompt: (prompt: string | ((prev: string) => string)) => void;
   setIsGenerating: (val: boolean) => void;
   setActiveTab: (tab: 'design' | 'code' | 'preview' | 'debug') => void;
   setFiles: (files: ProjectFile[]) => void;
@@ -113,6 +121,7 @@ interface NexusState {
   setTerminalMaximized: (val: boolean) => void;
   setTerminalClosed: (val: boolean) => void;
   setApiKeyData: (key: string | null, lastReset: number | null) => void;
+  revokeApiKey: () => Promise<void>;
   generateFreeApiKey: () => Promise<void>;
   setTheme: (theme: 'dark' | 'light' | 'cyberpunk') => void;
   setAccentColor: (color: string) => void;
@@ -150,11 +159,11 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   files: [],
   activeFile: null,
   agents: [
-    { id: 'architect', name: 'Architect', role: 'System Design', status: 'idle', model: 'Gemini 1.5 Pro' },
-    { id: 'frontend', name: 'Frontend', role: 'UI/UX Builder', status: 'idle', model: 'Claude 3.5 Sonnet' },
-    { id: 'backend', name: 'Backend', role: 'API & Logic', status: 'idle', model: 'GPT-4o' },
-    { id: 'debug', name: 'Debug', role: 'Error Correction', status: 'idle', model: 'Claude 3.5 Sonnet' },
-    { id: 'devops', name: 'DevOps', role: 'Deployment', status: 'idle', model: 'GPT-4o' },
+    { id: 'architect', name: 'Architect', role: 'System Design', status: 'idle', model: 'Gemini 3.1 Pro' },
+    { id: 'frontend', name: 'Frontend', role: 'UI/UX Builder', status: 'idle', model: 'Gemini 3 Flash' },
+    { id: 'backend', name: 'Backend', role: 'API & Logic', status: 'idle', model: 'Gemini 3.1 Pro' },
+    { id: 'debug', name: 'Debug', role: 'Error Correction', status: 'idle', model: 'Gemini 3 Flash' },
+    { id: 'devops', name: 'DevOps', role: 'Deployment', status: 'idle', model: 'Gemini 3.1 Pro' },
   ],
   logs: ['System initialized. Ready for input.'],
   isAuthenticated: false,
@@ -188,6 +197,9 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   stagingUrl: null,
   feedback: '',
   userProfile: null,
+  currentProjectId: null,
+  userProjects: [],
+  isAuthLoading: true,
   githubConnected: false,
   githubUser: null,
   avatar: null,
@@ -213,10 +225,74 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setStagingUrl: (url) => set({ stagingUrl: url }),
   setFeedback: (feedback) => set({ feedback }),
   setUserProfile: (profile) => set({ userProfile: profile }),
+  setCurrentProjectId: (id) => set({ currentProjectId: id }),
+  setUserProjects: (projects) => set({ userProjects: projects }),
+  saveCurrentProject: async () => {
+    const state = get();
+    const { auth, saveProject, saveProjectFile, serverTimestamp } = await import('./firebase');
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const projectId = state.currentProjectId || `proj_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      await saveProject({
+        id: projectId,
+        ownerId: user.uid,
+        name: state.projectName,
+        description: state.projectDescription,
+        framework: state.projectFramework,
+        language: state.projectLanguage,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Save files efficiently: only if they have content
+      for (const file of state.files) {
+        if (file.content) {
+          await saveProjectFile(projectId, file);
+        }
+      }
+
+      set({ currentProjectId: projectId });
+      state.addLog(`System: Project "${state.projectName}" saved successfully.`);
+    } catch (error) {
+      state.addLog(`Error: Failed to save project. ${error instanceof Error ? error.message : ''}`);
+    }
+  },
+  loadProject: async (id) => {
+    const state = get();
+    const { loadProjectFiles } = await import('./firebase');
+    
+    try {
+      const project = state.userProjects.find(p => p.id === id);
+      if (!project) throw new Error("Project not found");
+
+      const files = await loadProjectFiles(id);
+      
+      set({
+        currentProjectId: id,
+        projectName: project.name,
+        projectDescription: project.description,
+        projectFramework: project.framework,
+        projectLanguage: project.language,
+        files: files,
+        activeFile: files.length > 0 ? files[0].path : null,
+        activeTab: 'code'
+      });
+      
+      state.addLog(`System: Project "${project.name}" loaded.`);
+    } catch (error) {
+      state.addLog(`Error: Failed to load project. ${error instanceof Error ? error.message : ''}`);
+    }
+  },
+  setIsAuthLoading: (val) => set({ isAuthLoading: val }),
   setGithubConnected: (val) => set({ githubConnected: val }),
   setGithubUser: (user) => set({ githubUser: user }),
   setAvatar: (avatar) => set({ avatar }),
-  setPrompt: (prompt) => set({ prompt }),
+  setPrompt: (prompt) => set((state) => ({ 
+    prompt: typeof prompt === 'function' ? prompt(state.prompt) : prompt 
+  })),
   setIsGenerating: (val) => set({ isGenerating: val }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   setFiles: (files) => set({ files }),
@@ -231,7 +307,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setAgents: (agents) => set({ agents }),
   addAgent: (agent) => set((state) => ({ agents: [...state.agents, agent] })),
   login: (email) => set({ isAuthenticated: true, user: { email } }),
-  logout: () => set({ isAuthenticated: false, user: null, isPro: false, isEnterprise: false, usageLimit: 3 }),
+  logout: () => set({ isAuthenticated: false, user: null, isPro: false, isEnterprise: false, usageLimit: 3, userProjects: [], currentProjectId: null }),
   incrementUsage: () => set((state) => {
     const newCount = state.usageCount + 1;
     const shouldShowPaywall = newCount >= state.usageLimit;
@@ -257,7 +333,31 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setTerminalMaximized: (val) => set({ isTerminalMaximized: val, isTerminalMinimized: false }),
   setTerminalClosed: (val) => set({ isTerminalClosed: val }),
   setApiKeyData: (key, lastReset) => set({ freeApiKey: key, lastApiKeyReset: lastReset }),
+  revokeApiKey: async () => {
+    const { auth, db, doc, setDoc, serverTimestamp } = await import('./firebase');
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const keyRef = doc(db, 'api_keys', user.uid);
+      await setDoc(keyRef, {
+        key: null,
+        lastGeneratedAt: serverTimestamp()
+      }, { merge: true });
+      set({ freeApiKey: null });
+      get().addLog("Security: API key revoked successfully.");
+    } catch (error) {
+      get().addLog(`Security Error: ${error instanceof Error ? error.message : 'Failed to revoke key'}`);
+    }
+  },
   generateFreeApiKey: async () => {
+    const state = get();
+    if (!state.isPro && !state.isEnterprise) {
+      set({ showPaywall: true });
+      state.addLog("Security: Daily Free API Keys are exclusive to Pro and Enterprise tiers.");
+      return;
+    }
+
     const { auth, generateUserApiKey } = await import('./firebase');
     const user = auth.currentUser;
     if (!user) return;
@@ -483,6 +583,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
     activeTab: 'design',
     files: [],
     activeFile: null,
+    currentProjectId: null,
     logs: ['System reset.'],
     deployTarget: 'railway',
     showPaywall: false,

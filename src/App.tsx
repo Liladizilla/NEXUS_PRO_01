@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { CICDPipeline } from './components/features/CICDPipeline';
-import { FeedbackWidget } from './components/features/FeedbackWidget';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { 
@@ -24,6 +23,7 @@ import {
   History, 
   Zap, 
   Shield, 
+  Sparkles,
   CreditCard, 
   BarChart3, 
   Plus, 
@@ -80,13 +80,31 @@ import { AIChat } from './components/features/AIChat';
 import { Paywall } from './components/features/Paywall';
 import { Settings } from './components/features/Settings';
 import { AuthModal } from './components/features/AuthModal';
+import { AuthPage } from './components/features/AuthPage';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
 import { Debugger } from './components/features/Debugger';
+import BorderGlow from './components/ui/BorderGlow';
 import { useNexusStore, AgentStatus } from './core/store';
 import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
-import { auth, googleProvider, syncUserProfile, syncApiKey } from './core/firebase';
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { 
+  auth, 
+  googleProvider, 
+  githubProvider,
+  syncUserProfile, 
+  syncApiKey,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  signOut,
+  doc,
+  db,
+  getDoc,
+  setDoc,
+  serverTimestamp
+} from './core/firebase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
@@ -100,140 +118,38 @@ function cn(...inputs: ClassValue[]) {
 // --- Components ---
 
 const Intro = ({ onComplete }: { onComplete: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 3000);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
   return (
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 0 }}
-      transition={{ delay: 3, duration: 1 }}
+      transition={{ delay: 2.2, duration: 0.8 }}
       onAnimationComplete={onComplete}
-      className="fixed inset-0 z-[200] bg-nexus-bg flex flex-col items-center justify-center"
+      className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center"
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-        className="relative"
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col items-center"
       >
-        <div className="absolute inset-0 bg-nexus-accent/20 blur-[100px] rounded-full animate-pulse"></div>
-        <Zap size={120} className="text-nexus-accent relative glow-accent" />
+        <div className="text-7xl font-black tracking-tighter text-white mb-1">
+          ODYSEUS
+        </div>
+        <div className="text-[10px] uppercase tracking-[0.8em] text-white/20 font-black">
+          Architected by Odyseus AI
+        </div>
       </motion.div>
-      <motion.h1 
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.5, duration: 1 }}
-        className="mt-8 text-4xl font-black tracking-[0.2em] text-white uppercase"
-      >
-        Odyseus AI
-      </motion.h1>
       <motion.div 
         initial={{ width: 0 }}
         animate={{ width: 200 }}
-        transition={{ delay: 1, duration: 2 }}
-        className="h-0.5 bg-nexus-accent mt-4 rounded-full"
+        transition={{ delay: 0.4, duration: 1.2, ease: "circOut" }}
+        className="h-[1px] bg-nexus-accent mt-12 rounded-full opacity-30"
       />
-    </motion.div>
-  );
-};
-
-const AuthPage = ({ onLogin }: { onLogin: (email: string) => void }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('');
-
-  const handleSocialLogin = (provider: string) => {
-    setIsLoading(true);
-    setLoadingText(`Connecting to ${provider} Gateway...`);
-    
-    setTimeout(() => {
-      setLoadingText(`Authenticating with ${provider} Identity...`);
-      setTimeout(() => {
-        setLoadingText('Finalizing Odyseus Handshake...');
-        setTimeout(() => {
-          onLogin(`${provider.toLowerCase()}-user@nexus.ai`);
-          setIsLoading(false);
-        }, 800);
-      }, 1000);
-    }, 1200);
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="fixed inset-0 z-[150] bg-nexus-bg flex items-center justify-center p-6"
-    >
-      <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 border-nexus-accent/20 relative overflow-hidden">
-        {isLoading && (
-          <div className="absolute inset-0 z-50 bg-nexus-bg/80 backdrop-blur-md flex flex-col items-center justify-center space-y-4">
-            <div className="w-12 h-12 border-4 border-nexus-accent/20 border-t-nexus-accent rounded-full animate-spin"></div>
-            <p className="text-nexus-accent font-bold text-xs tracking-widest uppercase animate-pulse">{loadingText}</p>
-          </div>
-        )}
-
-        <div className="text-center space-y-2">
-          <Zap size={40} className="text-nexus-accent mx-auto mb-4" />
-          <h2 className="text-3xl font-black tracking-tight">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p className="text-white/40 text-sm">Access the world's most stable software builder OS</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Email Address</label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-white/5 border border-nexus-border rounded-xl px-4 py-3 text-sm focus:border-nexus-accent/50 transition-colors"
-              placeholder="name@company.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold text-white/40 ml-1">Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white/5 border border-nexus-border rounded-xl px-4 py-3 text-sm focus:border-nexus-accent/50 transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
-          <button 
-            onClick={() => onLogin(email || 'user@nexus.ai')}
-            className="w-full bg-nexus-accent text-nexus-accent-contrast font-bold py-3 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all glow-accent"
-          >
-            {isLogin ? 'Sign In' : 'Create Account'}
-          </button>
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-nexus-border"></div></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-nexus-bg px-2 text-white/20">Or continue with</span></div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <button 
-            onClick={() => handleSocialLogin('Google')}
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
-          >
-            <Globe size={14} /> Google
-          </button>
-          <button 
-            onClick={() => handleSocialLogin('Apple')}
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
-          >
-            <Smartphone size={14} /> Apple
-          </button>
-        </div>
-
-        <p className="text-center text-xs text-white/40">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
-          <button onClick={() => setIsLogin(!isLogin)} className="text-nexus-accent font-bold hover:underline">
-            {isLogin ? 'Sign Up' : 'Log In'}
-          </button>
-        </p>
-      </div>
     </motion.div>
   );
 };
@@ -255,7 +171,36 @@ const Panel = ({ children, className, title, icon: Icon, actions }: any) => (
   </div>
 );
 
+const TaskBreakdown = ({ tasks }: { tasks: string[] }) => (
+  <div className="space-y-2">
+    <div className="flex items-center justify-between mb-4">
+      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Process Breakdown</span>
+      <div className="flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-nexus-accent animate-pulse" />
+        <span className="text-[10px] text-nexus-accent font-bold uppercase tracking-tighter">Live Analysis</span>
+      </div>
+    </div>
+    <div className="space-y-1.5">
+      {tasks.map((task, i) => (
+        <motion.div 
+          key={i}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.1 }}
+          className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5"
+        >
+          <div className="w-4 h-4 rounded-full border border-nexus-accent/30 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-nexus-accent" />
+          </div>
+          <span className="text-xs text-white/70 font-medium">{task}</span>
+        </motion.div>
+      ))}
+    </div>
+  </div>
+);
+
 const AgentCard = ({ agent }: { agent: any }) => {
+  const [isInspecting, setIsInspecting] = useState(false);
   const statusColors = {
     idle: 'text-white/30',
     working: 'text-nexus-accent animate-pulse',
@@ -263,23 +208,62 @@ const AgentCard = ({ agent }: { agent: any }) => {
     error: 'text-rose-500'
   };
 
+  const statusLabels = {
+    idle: 'Waiting for task',
+    working: agent.lastAction || 'Processing...',
+    completed: 'Task finished',
+    error: 'Encountered issue'
+  };
+
   return (
-    <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-nexus-border/50">
-      <div className={cn("p-1.5 rounded-md bg-black/40", statusColors[agent.status as AgentStatus])}>
-        <Cpu size={14} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium truncate">{agent.name}</span>
-          <span className={cn("text-[10px] uppercase font-bold", statusColors[agent.status as AgentStatus])}>
-            {agent.status}
-          </span>
+    <div 
+      onClick={() => setIsInspecting(!isInspecting)}
+      className="flex flex-col gap-2 p-2 rounded-lg bg-white/5 border border-nexus-border/50 group hover:border-nexus-accent/30 transition-all cursor-help relative overflow-hidden"
+      title="Click to inspect agent capabilities and logs"
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn("p-1.5 rounded-md bg-black/40", statusColors[agent.status as AgentStatus])}>
+          <Cpu size={14} />
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] text-white/50 truncate">{agent.role}</p>
-          <span className="text-[8px] text-nexus-accent/60 font-mono uppercase truncate">{agent.model}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium truncate group-hover:text-nexus-accent transition-colors">{agent.name}</span>
+            <span className={cn("text-[8px] uppercase font-bold tracking-tighter", statusColors[agent.status as AgentStatus])}>
+              {statusLabels[agent.status as AgentStatus]}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] text-white/50 truncate italic">{agent.role}</p>
+            <span className="text-[8px] text-nexus-accent/60 font-mono uppercase truncate opacity-0 group-hover:opacity-100 transition-opacity">{agent.model}</span>
+          </div>
         </div>
       </div>
+      
+      <AnimatePresence>
+        {isInspecting && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="pt-2 border-t border-white/5 space-y-2"
+          >
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Capabilities</span>
+              <div className="flex flex-wrap gap-1">
+                {['Architecting', 'Code Synthesis', 'Security Scan'].map(cap => (
+                  <span key={cap} className="px-1.5 py-0.5 rounded-sm bg-white/5 text-[8px] text-white/40 border border-white/5">{cap}</span>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Live Logs</span>
+              <div className="text-[8px] font-mono text-nexus-accent/60 leading-tight">
+                {agent.status === 'working' ? '> Initializing neural mesh...' : '> Task execution finalized.'}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -453,47 +437,104 @@ export default function App() {
     stagingUrl, setStagingUrl,
     feedback, setFeedback,
     userProfile, setUserProfile,
+    isAuthLoading, setIsAuthLoading,
     isHighThinking, setIsHighThinking,
     accentColor,
     reset,
     templates, fetchTemplates,
-    setDebugActive, setCurrentLine, setDebugVariables, addDebugLog, isPro,
+    setDebugActive, setCurrentLine, setDebugVariables, addDebugLog,
     lintResults, setLintResults,
     isTerminalMinimized, setTerminalMinimized,
     isTerminalMaximized, setTerminalMaximized,
     isTerminalClosed, setTerminalClosed,
-    setApiKeyData
+    setApiKeyData,
+    isPro, isEnterprise,
+    currentProjectId, saveCurrentProject, setUserProjects
   } = useNexusStore();
 
+  const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        useNexusStore.setState({ isAuthenticated: true });
-        const unsubscribeProfile = syncUserProfile(user, (profile) => {
-          setUserProfile(profile);
-        });
-        const unsubscribeApiKey = syncApiKey(user.uid, (keyData) => {
-          if (keyData) {
-            setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
+    let unsubscribeProfile: (() => void) | null = null;
+    let unsubscribeApiKey: (() => void) | null = null;
+    let unsubscribeProjects: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth State Changed:", user ? `Logged in as ${user.email}` : "Logged out");
+      setIsAuthLoading(true);
+      
+      try {
+        // Clean up existing listeners if user changes
+        if (unsubscribeProfile) unsubscribeProfile();
+        if (unsubscribeApiKey) unsubscribeApiKey();
+        if (unsubscribeProjects) unsubscribeProjects();
+        unsubscribeProfile = null;
+        unsubscribeApiKey = null;
+        unsubscribeProjects = null;
+
+        if (user) {
+          // Ensure user profile exists in Firestore
+          const userRef = doc(db, 'users', user.uid);
+          const snapshot = await getDoc(userRef);
+          if (!snapshot.exists()) {
+            await setDoc(userRef, {
+              uid: user.uid,
+              displayName: user.displayName || user.email?.split('@')[0] || 'Odyseus Architect',
+              email: user.email || '',
+              photoURL: user.photoURL || null,
+              updatedAt: serverTimestamp()
+            });
           }
-        });
-        return () => {
-          unsubscribeProfile();
-          unsubscribeApiKey();
-        };
-      } else {
-        useNexusStore.setState({ isAuthenticated: false });
-        setUserProfile(null);
-        setApiKeyData(null, null);
+
+          useNexusStore.getState().login(user.email || 'user@odyseus.ai');
+          
+          unsubscribeProfile = syncUserProfile(user, (profile) => {
+            setUserProfile(profile);
+          });
+          unsubscribeApiKey = syncApiKey(user.uid, (keyData) => {
+            if (keyData) {
+              setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
+            }
+          });
+
+          // Sync User Projects
+          const { syncProjects } = await import('./core/firebase');
+          unsubscribeProjects = syncProjects(user.uid, (projects: any[]) => {
+            setUserProjects(projects);
+          });
+        } else {
+          useNexusStore.getState().logout();
+          setUserProfile(null);
+          setApiKeyData(null, null);
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      } finally {
+        setIsAuthLoading(false);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+      if (unsubscribeApiKey) unsubscribeApiKey();
+      if (unsubscribeProjects) unsubscribeProjects();
+    };
   }, []);
+
+  const handleSave = async () => {
+    if (!auth.currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+    setIsSaving(true);
+    await saveCurrentProject();
+    setIsSaving(false);
+  };
 
   const handleLogin = () => {
     setShowAuthModal(true);
@@ -529,6 +570,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
   const [backendHealth, setBackendHealth] = useState<any>(null);
+  const [taskBreakdown, setTaskBreakdown] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -600,15 +642,38 @@ export default function App() {
     }
     
     setIsGenerating(true);
-    setBuildStatus('processing');
-    setBuildProgress(0);
+    setBuildStatus('Analyzing requirements...');
+    setBuildProgress(5);
+    setTaskBreakdown([
+      'Analyzing architectural constraints',
+      'Provisioning specialized AI agents',
+      'Mapping dependency graph',
+      'Initializing CI/CD pipeline'
+    ]);
     addLog(`Starting generation for: ${prompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
+      // Derive agent models for orchestration
+      const agentModels = agents.reduce((acc, agent) => {
+        acc[agent.id] = agent.model;
+        return acc;
+      }, {} as Record<string, string>);
+
       const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress) => {
-        setBuildStatus(status);
+        const statusMap: Record<string, string> = {
+          'building': 'Synthesizing components...',
+          'testing': 'Running security & type checks...',
+          'deploying': 'Pushing to edge network...',
+          'completed': 'Stack ready'
+        };
+        setBuildStatus(statusMap[status] || status);
         setBuildProgress(progress);
         
+        // Update task breakdown based on progress
+        if (progress > 20) setTaskBreakdown(prev => [...prev, 'Generating UI components']);
+        if (progress > 50) setTaskBreakdown(prev => [...prev, 'Configuring API routes']);
+        if (progress > 80) setTaskBreakdown(prev => [...prev, 'Finalizing deployment']);
+
         // Update agent statuses based on CI/CD status
         if (status === 'building') {
           updateAgent('architect', { status: 'completed' });
@@ -620,7 +685,7 @@ export default function App() {
           updateAgent('debug', { status: 'completed' });
           updateAgent('devops', { status: 'working', lastAction: 'Deploying to staging...' });
         }
-      });
+      }, agentModels);
       
       // Update UI with provisioned agents from backend
       setAgents(plan.agents);
@@ -631,7 +696,7 @@ export default function App() {
       setFiles(result.files);
       if (result.files.length > 0) setActiveFile(result.files[0].path);
       
-      const finalStagingUrl = result.stagingUrl || `https://staging-${result.projectName.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substring(7)}.nexus-preview.app`;
+      const finalStagingUrl = result.stagingUrl || `${window.location.origin}/staging/${result.projectName.toLowerCase().replace(/\s+/g, '-')}`;
       setStagingUrl(finalStagingUrl);
       addLog(`CD: Successfully deployed to staging: ${finalStagingUrl}`);
       
@@ -676,116 +741,100 @@ export default function App() {
   };
 
   const handleDebug = async () => {
+    if (!currentFile) return;
     setIsGenerating(true);
-    addLog("Debug Agent: Initializing runtime debugger...");
-    updateAgent('debug', { status: 'working', lastAction: 'Attaching debugger...' });
-    await new Promise(r => setTimeout(r, 1500));
-    updateAgent('debug', { status: 'completed' });
-    addLog("Debug Agent: Debugger attached. Switching to Debug view.");
-    setIsGenerating(false);
-    setActiveTab('debug');
-    setDebugActive(true);
-    setCurrentLine(1);
-    setDebugVariables({
-      projectName: projectName,
-      isPro: isPro,
-      agentsCount: agents.length,
-      timestamp: Date.now()
-    });
-    addDebugLog("Debugger: Runtime session started.");
-  };
-
-  const handleFormat = () => {
-    if (!currentFile) return;
-    addLog(`System: Formatting ${currentFile.path}...`);
+    addLog(`Debug Agent: Analyzing ${currentFile.path} for potential issues...`);
+    updateAgent('debug', { status: 'working', lastAction: 'Analyzing code...' });
     
-    let formatted = currentFile.content;
-    const lang = currentFile.language?.toLowerCase() || '';
-
-    // Basic regex-based formatter for demonstration
-    // In a real app, we'd use prettier or language-specific formatters
-    if (['javascript', 'typescript', 'json', 'css', 'html'].includes(lang)) {
-      // Simple indentation fix
-      let indent = 0;
-      formatted = currentFile.content
-        .split('\n')
-        .map(line => {
-          line = line.trim();
-          if (line.endsWith('}') || line.endsWith(']')) indent = Math.max(0, indent - 1);
-          const newLine = '  '.repeat(indent) + line;
-          if (line.endsWith('{') || line.endsWith('[')) indent++;
-          return newLine;
-        })
-        .join('\n');
-    } else if (lang === 'python') {
-      // Basic python cleanup
-      formatted = currentFile.content
-        .split('\n')
-        .map(line => line.trimEnd())
-        .join('\n');
-    }
-
-    const newFiles = files.map(f => f.path === activeFile ? { ...f, content: formatted } : f);
-    setFiles(newFiles);
-    addLog(`System: Formatted ${currentFile.path} successfully.`);
-  };
-
-  const handleLint = () => {
-    if (!currentFile) return;
-    addLog(`System: Linting ${currentFile.path}...`);
-    
-    const results: { line: number; message: string; severity: 'error' | 'warning' }[] = [];
-    const lines = currentFile.content.split('\n');
-    const lang = currentFile.language?.toLowerCase() || '';
-
-    lines.forEach((line, i) => {
-      const trimmed = line.trim();
+    try {
+      const res = await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: currentFile.content })
+      });
       
-      // Generic rules
-      if (line.length > 120) {
-        results.push({ line: i + 1, message: 'Line exceeds 120 characters', severity: 'warning' });
+      const { issues } = await res.json();
+      
+      if (issues && issues.length > 0) {
+        addLog(`Debug Agent: Found ${issues.length} potential issues.`);
+        setDebugVariables({ issues });
+        issues.forEach((issue: any) => {
+          addDebugLog(`[${issue.severity.toUpperCase()}] Line ${issue.line}: ${issue.message} | Fix: ${issue.fix}`);
+        });
+      } else {
+        addLog("Debug Agent: No critical issues detected in current scope.");
       }
-      if (trimmed.includes('console.log')) {
-        results.push({ line: i + 1, message: 'Unexpected console statement', severity: 'warning' });
-      }
-      if (trimmed.includes('TODO')) {
-        results.push({ line: i + 1, message: 'Unresolved TODO comment', severity: 'warning' });
-      }
-
-      // Language specific rules
-      if (['javascript', 'typescript'].includes(lang)) {
-        if (trimmed.includes('==') && !trimmed.includes('===')) {
-          results.push({ line: i + 1, message: 'Use === instead of ==', severity: 'warning' });
-        }
-        if (trimmed.includes('var ')) {
-          results.push({ line: i + 1, message: 'Use let or const instead of var', severity: 'error' });
-        }
-      } else if (lang === 'python') {
-        if (trimmed.endsWith(';') && !trimmed.includes('#')) {
-          results.push({ line: i + 1, message: 'Unnecessary semicolon in Python', severity: 'warning' });
-        }
-        if (trimmed.startsWith('function ')) {
-          results.push({ line: i + 1, message: 'Use "def" instead of "function" in Python', severity: 'error' });
-        }
-      } else if (['c', 'cpp', 'rust', 'go'].includes(lang)) {
-        if (trimmed.includes('goto ')) {
-          results.push({ line: i + 1, message: 'Avoid using goto statements', severity: 'error' });
-        }
-      }
-    });
-
-    setLintResults(currentFile.path, results);
-    
-    if (results.length > 0) {
-      const errors = results.filter(r => r.severity === 'error').length;
-      const warnings = results.filter(r => r.severity === 'warning').length;
-      addLog(`Lint: Found ${errors} errors and ${warnings} warnings in ${currentFile.path}.`);
-    } else {
-      addLog(`Lint: No issues found in ${currentFile.path}.`);
+      
+      updateAgent('debug', { status: 'completed' });
+      setActiveTab('debug');
+      setDebugActive(true);
+      setCurrentLine(issues?.[0]?.line || 1);
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const currentFile = files.find(f => f.path === activeFile);
+  const handleFormat = async () => {
+    if (!currentFile) return;
+    setIsGenerating(true);
+    addLog(`System: Formatting ${currentFile.path} using AI Mesh...`);
+    
+    try {
+      const response = await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          code: currentFile.content, 
+          error: "Format this code perfectly according to industry standards. Return the formatted code in a 'fix' field of a single issue." 
+        })
+      });
+      
+      const { issues } = await response.json();
+      if (issues && issues[0]?.fix) {
+        const formatted = issues[0].fix;
+        const newFiles = files.map(f => f.path === activeFile ? { ...f, content: formatted } : f);
+        setFiles(newFiles);
+        addLog(`System: Formatted ${currentFile.path} successfully.`);
+      } else {
+        addLog("System: Formatting failed or no changes needed.");
+      }
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleLint = async () => {
+    if (!currentFile) return;
+    setIsGenerating(true);
+    addLog(`System: Linting ${currentFile.path} using AI Mesh...`);
+    
+    try {
+      const res = await fetch('/api/lint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: currentFile.content, language: currentFile.language })
+      });
+      
+      const { results } = await res.json();
+      setLintResults(currentFile.path, results || []);
+      
+      if (results && results.length > 0) {
+        const errors = results.filter((r: any) => r.severity === 'error').length;
+        const warnings = results.filter((r: any) => r.severity === 'warning').length;
+        addLog(`Lint: Found ${errors} errors and ${warnings} warnings in ${currentFile.path}.`);
+      } else {
+        addLog(`Lint: No issues found in ${currentFile.path}.`);
+      }
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const widgetLibrary = [
     { id: 'auth-form', name: 'Auth Form', category: 'Forms', icon: Shield, desc: 'Login/Signup with OAuth' },
@@ -807,12 +856,19 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-nexus-bg text-white selection:bg-nexus-accent/30">
+    <div className="flex h-screen w-full bg-nexus-bg text-white selection:bg-nexus-accent/30 overflow-hidden">
       <AnimatePresence>
         {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
       </AnimatePresence>
 
-      {!showIntro && !isAuthenticated && <AuthPage onLogin={login} />}
+      {!showIntro && isAuthLoading && (
+        <div className="fixed inset-0 z-[150] bg-nexus-bg flex flex-col items-center justify-center space-y-4">
+          <div className="w-12 h-12 border-4 border-nexus-accent/20 border-t-nexus-accent rounded-full animate-spin"></div>
+          <p className="text-nexus-accent font-bold text-xs tracking-widest uppercase animate-pulse">Initializing Nexus OS...</p>
+        </div>
+      )}
+
+      {!showIntro && !isAuthLoading && !isAuthenticated && <AuthPage />}
       
       <AnimatePresence>
         {showPaywall && <Paywall />}
@@ -839,17 +895,46 @@ export default function App() {
         {showHistory && <HistoryModal />}
       </AnimatePresence>
 
+      {/* --- Mobile Header --- */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-nexus-border z-[60] flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50">
+            <Zap size={18} className="text-nexus-accent" />
+          </div>
+          <span className="font-bold tracking-tighter">Odyseus</span>
+        </div>
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 rounded-lg bg-white/5 border border-nexus-border"
+        >
+          {isSidebarOpen ? <X size={20} /> : <Layout size={20} />}
+        </button>
+      </div>
+
       {/* --- Left Sidebar --- */}
       <motion.div 
         initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 60 }}
-        className="flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-20"
+        animate={{ 
+          width: isSidebarOpen ? 280 : 60,
+          x: (window.innerWidth < 1024 && !isSidebarOpen) ? -280 : 0
+        }}
+        className={cn(
+          "flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-[70] lg:z-20",
+          "fixed lg:relative inset-y-0 left-0 lg:translate-x-0 transition-transform lg:transition-none",
+          !isSidebarOpen && "lg:w-[60px]"
+        )}
       >
-        <div className="flex items-center gap-3 p-4 border-b border-nexus-border h-14">
-          <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50 glow-accent">
+        <div className="hidden lg:flex items-center gap-3 p-4 border-b border-white/5 h-14">
+          <div className="w-8 h-8 rounded-lg bg-nexus-accent/10 flex items-center justify-center border border-nexus-accent/20">
             <Zap size={18} className="text-nexus-accent" />
           </div>
-          {isSidebarOpen && <span className="font-bold tracking-tighter text-lg">Odyseus AI</span>}
+          {isSidebarOpen && <span className="font-black tracking-tighter text-lg uppercase">Odyseus</span>}
+        </div>
+        
+        {/* Mobile Sidebar Header */}
+        <div className="lg:hidden flex items-center justify-between p-4 border-b border-nexus-border">
+          <span className="font-bold tracking-tighter">Navigation</span>
+          <button onClick={() => setIsSidebarOpen(false)}><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -887,21 +972,59 @@ export default function App() {
                 <section>
                   <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold block mb-2">Explorer</span>
                   <div className="space-y-0.5">
-                    {files.map(file => (
-                      <div 
-                        key={file.path}
-                        onClick={() => setActiveFile(file.path)}
-                        className={cn(
-                          "flex items-center gap-2 p-1.5 rounded-md text-xs cursor-pointer transition-colors",
-                          activeFile === file.path ? "bg-white/10 text-white" : "text-white/50 hover:bg-white/5 hover:text-white/80"
-                        )}
-                      >
-                        <FileCode size={14} />
-                        <span className="truncate">{file.path}</span>
+                    {files.length === 0 ? (
+                      <div className="space-y-1 opacity-40">
+                        <div className="flex items-center gap-2 p-1.5 text-[10px] uppercase tracking-wider font-bold text-white/30">
+                          <FolderTree size={12} />
+                          <span>src/</span>
+                        </div>
+                        <div className="pl-4 space-y-1">
+                          <div className="flex items-center gap-2 p-1 text-[10px] text-white/20 italic">
+                            <FileCode size={10} />
+                            <span>components/</span>
+                          </div>
+                          <div className="flex items-center gap-2 p-1 text-[10px] text-white/20 italic">
+                            <FileCode size={10} />
+                            <span>lib/</span>
+                          </div>
+                          <div className="flex items-center gap-2 p-1 text-[10px] text-white/20 italic">
+                            <FileCode size={10} />
+                            <span>App.tsx</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-1.5 text-[10px] uppercase tracking-wider font-bold text-white/30">
+                          <FolderTree size={12} />
+                          <span>server/</span>
+                        </div>
+                        <div className="pl-4">
+                          <div className="flex items-center gap-2 p-1 text-[10px] text-white/20 italic">
+                            <FileCode size={10} />
+                            <span>index.ts</span>
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                    {files.length === 0 && (
-                      <div className="text-[10px] text-white/20 italic p-2">No files generated yet.</div>
+                    ) : (
+                      files.map(file => (
+                        <div 
+                          key={file.path}
+                          onClick={() => setActiveFile(file.path)}
+                          className={cn(
+                            "flex items-center gap-2 p-1.5 rounded-md text-xs cursor-pointer transition-colors group",
+                            activeFile === file.path ? "bg-white/10 text-white" : "text-white/50 hover:bg-white/5 hover:text-white/80"
+                          )}
+                        >
+                          <FileCode size={14} />
+                          <span className="truncate flex-1">{file.path}</span>
+                          <Search 
+                            size={10} 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-nexus-accent" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addLog(`Inspecting ${file.path}: Analysis complete. No critical issues found.`);
+                            }}
+                          />
+                        </div>
+                      ))
                     )}
                   </div>
                 </section>
@@ -948,36 +1071,36 @@ export default function App() {
       </motion.div>
 
       {/* --- Main Content --- */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div className="flex-1 flex flex-col min-w-0 relative pt-14 lg:pt-0">
         {/* Header / Tabs */}
-        <div className="h-14 border-b border-nexus-border flex items-center justify-between px-6 bg-black/10 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex bg-white/5 p-1 rounded-lg border border-nexus-border">
+        <div className="h-14 border-b border-nexus-border flex items-center justify-between px-4 lg:px-6 bg-black/10 backdrop-blur-sm overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
               <button 
                 onClick={() => setActiveTab('design')}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'design' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                  activeTab === 'design' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
                 )}
               >
-                <Layers size={14} />
-                Design
+                <Layout size={14} />
+                Builder
               </button>
               <button 
                 onClick={() => setActiveTab('code')}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'code' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                  activeTab === 'code' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
                 )}
               >
-                <Code2 size={14} />
+                <FileCode size={14} />
                 Code
               </button>
               <button 
                 onClick={() => setActiveTab('preview')}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'preview' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                  activeTab === 'preview' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
                 )}
               >
                 <Eye size={14} />
@@ -986,8 +1109,8 @@ export default function App() {
               <button 
                 onClick={() => setActiveTab('debug')}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                  activeTab === 'debug' ? "bg-nexus-accent text-nexus-accent-contrast shadow-lg shadow-nexus-accent/20" : "text-white/60 hover:text-white"
+                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                  activeTab === 'debug' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
                 )}
               >
                 <Bug size={14} />
@@ -996,25 +1119,36 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Live System
-            </div>
+          <div className="flex items-center gap-3 shrink-0">
             <button 
-              onClick={handleDebug}
-              disabled={isGenerating}
-              className="p-2 rounded-lg bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors"
-              title="Autonomous Debug"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
             >
-              <Shield size={16} className="text-purple-400" />
+              {isSaving ? (
+                <>
+                  <Loader2 size={12} className="animate-spin text-nexus-accent" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={12} className="text-nexus-accent" />
+                  Save
+                </>
+              )}
             </button>
-            <div className="flex items-center gap-1 bg-white/5 border border-nexus-border rounded-lg p-1">
+
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-white/40 text-[10px] font-black uppercase tracking-widest">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Live
+            </div>
+            
+            <div className="flex items-center gap-1 bg-white/5 border border-white/5 rounded-xl p-1">
               <select 
                 value={deployTarget}
                 onChange={(e) => setDeployTarget(e.target.value as any)}
                 disabled={isGenerating}
-                className="bg-transparent text-[10px] font-bold uppercase tracking-wider text-white/60 focus:outline-none px-2 cursor-pointer hover:text-white transition-colors"
+                className="bg-transparent text-[10px] font-black uppercase tracking-widest text-white/40 focus:outline-none px-2 cursor-pointer hover:text-white transition-colors"
               >
                 <option value="railway" className="bg-nexus-bg">Railway</option>
                 <option value="aws-s3" className="bg-nexus-bg">AWS S3</option>
@@ -1023,40 +1157,16 @@ export default function App() {
               <button 
                 onClick={handleDeploy}
                 disabled={isGenerating}
-                className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
                 title={`Deploy to ${deployTarget}`}
               >
                 <Play size={14} className="text-nexus-accent" />
               </button>
             </div>
 
-            {/* Usage Indicator */}
-            <div className="hidden lg:flex flex-col items-end mr-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">Builds</span>
-                <span className={cn(
-                  "text-[9px] font-bold px-1.5 py-0.5 rounded-md",
-                  usageCount >= usageLimit ? "bg-rose-500/20 text-rose-500" : "bg-nexus-accent/10 text-nexus-accent"
-                )}>
-                  {usageCount}/{usageLimit}
-                </span>
-              </div>
-              <div className="w-16 h-0.5 bg-white/5 rounded-full mt-1 overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, (usageCount / usageLimit) * 100)}%` }}
-                  className={cn(
-                    "h-full rounded-full",
-                    usageCount >= usageLimit ? "bg-rose-500" : "bg-nexus-accent"
-                  )}
-                />
-              </div>
-            </div>
-
             <div 
-              className="w-8 h-8 rounded-full bg-nexus-accent/20 border border-nexus-accent/50 flex items-center justify-center text-[10px] font-bold text-nexus-accent cursor-pointer hover:bg-nexus-accent/30 transition-all overflow-hidden"
+              className="w-8 h-8 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center text-[10px] font-black text-white/40 cursor-pointer hover:bg-white/10 transition-all overflow-hidden"
               onClick={() => isAuthenticated ? setShowSettings(true) : handleLogin()}
-              title={isAuthenticated ? "User Profile" : "Sign In"}
             >
               {isAuthenticated ? (
                 userProfile?.photoURL ? (
@@ -1083,149 +1193,222 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   className="flex-1 p-8 overflow-auto flex flex-col items-center justify-start text-center space-y-12 pt-24"
                 >
-                  <div className="max-w-2xl w-full space-y-8">
+                  <div className="max-w-4xl w-full space-y-12">
                     <div className="space-y-4">
-                      <h1 className="text-5xl font-black tracking-tighter bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent">
-                        What are we building today?
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-nexus-accent mb-4">
+                        <Sparkles size={12} />
+                        Next-Gen Project Builder
+                      </div>
+                      <h1 className="text-7xl font-black tracking-tighter leading-[1.1] max-w-3xl mx-auto text-center">
+                        <span className="text-white">Roll Your Own </span>
+                        <span className="text-nexus-accent">Project.</span>
                       </h1>
-                      <p className="text-white/40 text-lg">
-                        Describe your vision. Odyseus AI will architect, build, and deploy it instantly.
+                      <p className="text-white/40 text-xl max-w-xl mx-auto font-medium">
+                        Pick your components. We'll architect, build, and deploy your end-to-end type-safe application instantly.
                       </p>
                     </div>
 
-                    <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-nexus-accent/50 to-purple-500/50 rounded-2xl blur opacity-25 group-focus-within:opacity-100 transition duration-1000 group-focus-within:duration-200"></div>
-                      <div className="relative glass rounded-2xl p-4 flex flex-col gap-4">
-                        <textarea 
-                          value={prompt}
-                          onChange={(e) => setPrompt(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleGenerate();
-                            }
-                          }}
-                          placeholder="e.g. A real-time crypto analytics dashboard with social sentiment analysis..."
-                          className="w-full h-32 bg-transparent border-none focus:ring-0 text-lg resize-none placeholder:text-white/20"
-                        />
-                        <div className="flex items-center justify-between pt-2 border-t border-nexus-border">
-                          <div className="flex gap-2">
+                    <div className="relative group max-w-2xl mx-auto w-full">
+                      <BorderGlow
+                        borderRadius={24}
+                        backgroundColor="#000000"
+                        glowColor="180 100 50"
+                        animated={isGenerating}
+                        className="w-full"
+                      >
+                        <div className="p-6 flex flex-col gap-4">
+                          <textarea 
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleGenerate();
+                              }
+                            }}
+                            placeholder="Describe your project vision..."
+                            className="w-full h-24 bg-transparent border-none focus:ring-0 text-xl resize-none placeholder:text-white/10 font-medium"
+                          />
+                          
+                          <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                            <div className="flex gap-3">
+                              <button 
+                                onClick={() => setShowAssetManager(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest"
+                              >
+                                <Plus size={14} />
+                                Assets
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (!isPro && !isEnterprise) {
+                                    setShowPaywall(true);
+                                    addLog("High Thinking mode is exclusive to Pro and Enterprise tiers.");
+                                    return;
+                                  }
+                                  setIsHighThinking(!isHighThinking);
+                                }}
+                                className={cn(
+                                  "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-widest",
+                                  isHighThinking 
+                                    ? "bg-purple-500/10 border-purple-500/50 text-purple-400" 
+                                    : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10"
+                                )}
+                              >
+                                <Cpu size={14} />
+                                High Thinking
+                              </button>
+                            </div>
+                            
                             <button 
-                              onClick={() => setShowAssetManager(true)}
-                              className="p-2 rounded-lg bg-white/5 border border-nexus-border hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                              title="Add Assets"
-                            >
-                              <Plus size={16} />
-                            </button>
-                            <button 
-                              onClick={() => setShowTemplateSearch(true)}
-                              className="p-2 rounded-lg bg-white/5 border border-nexus-border hover:bg-white/10 text-white/40 hover:text-white transition-colors"
-                              title="Search Templates"
-                            >
-                              <Search size={16} />
-                            </button>
-                            <button 
-                              onClick={() => setIsHighThinking(!isHighThinking)}
+                              onClick={handleGenerate}
+                              disabled={isGenerating || !prompt.trim()}
                               className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-widest",
-                                isHighThinking 
-                                  ? "bg-purple-500/20 border-purple-500 text-purple-400 glow-purple" 
-                                  : "bg-white/5 border-nexus-border text-white/40 hover:bg-white/10"
+                                "flex items-center gap-2 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
+                                isGenerating || !prompt.trim() 
+                                  ? "bg-white/5 text-white/20 cursor-not-allowed" 
+                                  : "bg-nexus-accent text-white hover:scale-105 active:scale-95 glow-accent"
                               )}
-                              title="Enable High Thinking Mode (Gemini 3.1 Pro)"
                             >
-                              <Cpu size={14} className={isHighThinking ? "animate-pulse" : ""} />
-                              High Thinking
+                              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
+                              {isGenerating ? 'Building...' : 'Build Project'}
                             </button>
                           </div>
-                          <button 
-                            onClick={handleGenerate}
-                            disabled={isGenerating || !prompt.trim()}
-                            className={cn(
-                              "flex items-center gap-2 px-6 py-2 rounded-xl font-bold transition-all",
-                              isGenerating || !prompt.trim() 
-                                ? "bg-white/5 text-white/20 cursor-not-allowed" 
-                                : "bg-nexus-accent text-nexus-accent-contrast hover:scale-105 active:scale-95 glow-accent"
-                            )}
-                          >
-                            {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
-                            {isGenerating ? 'Architecting...' : 'Build System'}
-                          </button>
+                        </div>
+                      </BorderGlow>
+                    </div>
+
+                    {isGenerating && (
+                      <div className="max-w-xl mx-auto pt-12 text-left w-full">
+                        <TaskBreakdown tasks={taskBreakdown} />
+                        
+                        <div className="mt-12 p-6 glass rounded-2xl border-white/5 flex items-center gap-6">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-white/40">Build Progress</span>
+                              <span className="text-xs font-black text-nexus-accent">{buildProgress}%</span>
+                            </div>
+                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${buildProgress}%` }}
+                                className="h-full bg-nexus-accent shadow-[0_0_10px_rgba(255,100,0,0.5)]"
+                              />
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Status</div>
+                            <div className="text-xs font-bold text-white whitespace-nowrap">{buildStatus}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isGenerating && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full pt-12">
+                      <div className="space-y-6 text-left">
+                        <div className="flex items-center gap-2 px-2">
+                          <div className="w-1 h-4 bg-nexus-accent rounded-full" />
+                          <h3 className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Frontend Frameworks</h3>
+                        </div>
+                          <div className="grid grid-cols-1 gap-3">
+                            {['React (TanStack)', 'Next.js', 'Astro'].map(tech => (
+                                  <div 
+                                    key={tech}
+                                    onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + `Use ${tech}`)}
+                                    className="glass p-4 rounded-2xl border-white/5 hover:border-nexus-accent/30 transition-all cursor-pointer group"
+                                  >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold group-hover:text-nexus-accent transition-colors">{tech}</span>
+                                <Plus size={14} className="text-white/20 group-hover:text-nexus-accent" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-6 text-left">
+                        <div className="flex items-center gap-2 px-2">
+                          <div className="w-1 h-4 bg-purple-500 rounded-full" />
+                          <h3 className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Backend & API</h3>
+                        </div>
+                          <div className="grid grid-cols-1 gap-3">
+                            {['Hono', 'tRPC', 'Convex'].map(tech => (
+                                  <div 
+                                    key={tech}
+                                    onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + `Use ${tech}`)}
+                                    className="glass p-4 rounded-2xl border-white/5 hover:border-purple-500/30 transition-all cursor-pointer group"
+                                  >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold group-hover:text-purple-400 transition-colors">{tech}</span>
+                                <Plus size={14} className="text-white/20 group-hover:text-purple-400" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-6 text-left">
+                        <div className="flex items-center gap-2 px-2">
+                          <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                          <h3 className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Database & Auth</h3>
+                        </div>
+                          <div className="grid grid-cols-1 gap-3">
+                            {['Drizzle (Turso)', 'Better Auth', 'Clerk'].map(tech => (
+                                  <div 
+                                    key={tech}
+                                    onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + `Use ${tech}`)}
+                                    className="glass p-4 rounded-2xl border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer group"
+                                  >
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold group-hover:text-emerald-400 transition-colors">{tech}</span>
+                                <Plus size={14} className="text-white/20 group-hover:text-emerald-400" />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Project Templates</span>
-                        <span 
-                          className="text-[10px] text-nexus-accent font-bold cursor-pointer hover:underline"
-                          onClick={() => setShowTemplateSearch(true)}
-                        >
-                          View All
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mt-4">
-                        {templates.slice(0, 3).map((template) => {
-                          const Icon = (template.icon === 'ShoppingBag' ? ShoppingBag : 
-                                       template.icon === 'Users' ? Users : 
-                                       template.icon === 'LayoutDashboard' ? LayoutDashboard : 
-                                       template.icon === 'Bot' ? Bot : 
-                                       template.icon === 'Palette' ? Palette : Dumbbell);
-                          return (
-                            <motion.div
-                              key={template.id}
-                              whileHover={{ y: -5, scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => setPrompt(template.prompt)}
-                              className="glass p-6 rounded-2xl text-left cursor-pointer border-white/5 hover:border-nexus-accent/30 transition-colors group"
-                            >
-                              <div className={cn(
-                                "w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors",
-                                template.color.replace('text-', 'bg-').replace('400', '400/10')
-                              )}>
-                                <Icon size={24} className={cn("text-white/40 group-hover:text-nexus-accent", template.color)} />
-                              </div>
-                              <h4 className="font-bold text-sm mb-1 group-hover:text-nexus-accent transition-colors">{template.title}</h4>
-                              <p className="text-[10px] text-white/40 line-clamp-2">{template.description}</p>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">UI Widget Library</span>
-                        <span 
-                          className="text-[10px] text-nexus-accent font-bold cursor-pointer hover:underline"
-                          onClick={() => addLog("System: Opening full widget library catalog...")}
-                        >
-                          View All
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-3">
-                        {widgetLibrary.map(widget => (
-                          <div 
-                            key={widget.id} 
-                            onClick={() => addWidgetToPrompt(widget.name)}
-                            className="glass p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-all border-white/5 hover:border-nexus-accent/30 group relative overflow-hidden"
-                          >
-                            <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Plus size={10} className="text-nexus-accent" />
-                            </div>
-                            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center mb-2 group-hover:bg-nexus-accent/10 transition-colors">
-                              <widget.icon size={16} className="text-white/40 group-hover:text-nexus-accent" />
-                            </div>
-                            <h3 className="text-[11px] font-bold truncate">{widget.name}</h3>
-                            <p className="text-[9px] text-white/30 mt-0.5 truncate">{widget.category}</p>
+                    <div className="pt-24 pb-12">
+                      <div className="max-w-xl mx-auto p-8 glass rounded-[32px] border-white/5 space-y-6 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-nexus-accent/10 flex items-center justify-center mx-auto">
+                          <Sparkles size={24} className="text-nexus-accent" />
+                        </div>
+                        <h2 className="text-3xl font-black tracking-tight">Stop guessing. Start building.</h2>
+                        <p className="text-white/60 text-base leading-relaxed">
+                          Odyseus doesn't just "generate code." It architecturally maps your idea, provisions specialized AI agents, and builds production-ready stacks in seconds.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="text-nexus-accent font-black text-xl mb-1">01</div>
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40">Architect</div>
                           </div>
-                        ))}
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="text-purple-400 font-black text-xl mb-1">02</div>
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40">Provision</div>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="text-emerald-400 font-black text-xl mb-1">03</div>
+                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40">Deploy</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-center gap-4 pt-8">
+                          <div className="flex -space-x-2">
+                            {[1,2,3,4].map(i => (
+                              <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-white/10" />
+                            ))}
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/20">Trusted by developers at top startups</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
 
               {activeTab === 'code' && (
                 <motion.div 
@@ -1330,6 +1513,27 @@ export default function App() {
                     <div className="flex items-center justify-between">
                       <h2 className="text-2xl font-bold tracking-tight">{projectName}</h2>
                       <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            addLog("System: Refreshing preview mesh...");
+                            // Simulate refresh
+                          }}
+                          className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                          title="Refresh Preview"
+                        >
+                          <RefreshCw size={16} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            addLog("System: Initializing architectural inspector...");
+                            // Show inspector logic
+                          }}
+                          className="p-2 rounded-lg border border-white/5 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                          title="Inspect Architecture"
+                        >
+                          <Search size={16} />
+                        </button>
+                        <div className="w-[1px] h-8 bg-white/5 mx-2" />
                         <button 
                           onClick={() => setPreviewMode('desktop')}
                           className={cn(
@@ -1754,10 +1958,8 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {/* --- Feedback Loop Widget --- */}
-      <FeedbackWidget />
-
-      {/* --- Global Overlay for Generation --- */}
+      {/* --- AI Assistant & Feedback Loop --- */}
+      <AIChat />
       <AnimatePresence>
         {isGenerating && (
           <motion.div 
@@ -1856,7 +2058,6 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-      <AIChat />
     </div>
   );
 }

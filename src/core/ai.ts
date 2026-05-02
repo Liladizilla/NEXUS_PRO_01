@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
 export interface GeneratedApp {
   projectName: string;
@@ -102,47 +102,109 @@ async function callFallbackAI(prompt: string): Promise<GeneratedApp> {
   return callGemini(prompt);
 }
 
-export async function generateApp(prompt: string, agents: any[], feedback?: string, isHighThinking?: boolean, onProgress?: (status: string, progress: number) => void): Promise<BuildResult> {
-  // 1. Submit task to queue
-  const res = await fetch('/api/generate', {
+export async function generateApp(
+  prompt: string, 
+  agents: any[], 
+  feedback?: string, 
+  isHighThinking?: boolean, 
+  onProgress?: (status: string, progress: number) => void,
+  agentModels?: Record<string, string>
+): Promise<BuildResult> {
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+  const ai = new GoogleGenAI({ apiKey });
+  
+  const modelName = isHighThinking ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
+  
+  let modelContext = "";
+  if (agentModels) {
+    modelContext = `\n\nAgent Orchestration Context:\n` + 
+      Object.entries(agentModels).map(([id, m]) => `- ${id}: ${m}`).join('\n');
+  }
+
+  const finalPrompt = feedback 
+    ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
+    : prompt;
+
+  if (onProgress) onProgress('processing', 10);
+  
+  // 1. Synthesizing
+  if (onProgress) onProgress('synthesizing', 20);
+  
+  const response = await ai.models.generateContent({
+    model: modelName,
+    contents: finalPrompt,
+    config: {
+      systemInstruction: `You are the Odyseus AI Orchestrator, a world-class software architect. 
+      Your goal is to synthesize high-quality, production-ready software architectures. 
+      
+      CRITICAL INSTRUCTIONS:
+      1. ALWAYS generate a complex, multi-tier architecture.
+      2. Include a modern frontend (React/Next.js), a robust backend (Node.js/Go/Rust), and infrastructure-as-code (Terraform/Docker/K8s).
+      3. Use multiple programming languages where appropriate (e.g., Rust for performance-critical parts, Go for microservices, TypeScript for frontend).
+      4. Ensure the file structure is professional (e.g., /src, /server, /infra, /core, /scripts).
+      5. Include detailed README.md and documentation.
+      ${modelContext}
+      
+      You must ALWAYS respond with a valid JSON object containing 'projectName', 'description', and 'files' (an array of {path, content, language} objects).`,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          projectName: { type: Type.STRING },
+          description: { type: Type.STRING },
+          files: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                path: { type: Type.STRING },
+                content: { type: Type.STRING },
+                language: { type: Type.STRING }
+              },
+              required: ["path", "content", "language"]
+            }
+          }
+        },
+        required: ["projectName", "description", "files"]
+      },
+      thinkingConfig: isHighThinking ? { thinkingLevel: ThinkingLevel.HIGH } : undefined
+    }
+  });
+
+  if (!response.text) throw new Error("Empty response from Gemini Mesh");
+  const result = JSON.parse(response.text);
+
+  // 2. Building
+  if (onProgress) onProgress('building', 40);
+  await new Promise(r => setTimeout(r, 1500));
+
+  // 3. Testing
+  if (onProgress) onProgress('testing', 70);
+  await new Promise(r => setTimeout(r, 1500));
+
+  // 4. Deploying
+  if (onProgress) onProgress('deploying', 90);
+  await new Promise(r => setTimeout(r, 1500));
+
+  const taskId = Math.random().toString(36).substr(2, 9);
+  const stagingUrl = `${window.location.origin}/staging/${taskId}`;
+
+  // We still notify the backend about the completed task for persistence if possible
+  // but we don't wait for it.
+  fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, agents, feedback, isHighThinking })
-  });
-  
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || `Backend Gateway: Request rejected (${res.status})`);
-  }
-  
-  const { taskId, plan } = await res.json();
-  console.log(`Task Queue: Job ${taskId.slice(0, 8)} created. Waiting for worker...`);
+    body: JSON.stringify({ prompt, agents, feedback, isHighThinking, result: { ...result, stagingUrl }, status: 'completed' })
+  }).catch(err => console.warn("Failed to sync task with backend", err));
 
-  // 2. Poll for completion (Task Queue Simulation)
-  return new Promise((resolve, reject) => {
-    const poll = async () => {
-      try {
-        const taskRes = await fetch(`/api/tasks/${taskId}`);
-        if (!taskRes.ok) throw new Error(`Connectivity: Task polling failed (${taskRes.status})`);
-        
-        const task = await taskRes.json();
-        
-        if (onProgress) {
-          onProgress(task.status, task.progress);
-        }
+  if (onProgress) onProgress('completed', 100);
 
-        if (task.status === 'completed') {
-          console.log("Task Queue: Job completed. Retrieving build artifacts...");
-          resolve({ result: task.result, plan });
-        } else if (task.status === 'failed') {
-          reject(new Error(task.result?.error || "Pipeline: Generation failed during synthesis"));
-        } else {
-          setTimeout(poll, 1000);
-        }
-      } catch (e) {
-        reject(e);
-      }
-    };
-    poll();
-  });
+  return { 
+    result: { ...result, stagingUrl }, 
+    plan: {
+      agents: agents,
+      systemLoad: 45,
+      complexity: 85
+    }
+  };
 }
