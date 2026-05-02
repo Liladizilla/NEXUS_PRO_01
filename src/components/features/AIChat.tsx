@@ -185,33 +185,9 @@ export const AIChat = () => {
                             </div>
                           </div>
                         </div>
-                      )}
-                          </div>
-                        </div>
-                      )}
+                       )}
                     </div>
 
-<<<<<<< HEAD
-                {/* Input */}
-                <div className="p-4 border-t border-white/5 bg-white/5">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="Ask me anything..."
-                      className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs focus:outline-none focus:border-nexus-accent/50 transition-colors"
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={!input.trim() || isLoading}
-                      title="Send message"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-nexus-accent hover:text-white transition-colors disabled:opacity-50"
-                    >
-                      <Send size={16} />
-                    </button>
-=======
                     {/* Input */}
                     <div className="p-4 border-t border-white/5 bg-white/5">
                       <BorderGlow
