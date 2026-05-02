@@ -2,11 +2,13 @@
 
 Odyseus AI is a next-generation, autonomous software development platform designed to transform natural language prompts into production-ready, full-stack applications. It acts as an "AI Operating System" for software architecture, managing everything from initial design and component selection to deployment and real-time debugging.
 
-## 🚀 Vision
+## 🚀 Available Platforms
 
-Odyseus AI bridges the gap between human creativity and technical execution. By leveraging a multi-agent orchestration layer, it allows users to "Roll Their Own Project" by simply describing their vision. The system architecturally maps the idea, provisions specialized AI agents, and builds a type-safe, scalable stack in seconds.
+Odyseus AI is now available across multiple platforms:
 
----
+- **[Desktop App](#-desktop-application)** - Native desktop experience for Windows, macOS, and Linux
+- **[Web App](#-web-application)** - Browser-based access from any device
+- **[Mobile App](#-mobile-application)** - Coming soon for iOS and Android
 
 ## ✨ Key Features
 
@@ -117,5 +119,72 @@ Odyseus AI automatically generates a `firestore.rules` file based on your projec
 *   **V2.2:** Multi-user collaborative architecting.
 
 ---
+
+## 💻 Desktop Application
+
+Odyseus AI is now available as a native desktop application built with Electron! This brings enhanced performance and native system integration to your development workflow.
+
+### Features
+- **Native Window Controls**: Minimize, maximize, and close buttons integrated into the app
+- **System Integration**: Access to system information and native APIs
+- **Persistent Settings**: Electron Store for local configuration
+- **Built-in Server**: Embedded Express server for local development
+- **Cross-Platform**: Available for Windows, macOS, and Linux
+
+### Installation
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases):
+
+- **Windows**: `NexusPro-Setup-1.0.0.exe` (NSIS installer)
+- **macOS**: `NexusPro-1.0.0.dmg` (Disk image)
+- **Linux**: `NexusPro-1.0.0.AppImage` (AppImage)
+
+### Building from Source
+
+```bash
+# Install dependencies
+npm install
+
+# Build the web application
+npm run build
+
+# Build desktop application
+npm run electron:build
+```
+
+For more information, see [DESKTOP_README.md](DESKTOP_README.md).
+
+---
+
+## 📱 Mobile Application
+
+Odyseus AI is coming to mobile devices! We're developing a cross-platform mobile application for iOS and Android using React Native.
+
+### Planned Features
+- AI-powered code generation on the go
+- Project management from your phone
+- Real-time debugging tools
+- Push notifications for build status
+- Biometric authentication
+- Offline mode for core functionality
+
+### Technology Stack
+- **React Native** with **Expo**
+- **Native Performance**: Near-native UI/UX
+- **Code Sharing**: 70-80% shared with web version
+- **Cross-Platform**: Single codebase for iOS and Android
+
+### Timeline
+- **Phase 1** (Weeks 1-4): Foundation & Setup
+- **Phase 2** (Weeks 5-8): UI/UX Adaptation
+- **Phase 3** (Weeks 9-16): Feature Implementation
+- **Phase 4** (Weeks 17-20): Native Integration
+- **Phase 5** (Weeks 21-24): Testing & Deployment
+
+For detailed roadmap, see [MOBILE_ROADMAP.md](MOBILE_ROADMAP.md).
+
+---
+
+## 📈 Future Roadmap
 
 *Architected by Odyseus AI.*

@@ -1,14 +1,66 @@
 {
-  "name": "react-example",
+  "name": "nexus-pro-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "electron:dev": "tsx server/index.ts & electron .",
+    "electron:build": "vite build && electron-builder build",
+    "electron:build:win": "vite build && electron-builder build --win",
+    "electron:build:mac": "vite build && electron-builder build --mac",
+    "electron:build:linux": "vite build && electron-builder build --linux"
+  },
+  "main": "electron/main.js",
+  "build": {
+    "appId": "com.odyseus.nexuspro",
+    "productName": "Odyseus Nexus Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "server/**/*",
+      "firebase-applet-config.json",
+      "firebase-blueprint.json",
+      "firestore.rules"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -20,6 +72,7 @@
     "clsx": "^2.1.1",
     "compression": "^1.8.1",
     "dotenv": "^17.2.3",
+    "electron-store": "^8.1.0",
     "express": "^4.21.2",
     "express-rate-limit": "^8.3.1",
     "firebase": "^12.11.0",
@@ -41,6 +94,8 @@
     "@types/node": "^22.14.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.21",
+    "electron": "^34.0.0",
+    "electron-builder": "^24.13.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
