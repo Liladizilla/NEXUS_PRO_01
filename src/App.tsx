@@ -84,6 +84,7 @@ import { AuthPage } from './components/features/AuthPage';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
 import { Debugger } from './components/features/Debugger';
 import BorderGlow from './components/ui/BorderGlow';
+import { DesktopApp } from './components/features/DesktopApp';
 import { useNexusStore, AgentStatus } from './core/store';
 import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
@@ -857,6 +858,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-nexus-bg text-white selection:bg-nexus-accent/30 overflow-hidden">
+      <DesktopApp />
       <AnimatePresence>
         {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
       </AnimatePresence>
