@@ -51,6 +51,34 @@
         }
       },
       "required": ["uid", "key", "lastGeneratedAt"]
+    },
+    "projects": {
+      "title": "Project",
+      "description": "Stores project metadata and configuration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "framework": { "type": "string" },
+        "language": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name"]
+    },
+    "files": {
+      "title": "Project File",
+      "description": "Stores individual file content within a project.",
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "content": { "type": "string" },
+        "language": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["path", "content"]
     }
   },
   "firestore": {
@@ -61,6 +89,14 @@
     "/api_keys/{userId}": {
       "schema": "api_keys",
       "description": "A collection of API keys, keyed by the user's Auth UID."
+    },
+    "/projects/{projectId}": {
+      "schema": "projects",
+      "description": "A collection of projects."
+    },
+    "/projects/{projectId}/files/{fileId}": {
+      "schema": "files",
+      "description": "A subcollection of files for a specific project."
     }
   }
 }

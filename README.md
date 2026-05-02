@@ -1,51 +1,121 @@
-# Odyseus AI: Autonomous Software Orchestration OS
+# Odyseus AI – Autonomous Software Builder OS
 
-Odyseus AI is a next-generation, autonomous development ecosystem designed to transform natural language prompts into production-ready software. By orchestrating a mesh of specialized AI agents, Odyseus AI handles the entire software development lifecycle—from architecture and UI design to backend logic, debugging, and multi-cloud deployment.
+Odyseus AI is a next-generation, autonomous software development platform designed to transform natural language prompts into production-ready, full-stack applications. It acts as an "AI Operating System" for software architecture, managing everything from initial design and component selection to deployment and real-time debugging.
 
-## What Odyseus AI Does
+## 🚀 Vision
 
-Odyseus AI acts as a "Software Builder OS," providing a unified interface where users can collaborate with an autonomous team of AI agents. Instead of writing code manually, you describe your vision, and the system synthesizes the necessary components, infrastructure, and logic to bring it to life.
-
-## How to Use Odyseus AI
-
-1.  **Authentication**: Sign in via Google, Apple, or your corporate email to access your personal development workspace.
-2.  **Synthesis**: Enter a detailed prompt describing the application you want to build (e.g., "A real-time Kanban board with task persistence").
-3.  **Orchestration**: Watch as the **Architect**, **Frontend**, **Backend**, and **Debug** agents collaborate in real-time. You can monitor their progress through the live "Communication Mesh" and terminal logs.
-4.  **Refinement**: Use the integrated **Asset Manager** to add custom images or the **Template Registry** to inject pre-built ecosystem modules.
-5.  **Preview**: Instantly view your generated application in the built-in **Preview Engine**, with toggles for both Desktop and Mobile responsiveness.
-6.  **Task Management**: Use the interactive **Kanban Workspace** to manage specific orchestration tasks and assign them to different agents.
-7.  **Deployment**: Once satisfied, use the **DevOps Agent** to deploy your application to **Railway**, **AWS S3**, or **Cloudflare Pages** with a single click.
-
-## Key Features
-
-### 🤖 Autonomous Agent Mesh
-- **Architect**: Designs system structure and data models.
-- **Frontend**: Synthesizes responsive UI components and layouts.
-- **Backend**: Provisions APIs, databases, and server-side logic.
-- **Debug**: Scans for vulnerabilities and optimizes performance.
-- **DevOps**: Handles cloud infrastructure and instant deployment.
-
-### ⚡ Real-Time Synthesis Visualization
-- **Communication Mesh**: A visual representation of agents collaborating and sharing data.
-- **Live Terminal**: Real-time logs from the underlying build processes.
-- **Agent Status Cards**: Monitor the health and current activity of every agent in your team.
-
-### 🛠️ Professional Development Tools
-- **Asset Manager**: Centralized management for images, SVGs, and data files.
-- **Template Search**: Access a global registry of high-performance application templates.
-- **Project History**: Track every build and restore previous versions of your ecosystem.
-- **Custom Orchestration**: Select specific AI models (GPT-4o, Claude 3.5, Gemini 1.5 Pro) for each agent to optimize for cost or performance.
-
-### 🌐 Multi-Cloud Deployment
-- One-click deployment to **Railway**, **AWS**, or **Cloudflare**.
-- Automatic provisioning of SSL, CDN, and edge routing.
-- Custom domain support for Pro and Enterprise users.
-
-### 🎨 Advanced Customization
-- **Theme Engine**: Switch between Deep Space (Dark), Pure Light, and Cyberpunk aesthetics.
-- **Accent Customization**: Personalize your workspace with custom accent colors and glow effects.
-- **Autonomous Mode**: Toggle whether agents can make architectural decisions without manual confirmation.
+Odyseus AI bridges the gap between human creativity and technical execution. By leveraging a multi-agent orchestration layer, it allows users to "Roll Their Own Project" by simply describing their vision. The system architecturally maps the idea, provisions specialized AI agents, and builds a type-safe, scalable stack in seconds.
 
 ---
 
-*Odyseus AI — Building the future of software, autonomously.*
+## ✨ Key Features
+
+### 1. Autonomous Multi-Agent Orchestration
+*   **Architect Agent:** Analyzes prompts to define the optimal tech stack and data schema.
+*   **Frontend/Backend Agents:** Work in parallel (Parallel Synthesis) to build out the UI and server-side logic.
+*   **Security Agent:** Automatically generates and validates Firestore security rules.
+*   **DevOps Agent:** Manages the CI/CD pipeline and deployment status.
+
+### 2. Next-Gen Project Builder
+*   **Natural Language Interface:** Describe your app, and Odyseus handles the rest.
+*   **Stack Customization:** Choose from modern frameworks like React (TanStack), Next.js, or Astro.
+*   **Database Integration:** Seamlessly provisions Firestore with automated schema mapping.
+
+### 3. Integrated AI Assistant (Odyseus AI)
+*   **Dual-Mode Interface:** A unified widget for both real-time **Chat** support and a **Refinement Loop**.
+*   **Context-Aware:** The assistant understands your project's current state and can help debug or extend features.
+*   **Refine Tab:** Directly provide feedback to the AI to iterate on the current build.
+
+### 4. Developer Tools & Observability
+*   **Visual CI/CD Pipeline:** Track every stage of the build process—from synthesis to deployment—in real-time.
+*   **Real-Time Debugger:** Inspect the "Neural Mesh" logs and step through the AI's decision-making process.
+*   **Kanban Board:** Automatically generated task lists to track the progress of the autonomous agents.
+
+### 5. Enterprise-Grade Security & Auth
+*   **Firebase Integration:** Built-in authentication and secure database configuration.
+*   **Type-Safe Architecture:** Ensures consistent data flow across the entire application.
+
+---
+
+## 🎨 Design Language: Glassmorphism 2.0
+
+Odyseus AI features a high-fidelity, futuristic interface built on **Glassmorphism** principles:
+*   **Translucent Surfaces:** Backdrop blurs and subtle borders create a sense of depth.
+*   **Vibrant Accents:** A signature "Nexus Accent" (Cyan/Neon) guides the user's attention.
+*   **Fluid Animations:** Powered by Framer Motion for a tactile, responsive feel.
+*   **Responsive Layout:** A desktop-first precision design that adapts seamlessly to different workflows.
+
+---
+
+## 🛠️ Technical Stack
+
+*   **Frontend:** React 18+, Vite, TypeScript.
+*   **Styling:** Tailwind CSS (Utility-first, mobile-first).
+*   **Animations:** Framer Motion (`motion/react`).
+*   **State Management:** Zustand (for a lightweight, high-performance global store).
+*   **Backend/Database:** Firebase (Authentication, Firestore).
+*   **AI Engine:** Google Gemini 3.1 Pro via the `@google/genai` SDK.
+*   **Icons:** Lucide React.
+
+---
+
+## 📂 Project Structure
+
+```text
+/src
+  /components
+    /features      # Core functional modules (AIChat, Debugger, Kanban, etc.)
+    /ui            # Reusable atomic design components (Buttons, Cards, Modals)
+  /core
+    ai.ts          # Gemini API integration and prompt engineering
+    firebase.ts    # Firebase initialization and Firestore helpers
+    store.ts       # Zustand global state management
+  /lib             # Utility functions and shared helpers
+  /types           # Global TypeScript definitions
+  App.tsx          # Main application entry and routing logic
+  main.tsx         # React DOM mounting
+```
+
+---
+
+## 🛠️ Getting Started
+
+1.  **Environment Variables:**
+    *   Ensure `GEMINI_API_KEY` is set in your environment.
+    *   Firebase configuration should be present in `firebase-applet-config.json`.
+
+2.  **Installation:**
+    ```bash
+    npm install
+    ```
+
+3.  **Development:**
+    ```bash
+    npm run dev
+    ```
+
+4.  **Build:**
+    ```bash
+    npm run build
+    ```
+
+---
+
+## 🛡️ Security Rules
+
+Odyseus AI automatically generates a `firestore.rules` file based on your project's `firebase-blueprint.json`. These rules implement:
+*   **Default Deny:** All access is restricted unless explicitly allowed.
+*   **Ownership Validation:** Users can only access their own data.
+*   **Schema Enforcement:** Strict type and length checking for all document fields.
+
+---
+
+## 📈 Roadmap
+
+*   **V2.0:** Support for mobile app generation (React Native).
+*   **V2.1:** Advanced "Time Travel" debugging for AI logic.
+*   **V2.2:** Multi-user collaborative architecting.
+
+---
+
+*Architected by Odyseus AI.*
