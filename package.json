@@ -35,7 +35,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -43,7 +45,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -51,7 +56,9 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -94,7 +101,7 @@
     "@types/node": "^22.14.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.21",
-    "electron": "^34.0.0",
+    "electron": "^34.5.8",
     "electron-builder": "^24.13.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
