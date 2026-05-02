@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 :root {
-<<<<<<< HEAD
   /* Accent color - can be overridden dynamically */
   --nexus-accent: #00f2ff;
   --nexus-accent-contrast: black;
@@ -14,17 +13,12 @@
   --nexus-border: rgba(255, 255, 255, 0.1);
   --nexus-text: #ffffff;
   --nexus-text-muted: rgba(255, 255, 255, 0.6);
-=======
-  --nexus-accent: #3b82f6;
-  --nexus-accent-contrast: white;
->>>>>>> 703ac5cad5fa39eb13e7f2a83977a3bc57659d9e
 }
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-<<<<<<< HEAD
   --color-nexus-bg: var(--nexus-bg);
   --color-nexus-bg-secondary: var(--nexus-bg-secondary);
   --color-nexus-panel: var(--nexus-panel);
@@ -33,13 +27,6 @@
   --color-nexus-border: var(--nexus-border);
   --color-nexus-text: var(--nexus-text);
   --color-nexus-text-muted: var(--nexus-text-muted);
-=======
-  --color-nexus-bg: #000000;
-  --color-nexus-panel: rgba(10, 10, 10, 0.8);
-  --color-nexus-accent: var(--nexus-accent);
-  --color-nexus-accent-contrast: var(--nexus-accent-contrast);
-  --color-nexus-border: rgba(255, 255, 255, 0.08);
->>>>>>> 703ac5cad5fa39eb13e7f2a83977a3bc57659d9e
 }
 
 @layer base {
@@ -108,7 +95,6 @@
 }
 
 ::-webkit-scrollbar-thumb {
-<<<<<<< HEAD
   @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
   background: rgba(var(--nexus-accent-rgb), 0.3);
   
