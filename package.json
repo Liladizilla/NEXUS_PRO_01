@@ -100,7 +100,7 @@
     "@types/node": "^22.14.0",
     "@types/react-syntax-highlighter": "^15.5.13",
     "autoprefixer": "^10.4.21",
-    "electron": "^34.5.8",
+    "electron": "^39.8.5",
     "electron-builder": "^24.13.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
