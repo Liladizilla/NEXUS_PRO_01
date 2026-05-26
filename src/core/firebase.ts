@@ -16,7 +16,7 @@ import {
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp, collection, query, where, orderBy, limit, getDocFromServer } from 'firebase/firestore';
 
 // Import the Firebase configuration
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../firebase-applet-config.json' assert { type: 'json' };
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);

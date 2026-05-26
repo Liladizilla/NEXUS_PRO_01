@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNexusStore } from '../core/store';
+import { useNexusStore } from '../../core/store';
 
 // Type definitions for Electron API
 interface ElectronAPI {

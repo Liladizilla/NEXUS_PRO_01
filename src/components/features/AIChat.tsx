@@ -258,7 +258,6 @@ export const AIChat = () => {
                         </button>
                       </form>
                     )}
->>>>>>> 703ac5cad5fa39eb13e7f2a83977a3bc57659d9e
                   </div>
                 )}
                 

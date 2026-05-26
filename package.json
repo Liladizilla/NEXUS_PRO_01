@@ -2,35 +2,34 @@
   "name": "nexus-pro-app",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
+    "clean": "node -e \"const fs = require('fs'); fs.rmSync('dist', { recursive: true, force: true });\"",
     "lint": "tsc --noEmit",
-    "electron:dev": "tsx server/index.ts & electron .",
-    "electron:build": "vite build && electron-builder build",
-    "electron:build:win": "vite build && electron-builder build --win",
-    "electron:build:mac": "vite build && electron-builder build --mac",
-    "electron:build:linux": "vite build && electron-builder build --linux"
+    "electron:dev": "start \"\" tsx server/index.ts & electron .",
+    "build:server": "tsc -p server/tsconfig.json",
+    "copy:dist": "node scripts/copy-dist.cjs",
+    "prepack": "npm run copy:dist",
+    "electron:build": "vite build && npm run build:server && npm run copy:dist && electron-builder build",
+    "electron:build:win": "vite build && npm run build:server && npm run copy:dist && electron-builder build --win",
+    "electron:build:mac": "vite build && npm run build:server && npm run copy:dist && electron-builder build --mac",
+    "electron:build:linux": "vite build && npm run build:server && npm run copy:dist && electron-builder build --linux"
   },
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "build": {
     "appId": "com.odyseus.nexuspro",
     "productName": "Odyseus Nexus Pro",
     "directories": {
-      "output": "release"
+      "output": "C:/temp/nexus-release"
     },
     "files": [
-      "dist/**/*",
       "electron/**/*",
-      "package.json",
-      "server/**/*",
-      "firebase-applet-config.json",
-      "firebase-blueprint.json",
-      "firestore.rules"
+      "package.json"
     ],
+    "asar": true,
+    "asarUnpack": "electron/dist/**/*,electron/server-dist/**/*",
     "win": {
       "target": [
         {
@@ -84,7 +83,7 @@
     "express-rate-limit": "^8.3.1",
     "firebase": "^12.11.0",
     "helmet": "^8.1.0",
-    "lucide-react": "^0.546.0",
+    "lucide-react": "^1.16.0",
     "motion": "^12.38.0",
     "prettier": "^3.8.1",
     "react": "^19.0.0",

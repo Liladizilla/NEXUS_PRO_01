@@ -190,11 +190,11 @@ export async function generateApp(
   const stagingUrl = `${window.location.origin}/staging/${taskId}`;
 
   // We still notify the backend about the completed task for persistence if possible
-  // but we don't wait for it.
+  // but we don't wait for it. Fire-and-forget with a flag to prevent re-processing.
   fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, agents, feedback, isHighThinking, result: { ...result, stagingUrl }, status: 'completed' })
+    body: JSON.stringify({ prompt, agents, feedback, isHighThinking, result: { ...result, stagingUrl }, status: 'completed', skipProcessing: true })
   }).catch(err => console.warn("Failed to sync task with backend", err));
 
   if (onProgress) onProgress('completed', 100);

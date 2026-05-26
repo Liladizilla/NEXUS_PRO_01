@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Camera, Save, Loader2, CheckCircle2, Mail, AlertTriangle, Github, Globe, MapPin, Info, BarChart3, Rocket, Cpu } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { User, Camera, Save, Loader2, CheckCircle2, Mail, AlertTriangle, GitBranch, Globe, MapPin, Info, BarChart3, Rocket, Cpu } from 'lucide-react';
 import { useNexusStore } from '../../core/store';
 import { auth, updateUserProfile, sendEmailVerification } from '../../core/firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,7 +27,7 @@ export const UserProfile = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifySent, setVerifySent] = useState(false);
-  const [isConnectingGithub, setIsConnectingGithub] = useState(false);
+  const [isConnectingGitBranch, setIsConnectingGitBranch] = useState(false);
 
   useEffect(() => {
     if (userProfile) {
@@ -41,10 +41,10 @@ export const UserProfile = () => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS' && event.data?.provider === 'github') {
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS' && event.data?.provider === 'GitBranch') {
         setGithubConnected(true);
         setGithubUser(event.data.user);
-        addLog(`System: GitHub account @${event.data.user} connected successfully.`);
+        addLog(`System: GitBranch account @${event.data.user} connected successfully.`);
         
         // Update profile in Firestore
         if (auth.currentUser) {
@@ -82,16 +82,16 @@ export const UserProfile = () => {
     }
   };
 
-  const handleConnectGithub = async () => {
-    setIsConnectingGithub(true);
+  const handleConnectGitBranch = async () => {
+    setIsConnectingGitBranch(true);
     try {
-      const res = await fetch('/api/auth/github/url');
+      const res = await fetch('/api/auth/GitBranch/url');
       const { url } = await res.json();
-      window.open(url, 'github_oauth', 'width=600,height=700');
+      window.open(url, 'GitBranch_oauth', 'width=600,height=700');
     } catch (error) {
-      addLog(`Error: Failed to initiate GitHub connection. ${error instanceof Error ? error.message : ''}`);
+      addLog(`Error: Failed to initiate GitBranch connection. ${error instanceof Error ? error.message : ''}`);
     } finally {
-      setIsConnectingGithub(false);
+      setIsConnectingGitBranch(false);
     }
   };
 
@@ -361,26 +361,26 @@ export const UserProfile = () => {
 
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
           <div className="flex items-center gap-2 text-white/40">
-            <Github size={16} />
+            <GitBranch size={16} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Integrations</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${githubConnected ? 'bg-white/10 text-white' : 'bg-white/5 text-white/20'}`}>
-                <Github size={16} />
+                <GitBranch size={16} />
               </div>
               <div>
-                <p className="text-xs font-bold text-white">{githubConnected ? `@${githubUser}` : 'GitHub'}</p>
+                <p className="text-xs font-bold text-white">{githubConnected ? `@${githubUser}` : 'GitBranch'}</p>
                 <p className="text-[8px] font-bold uppercase tracking-widest text-white/20">{githubConnected ? 'Connected' : 'Not Connected'}</p>
               </div>
             </div>
             {!githubConnected ? (
               <button 
-                onClick={handleConnectGithub}
-                disabled={isConnectingGithub}
+                onClick={handleConnectGitBranch}
+                disabled={isConnectingGitBranch}
                 className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[8px] font-bold uppercase tracking-widest text-white hover:bg-white/10 transition-colors disabled:opacity-50"
               >
-                {isConnectingGithub ? '...' : 'Connect'}
+                {isConnectingGitBranch ? '...' : 'Connect'}
               </button>
             ) : (
               <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
