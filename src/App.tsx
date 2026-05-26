@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,9 +9,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { 
   Layout, 
-  Code2, 
   Eye, 
-  Layers, 
   Play, 
   Terminal, 
   Settings as LucideSettings, 
@@ -24,10 +22,8 @@ import {
   Zap, 
   Shield, 
   Sparkles,
-  CreditCard, 
   BarChart3, 
   Plus, 
-  MoreVertical, 
   ChevronRight, 
   ChevronDown,
   X,
@@ -41,28 +37,15 @@ import {
   Globe,
   Smartphone,
   Monitor,
-  Table2,
   BarChart,
-  PieChart,
   LineChart,
-  FormInput,
-  CheckSquare,
-  Type,
-  Bug,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Grid3X3,
-  Columns,
-  Rows,
-  MousePointer2,
   CircleDot,
   Flame,
   Wand2,
   TableProperties,
   LayoutList,
-  Layers3,
-  Trello,
-  ShoppingBag,
+  KanbanSquare,
+  ShoppingCart,
   Users,
   LayoutDashboard,
   User,
@@ -71,7 +54,9 @@ import {
   Dumbbell,
   Check,
   Wand,
-  Maximize2
+  Maximize2,
+  Columns,
+  Bug
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProjectTemplates } from './components/features/ProjectTemplates';
@@ -90,15 +75,9 @@ import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
 import { 
   auth, 
-  googleProvider, 
-  githubProvider,
   syncUserProfile, 
   syncApiKey,
   onAuthStateChanged,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
   signOut,
   doc,
   db,
@@ -108,7 +87,6 @@ import {
 } from './core/firebase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import ReactMarkdown from 'react-markdown';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -441,6 +419,7 @@ export default function App() {
     isAuthLoading, setIsAuthLoading,
     isHighThinking, setIsHighThinking,
     accentColor,
+    theme,
     reset,
     templates, fetchTemplates,
     setDebugActive, setCurrentLine, setDebugVariables, addDebugLog,
@@ -452,6 +431,26 @@ export default function App() {
     isPro, isEnterprise,
     currentProjectId, saveCurrentProject, setUserProjects
   } = useNexusStore();
+
+  // sync theme class with store (for pro UI theme which uses `.dark` class)
+  useEffect(() => {
+    try {
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else if (theme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      } else {
+        // cyberpunk or other custom themes
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [theme]);
 
   const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -751,7 +750,7 @@ export default function App() {
       const res = await fetch('/api/debug', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: currentFile.content })
+        body: JSON.stringify({ code: currentFile.content, error: null, language: currentFile.language || 'typescript' })
       });
       
       const { issues } = await res.json();
@@ -783,18 +782,17 @@ export default function App() {
     addLog(`System: Formatting ${currentFile.path} using AI Mesh...`);
     
     try {
-      const response = await fetch('/api/debug', {
+      const response = await fetch('/api/format', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           code: currentFile.content, 
-          error: "Format this code perfectly according to industry standards. Return the formatted code in a 'fix' field of a single issue." 
+          language: currentFile.language || 'typescript'
         })
       });
       
-      const { issues } = await response.json();
-      if (issues && issues[0]?.fix) {
-        const formatted = issues[0].fix;
+      const { formatted } = await response.json();
+      if (formatted) {
         const newFiles = files.map(f => f.path === activeFile ? { ...f, content: formatted } : f);
         setFiles(newFiles);
         addLog(`System: Formatted ${currentFile.path} successfully.`);
@@ -817,7 +815,7 @@ export default function App() {
       const res = await fetch('/api/lint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: currentFile.content, language: currentFile.language })
+        body: JSON.stringify({ code: currentFile.content, language: currentFile.language || 'typescript' })
       });
       
       const { results } = await res.json();
@@ -845,7 +843,7 @@ export default function App() {
     { id: 'scatter-plot', name: 'Scatter Plot', category: 'Charts', icon: CircleDot, desc: 'Correlation analysis' },
     { id: 'heatmap', name: 'Heatmap', category: 'Charts', icon: Flame, desc: 'Density visualization' },
     { id: 'wizard-form', name: 'Step Wizard', category: 'Forms', icon: Wand2, desc: 'Multi-step form flow' },
-    { id: 'kanban', name: 'Kanban Board', category: 'Layout', icon: Trello, desc: 'Drag-drop task management' },
+    { id: 'kanban', name: 'Kanban Board', category: 'Layout', icon: KanbanSquare, desc: 'Drag-drop task management' },
     { id: 'sidebar-nav', name: 'Sidebar Nav', category: 'Layout', icon: Columns, desc: 'Collapsible navigation' },
     { id: 'dashboard-grid', name: 'Bento Grid', category: 'Layout', icon: LayoutList, desc: 'Modern dashboard layout' },
   ];
@@ -1266,10 +1264,10 @@ export default function App() {
                               onClick={handleGenerate}
                               disabled={isGenerating || !prompt.trim()}
                               className={cn(
-                                "flex items-center gap-2 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
+                                "ui-btn px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
                                 isGenerating || !prompt.trim() 
-                                  ? "bg-white/5 text-white/20 cursor-not-allowed" 
-                                  : "bg-nexus-accent text-white hover:scale-105 active:scale-95 glow-accent"
+                                  ? "opacity-50 cursor-not-allowed" 
+                                  : ""
                               )}
                             >
                               {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
@@ -1568,7 +1566,7 @@ export default function App() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className="w-10 h-10 rounded-xl bg-nexus-accent/10 flex items-center justify-center border border-nexus-accent/20">
-                                    <Trello size={20} className="text-nexus-accent" />
+                                    <KanbanSquare size={20} className="text-nexus-accent" />
                                   </div>
                                   <div>
                                     <h3 className="text-lg font-bold">Project Workspace</h3>
@@ -1766,7 +1764,7 @@ export default function App() {
                         <span className={cn(
                           "shrink-0",
                           isCritical ? "text-rose-500" : isAdvice ? "text-amber-400" : "text-nexus-accent/50"
-                        )}>➜</span>
+                        )}>âžœ</span>
                         <span className={cn(
                           isCritical ? "text-rose-400 font-bold" : 
                           isAdvice ? "text-amber-200/80 italic" : 
@@ -1794,7 +1792,7 @@ export default function App() {
                   )}
                   {isGenerating && (
                     <div className="flex gap-2 text-nexus-accent animate-pulse">
-                      <span className="shrink-0">➜</span>
+                      <span className="shrink-0">âžœ</span>
                       <span>Processing build stack...</span>
                     </div>
                   )}

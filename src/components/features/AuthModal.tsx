@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Mail, 
   Lock, 
-  Github, 
-  Chrome, 
+  GitBranch, 
+  Globe, 
   ArrowRight, 
   AlertCircle, 
   CheckCircle2,
@@ -150,7 +150,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
             >
-              <Chrome size={14} className="text-nexus-accent" />
+              <Globe size={14} className="text-nexus-accent" />
               Google
             </button>
             <button
@@ -158,7 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
             >
-              <Github size={14} className="text-white" />
+              <GitBranch size={14} className="text-white" />
               GitHub
             </button>
           </div>
@@ -221,7 +221,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all"
-                    placeholder="••••••••"
+                    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   />
                   <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" />
                 </div>

@@ -438,7 +438,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
     } 
   })),
   setDebugVariables: (vars) => set((state) => ({ 
-    debugState: { ...state.debugState, variables: vars } 
+    debugState: { ...state.debugState, variables: { ...state.debugState.variables, ...vars } } 
   })),
   addDebugLog: (log) => set((state) => ({ 
     debugState: { ...state.debugState, logs: [...state.debugState.logs, log] } 
@@ -593,11 +593,11 @@ export const useNexusStore = create<NexusState>((set, get) => ({
     showTaskModal: false,
     showHistory: false,
     agents: [
-      { id: 'architect', name: 'Architect', role: 'System Design', status: 'idle', model: 'Gemini 1.5 Pro' },
-      { id: 'frontend', name: 'Frontend', role: 'UI/UX Builder', status: 'idle', model: 'Claude 3.5 Sonnet' },
-      { id: 'backend', name: 'Backend', role: 'API & Logic', status: 'idle', model: 'GPT-4o' },
-      { id: 'debug', name: 'Debug', role: 'Error Correction', status: 'idle', model: 'Claude 3.5 Sonnet' },
-      { id: 'devops', name: 'DevOps', role: 'Deployment', status: 'idle', model: 'GPT-4o' },
+      { id: 'architect', name: 'Architect', role: 'System Design', status: 'idle', model: 'Gemini 3.1 Pro' },
+      { id: 'frontend', name: 'Frontend', role: 'UI/UX Builder', status: 'idle', model: 'Gemini 3 Flash' },
+      { id: 'backend', name: 'Backend', role: 'API & Logic', status: 'idle', model: 'Gemini 3.1 Pro' },
+      { id: 'debug', name: 'Debug', role: 'Error Correction', status: 'idle', model: 'Gemini 3 Flash' },
+      { id: 'devops', name: 'DevOps', role: 'Deployment', status: 'idle', model: 'Gemini 3.1 Pro' },
     ],
   }),
 }));
