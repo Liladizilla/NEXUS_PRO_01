@@ -1,17 +1,34 @@
 // @ts-ignore - Server-side dependencies not needed in client builds
 import { v4 as uuidv4 } from 'uuid';
-// @ts-ignore - Server-side Firebase SDK
+// @ts-ignore - Server-side Firebase SDK (type-only import)
 import type { Firestore } from 'firebase/firestore';
-// @ts-ignore - Server-side Firebase SDK
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+
+// Firestore helper functions will be dynamically imported when a DB is available in production.
+let firestoreHelpers: any = null;
 
 export class QueueService {
   private tasks: Map<string, { status: string, result?: any, progress: number, agents?: any[] }> = new Map();
   private db: any;
   private readonly MAX_CACHE_SIZE = 100;
+  private firestoreFns: any = null;
 
   constructor(db: any) {
     this.db = db;
+    if (this.db && process.env.NODE_ENV === 'production') {
+      import('firebase/firestore').then((m) => {
+        this.firestoreFns = {
+          doc: m.doc,
+          setDoc: m.setDoc,
+          getDoc: m.getDoc,
+          collection: m.collection,
+          query: m.query,
+          where: m.where,
+          getDocs: m.getDocs,
+        };
+      }).catch((err) => {
+        console.warn('[ODYSEUS QUEUE] Failed to load firestore helpers:', err);
+      });
+    }
   }
 
   private evictCache() {
@@ -27,9 +44,9 @@ export class QueueService {
     this.tasks.set(id, initialTask);
     this.evictCache();
     
-    if (this.db) {
+    if (this.db && this.firestoreFns) {
       try {
-        await setDoc(doc(this.db, 'tasks', id), initialTask);
+        await this.firestoreFns.setDoc(this.firestoreFns.doc(this.db, 'tasks', id), initialTask);
       } catch (e) {
         console.error("Firestore Error (createTask):", e);
       }
@@ -42,7 +59,7 @@ export class QueueService {
     
     // Space Check: Firestore has a 1MB limit per document.
     if (result) {
-      const size = Buffer.byteLength(JSON.stringify(result));
+      const size = new TextEncoder().encode(JSON.stringify(result)).length;
       if (size > 800000) { // ~800KB warning
         console.warn(`\x1b[33m[ODYSEUS QUEUE]\x1b[0m Task ${id} result size (${(size / 1024).toFixed(2)} KB) is approaching Firestore 1MB limit.`);
         if (size > 1000000) {
@@ -67,9 +84,9 @@ export class QueueService {
     this.tasks.set(id, updatedTask);
     this.evictCache();
     
-    if (this.db) {
+    if (this.db && this.firestoreFns) {
       try {
-        await setDoc(doc(this.db, 'tasks', id), updatedTask, { merge: true });
+        await this.firestoreFns.setDoc(this.firestoreFns.doc(this.db, 'tasks', id), updatedTask, { merge: true });
       } catch (e) {
         console.error("Firestore Error (updateTask):", e);
       }
@@ -79,10 +96,10 @@ export class QueueService {
   async getTask(id: string) {
     if (this.tasks.has(id)) return this.tasks.get(id);
     
-    if (this.db) {
+    if (this.db && this.firestoreFns) {
       try {
-        const docRef = doc(this.db, 'tasks', id);
-        const docSnap = await getDoc(docRef);
+        const docRef = this.firestoreFns.doc(this.db, 'tasks', id);
+        const docSnap = await this.firestoreFns.getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
           this.tasks.set(id, data as any);
@@ -96,10 +113,10 @@ export class QueueService {
   }
 
   async getActiveTasksCount() {
-    if (this.db) {
+    if (this.db && this.firestoreFns) {
       try {
-        const q = query(collection(this.db, 'tasks'), where('status', 'in', ['processing', 'queued']));
-        const querySnapshot = await getDocs(q);
+        const q = this.firestoreFns.query(this.firestoreFns.collection(this.db, 'tasks'), this.firestoreFns.where('status', 'in', ['processing', 'queued']));
+        const querySnapshot = await this.firestoreFns.getDocs(q);
         return querySnapshot.size;
       } catch (e) {
         console.error("Firestore Error (getActiveTasksCount):", e);

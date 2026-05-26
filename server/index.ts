@@ -1,15 +1,14 @@
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
-import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from 'dotenv';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+// Use the CJS dist entry for Firebase to avoid ESM resolution issues in this Node environment
+// Firebase imports removed to avoid package export resolution issues during development.
+// We'll dynamically import Firebase only when a config is present AND in production.
 import { readFileSync } from 'fs';
 
 import { AIService } from './services/ai.service.js';
@@ -22,11 +21,21 @@ let db: any = null;
 try {
   const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
   const firebaseConfig = JSON.parse(readFileSync(configPath, 'utf8'));
-  
+
   if (firebaseConfig && firebaseConfig.projectId) {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-    console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const { initializeApp } = await import('firebase/app');
+        const { getFirestore } = await import('firebase/firestore');
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
+      } catch (err) {
+        console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase import failed. Task persistence disabled.", err);
+      }
+    } else {
+      console.log('\x1b[36m[ODYSEUS BACKEND]\x1b[0m Skipping Firebase initialization in development.');
+    }
   }
 } catch (error) {
   console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase config missing or invalid. Task persistence disabled.", error);
@@ -280,8 +289,13 @@ app.get('/api/auth/github/callback', async (req, res) => {
 });
 
 app.post('/api/generate', async (req, res) => {
-  const { prompt, agents, feedback, isHighThinking, agentModels } = req.body;
-  if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+  const { prompt, agents, feedback, isHighThinking, agentModels, result: clientResult, skipProcessing } = req.body;
+  if (!prompt && !skipProcessing) return res.status(400).json({ error: "Prompt is required" });
+
+  // If the client already processed (client-side Gemini), just return the result
+  if (skipProcessing && clientResult) {
+    return res.json({ taskId: 'client-side', plan: { agents: agents || [], systemLoad: 0, complexity: 0 } });
+  }
 
   const activeTasks = await queueService.getActiveTasksCount();
   const plan = getAutoscalingPlan(prompt, activeTasks, agents || []);
@@ -435,19 +449,18 @@ const isProd = process.env.NODE_ENV === 'production';
 
 if (!isProd) {
   // Only use Vite in development
-  (async () => {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+  const { createServer: createViteServer } = await import('vite');
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
+    appType: 'spa',
+  });
+  app.use(vite.middlewares);
+  
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
     });
-    app.use(vite.middlewares);
-    
-    if (!process.env.VERCEL) {
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
-      });
-    }
-  })();
+  }
 } else {
   // In production (including Vercel), serve static files
   const distPath = path.join(process.cwd(), 'dist');
