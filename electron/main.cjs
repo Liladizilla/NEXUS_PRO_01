@@ -1,11 +1,10 @@
 const { app, BrowserWindow, shell, ipcMain, screen } = require('electron');
 const { join, dirname } = require('path');
-const { fileURLToPath } = require('url');
 const { spawn } = require('child_process');
 const Store = require('electron-store');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = __filename;
+const __dirname = __dirname;
 
 // Initialize electron-store for persistent settings
 const store = new Store();
