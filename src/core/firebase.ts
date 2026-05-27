@@ -13,7 +13,8 @@ import {
   updateProfile,
   signOut
 } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp, collection, query, where, orderBy, limit, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocFromServer } from 'firebase/firestore';
+import type { DocumentSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
 // Import the Firebase configuration
 import firebaseConfig from '../../firebase-applet-config.json' assert { type: 'json' };
@@ -117,7 +118,7 @@ export interface UserProfile {
   displayName: string;
   photoURL: string | null;
   email: string;
-  updatedAt: Timestamp | any;
+  updatedAt: any;
   githubConnected?: boolean;
   githubUser?: string | null;
   avatar?: string | null;
@@ -128,13 +129,13 @@ export interface UserProfile {
 
 export const syncUserProfile = (user: User, callback: (profile: UserProfile | null) => void) => {
   const userRef = doc(db, 'users', user.uid);
-  return onSnapshot(userRef, (snapshot) => {
+  return onSnapshot(userRef, (snapshot: any) => {
     if (snapshot.exists()) {
       callback(snapshot.data() as UserProfile);
     } else {
       callback(null);
     }
-  }, (error) => {
+  }, (error: unknown) => {
     handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
   });
 };
@@ -155,18 +156,18 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
 export interface UserApiKey {
   uid: string;
   key: string;
-  lastGeneratedAt: Timestamp | any;
+  lastGeneratedAt: any;
 }
 
 export const syncApiKey = (uid: string, callback: (apiKey: UserApiKey | null) => void) => {
   const keyRef = doc(db, 'api_keys', uid);
-  return onSnapshot(keyRef, (snapshot) => {
+  return onSnapshot(keyRef, (snapshot: any) => {
     if (snapshot.exists()) {
       callback(snapshot.data() as UserApiKey);
     } else {
       callback(null);
     }
-  }, (error) => {
+  }, (error: unknown) => {
     handleFirestoreError(error, OperationType.GET, `api_keys/${uid}`);
   });
 };
@@ -195,8 +196,8 @@ export interface ProjectMetadata {
   description: string;
   framework: string;
   language: string;
-  createdAt: Timestamp | any;
-  updatedAt: Timestamp | any;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export const saveProject = async (metadata: ProjectMetadata) => {
@@ -227,10 +228,10 @@ export const saveProjectFile = async (projectId: string, file: { path: string; c
 
 export const syncProjects = (ownerId: string, callback: (projects: ProjectMetadata[]) => void) => {
   const q = query(collection(db, 'projects'), where('ownerId', '==', ownerId), orderBy('updatedAt', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    const projects = snapshot.docs.map(doc => doc.data() as ProjectMetadata);
+  return onSnapshot(q, (snapshot: any) => {
+    const projects = snapshot.docs.map((doc: any) => doc.data() as ProjectMetadata);
     callback(projects);
-  }, (error) => {
+  }, (error: unknown) => {
     handleFirestoreError(error, OperationType.LIST, 'projects');
   });
 };
@@ -240,7 +241,7 @@ export const loadProjectFiles = async (projectId: string) => {
   const filesRef = collection(db, 'projects', projectId, 'files');
   try {
     const snapshot = await getDocs(filesRef);
-    return snapshot.docs.map(doc => doc.data() as { path: string; content: string; language: string });
+    return snapshot.docs.map((doc: any) => doc.data() as { path: string; content: string; language: string });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, `projects/${projectId}/files`);
     return [];

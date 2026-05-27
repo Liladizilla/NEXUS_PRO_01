@@ -22,6 +22,10 @@
       ]
     },
     "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
     "noEmit": true
-  }
+  },
+  "include": ["src", "server", "electron", "scripts"],
+  "exclude": ["node_modules", "dist"]
 }

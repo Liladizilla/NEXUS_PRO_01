@@ -148,22 +148,32 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
   }, [animated]);
 
   const glowVars = buildGlowVars(glowColor, glowIntensity);
+  const gradientVars = buildGradientVars(colors);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+
+    card.style.setProperty('--card-bg', backgroundColor);
+    card.style.setProperty('--edge-sensitivity', `${edgeSensitivity}`);
+    card.style.setProperty('--border-radius', `${borderRadius}px`);
+    card.style.setProperty('--glow-padding', `${glowRadius}px`);
+    card.style.setProperty('--cone-spread', `${coneSpread}`);
+    card.style.setProperty('--fill-opacity', `${fillOpacity}`);
+
+    Object.entries(glowVars).forEach(([key, value]) => {
+      card.style.setProperty(key, value);
+    });
+    Object.entries(gradientVars).forEach(([key, value]) => {
+      card.style.setProperty(key, value);
+    });
+  }, [backgroundColor, edgeSensitivity, borderRadius, glowRadius, coneSpread, fillOpacity, glowVars, gradientVars]);
 
   return (
     <div
       ref={cardRef}
       onPointerMove={handlePointerMove}
       className={`border-glow-card ${className}`}
-      style={{
-        '--card-bg': backgroundColor,
-        '--edge-sensitivity': edgeSensitivity,
-        '--border-radius': `${borderRadius}px`,
-        '--glow-padding': `${glowRadius}px`,
-        '--cone-spread': coneSpread,
-        '--fill-opacity': fillOpacity,
-        ...glowVars,
-        ...buildGradientVars(colors),
-      } as React.CSSProperties}
     >
       <span className="edge-light" />
       <div className="border-glow-inner">

@@ -91,7 +91,11 @@ async function callGemini(prompt: string): Promise<GeneratedApp> {
     },
   });
 
-  return JSON.parse(response.text);
+  const text = response?.text ?? '';
+  if (!text) {
+    throw new Error('AI response text is empty');
+  }
+  return JSON.parse(text);
 }
 
 // Simulation of other providers for the "Multi-AI Failsafe" requirement

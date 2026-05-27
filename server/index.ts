@@ -393,8 +393,9 @@ app.post('/api/format', async (req, res) => {
 
 // --- 3.2 STAGING SERVER (THE SANDBOX) ---
 app.get('/staging/:taskId/*', async (req, res) => {
-  const { taskId } = req.params;
-  const filePath = req.params[0] || 'index.html';
+  const { taskId } = req.params as { taskId: string };
+  const params = req.params as Record<string, string | undefined>;
+  const filePath = params['0'] || 'index.html';
   
   const task = await queueService.getTask(taskId);
   if (!task || task.status !== 'completed' || !task.result) {
