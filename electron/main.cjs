@@ -3,8 +3,7 @@ const { join, dirname } = require('path');
 const { spawn } = require('child_process');
 const Store = require('electron-store');
 
-const __filename = __filename;
-const __dirname = __dirname;
+// __filename and __dirname are provided by Node CommonJS modules, no redeclaration needed.
 
 // Initialize electron-store for persistent settings
 const store = new Store();

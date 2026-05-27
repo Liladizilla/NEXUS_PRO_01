@@ -353,7 +353,8 @@ app.post('/api/format', async (req, res) => {
 // --- 3.2 STAGING SERVER (THE SANDBOX) ---
 app.get('/staging/:taskId/*', async (req, res) => {
     const { taskId } = req.params;
-    const filePath = req.params[0] || 'index.html';
+    const params = req.params;
+    const filePath = params['0'] || 'index.html';
     const task = await queueService.getTask(taskId);
     if (!task || task.status !== 'completed' || !task.result) {
         return res.status(404).send('Staging environment not ready or task not found.');

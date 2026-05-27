@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="logoTitle" preserveAspectRatio="xMidYMid meet">
+  <title id="logoTitle">Odyseus Nexus Pro logo</title>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#090913"/>
+  <circle cx="256" cy="256" r="176" fill="url(#grad)"/>
+  <circle cx="256" cy="256" r="128" fill="#0f172a"/>
+  <path d="M210 170 L302 170 A78 78 0 0 1 302 342 L210 342 Z" fill="url(#glow)" opacity="0.7"/>
+  <path d="M184 206 L328 206 C344 206 356 218 356 234 L356 278 C356 294 344 306 328 306 L184 306 C168 306 156 294 156 278 L156 234 C156 218 168 206 184 206 Z" fill="#f8fafc" opacity="0.95"/>
+  <path d="M264 194 L286 194 C296 194 304 202 304 212 L304 300 C304 310 296 318 286 318 L264 318 Z" fill="#0f172a"/>
+</svg>

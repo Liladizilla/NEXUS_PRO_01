@@ -2,6 +2,9 @@
   "name": "nexus-pro-app",
   "private": true,
   "version": "1.0.0",
+  "author": "Charis",
+  "description": "Odyseus Nexus Pro - AI-powered software builder OS",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "tsx server/index.ts",
     "build": "vite build",
