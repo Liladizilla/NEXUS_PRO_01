@@ -69,6 +69,8 @@ import { AuthPage } from './components/features/AuthPage';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
 import { Debugger } from './components/features/Debugger';
 import BorderGlow from './components/ui/BorderGlow';
+// @ts-ignore - SVG imported as URL handled by bundler
+import logoUrl from './assets/logo.svg';
 import { DesktopApp } from './components/features/DesktopApp';
 import { useNexusStore, AgentStatus } from './core/store';
 import { generateApp } from './core/ai';
@@ -97,18 +99,27 @@ function cn(...inputs: ClassValue[]) {
 // --- Components ---
 
 const Intro = ({ onComplete }: { onComplete: () => void }) => {
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 3000);
-    return () => clearTimeout(timer);
+  const hasCompletedRef = useRef(false);
+
+  const handleComplete = useCallback(() => {
+    if (!hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      onComplete();
+    }
   }, [onComplete]);
+
+  useEffect(() => {
+    const timer = setTimeout(handleComplete, 3000);
+    return () => clearTimeout(timer);
+  }, [handleComplete]);
 
   return (
     <motion.div 
       initial={{ opacity: 1 }}
       animate={{ opacity: 0 }}
       transition={{ delay: 2.2, duration: 0.8 }}
-      onAnimationComplete={onComplete}
-      className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center"
+      onAnimationComplete={handleComplete}
+      className="fixed inset-0 z-200 bg-black flex flex-col items-center justify-center pointer-events-none"
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
@@ -116,6 +127,7 @@ const Intro = ({ onComplete }: { onComplete: () => void }) => {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="flex flex-col items-center"
       >
+        <img src={logoUrl} alt="Odyseus Nexus Pro logo" className="w-24 h-24 mb-4" />
         <div className="text-7xl font-black tracking-tighter text-white mb-1">
           ODYSEUS
         </div>
@@ -127,7 +139,7 @@ const Intro = ({ onComplete }: { onComplete: () => void }) => {
         initial={{ width: 0 }}
         animate={{ width: 200 }}
         transition={{ delay: 0.4, duration: 1.2, ease: "circOut" }}
-        className="h-[1px] bg-nexus-accent mt-12 rounded-full opacity-30"
+        className="h-px bg-nexus-accent mt-12 rounded-full opacity-30"
       />
     </motion.div>
   );
@@ -571,7 +583,15 @@ export default function App() {
   const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
   const [backendHealth, setBackendHealth] = useState<any>(null);
   const [taskBreakdown, setTaskBreakdown] = useState<string[]>([]);
+  const [authChecked, setAuthChecked] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAuthChecked(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (templates.length === 0) {
@@ -861,14 +881,14 @@ export default function App() {
         {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
       </AnimatePresence>
 
-      {!showIntro && isAuthLoading && (
-        <div className="fixed inset-0 z-[150] bg-nexus-bg flex flex-col items-center justify-center space-y-4">
+      {!showIntro && isAuthLoading && !authChecked && (
+        <div className="fixed inset-0 z-150 bg-nexus-bg flex flex-col items-center justify-center space-y-4">
           <div className="w-12 h-12 border-4 border-nexus-accent/20 border-t-nexus-accent rounded-full animate-spin"></div>
           <p className="text-nexus-accent font-bold text-xs tracking-widest uppercase animate-pulse">Initializing Nexus OS...</p>
         </div>
       )}
 
-      {!showIntro && !isAuthLoading && !isAuthenticated && <AuthPage />}
+      {!showIntro && (!isAuthenticated || (!isAuthLoading && !authChecked)) && <AuthPage />}
       
       <AnimatePresence>
         {showPaywall && <Paywall />}
@@ -895,8 +915,11 @@ export default function App() {
         {showHistory && <HistoryModal />}
       </AnimatePresence>
 
+      {/* Dashboard - Only show when authenticated */}
+      {!showIntro && !isAuthLoading && isAuthenticated && (
+      <div className="flex-1 flex flex-col w-full">
       {/* --- Mobile Header --- */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-nexus-border z-[60] flex items-center justify-between px-4">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-nexus-border z-60 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50">
             <Zap size={18} className="text-nexus-accent" />
@@ -906,6 +929,8 @@ export default function App() {
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="p-2 rounded-lg bg-white/5 border border-nexus-border"
+          title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          aria-label={isSidebarOpen ? "Close navigation sidebar" : "Open navigation sidebar"}
         >
           {isSidebarOpen ? <X size={20} /> : <Layout size={20} />}
         </button>
@@ -919,9 +944,9 @@ export default function App() {
           x: (window.innerWidth < 1024 && !isSidebarOpen) ? -280 : 0
         }}
         className={cn(
-          "flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-[70] lg:z-20",
+          "flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-70 lg:z-20",
           "fixed lg:relative inset-y-0 left-0 lg:translate-x-0 transition-transform lg:transition-none",
-          !isSidebarOpen && "lg:w-[60px]"
+          !isSidebarOpen && "lg:w-15"
         )}
       >
         <div className="hidden lg:flex items-center gap-3 p-4 border-b border-white/5 h-14">
@@ -934,7 +959,12 @@ export default function App() {
         {/* Mobile Sidebar Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-nexus-border">
           <span className="font-bold tracking-tighter">Navigation</span>
-          <button onClick={() => setIsSidebarOpen(false)}><X size={20} /></button>
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            title="Close sidebar"
+            aria-label="Close navigation sidebar"
+            className="p-2 rounded-lg bg-white/5 border border-nexus-border"
+          ><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -1148,6 +1178,7 @@ export default function App() {
                 value={deployTarget}
                 onChange={(e) => setDeployTarget(e.target.value as any)}
                 disabled={isGenerating}
+                aria-label="Deployment target"
                 className="bg-transparent text-[10px] font-black uppercase tracking-widest text-white/40 focus:outline-none px-2 cursor-pointer hover:text-white transition-colors"
               >
                 <option value="railway" className="bg-nexus-bg">Railway</option>
@@ -1372,7 +1403,7 @@ export default function App() {
                     </div>
 
                     <div className="pt-24 pb-12">
-                      <div className="max-w-xl mx-auto p-8 glass rounded-[32px] border-white/5 space-y-6 text-center">
+                      <div className="max-w-xl mx-auto p-8 glass rounded-4xl border-white/5 space-y-6 text-center">
                         <div className="w-12 h-12 rounded-2xl bg-nexus-accent/10 flex items-center justify-center mx-auto">
                           <Sparkles size={24} className="text-nexus-accent" />
                         </div>
@@ -1533,13 +1564,15 @@ export default function App() {
                         >
                           <Search size={16} />
                         </button>
-                        <div className="w-[1px] h-8 bg-white/5 mx-2" />
+                        <div className="w-px h-8 bg-white/5 mx-2" />
                         <button 
                           onClick={() => setPreviewMode('desktop')}
                           className={cn(
                             "p-2 rounded-lg border transition-colors",
                             previewMode === 'desktop' ? "bg-nexus-accent/20 border-nexus-accent text-nexus-accent" : "bg-white/5 border-nexus-border hover:bg-white/10"
                           )}
+                          title="Switch to desktop preview"
+                          aria-label="Switch to desktop preview"
                         >
                           <Monitor size={16} />
                         </button>
@@ -1549,6 +1582,8 @@ export default function App() {
                             "p-2 rounded-lg border transition-colors",
                             previewMode === 'mobile' ? "bg-nexus-accent/20 border-nexus-accent text-nexus-accent" : "bg-white/5 border-nexus-border hover:bg-white/10"
                           )}
+                          title="Switch to mobile preview"
+                          aria-label="Switch to mobile preview"
                         >
                           <Smartphone size={16} />
                         </button>
@@ -1556,8 +1591,8 @@ export default function App() {
                     </div>
                     
                     <div className={cn(
-                      "glass rounded-2xl min-h-[500px] p-8 flex flex-col items-center justify-center border-white/5 transition-all duration-500 mx-auto",
-                      previewMode === 'mobile' ? "max-w-[375px] border-x-8 border-t-16 border-b-16 border-black/40 rounded-[40px]" : "w-full"
+                      "glass rounded-2xl min-h-125 p-8 flex flex-col items-center justify-center border-white/5 transition-all duration-500 mx-auto",
+                      previewMode === 'mobile' ? "max-w-93.75 border-x-8 border-t-16 border-b-16 border-black/40 rounded-[40px]" : "w-full"
                     )}>
                       {files.length > 0 ? (
                         <div className="w-full space-y-8">
@@ -1643,7 +1678,7 @@ export default function App() {
                                     value={feedback}
                                     onChange={(e) => setFeedback(e.target.value)}
                                     placeholder="How can we improve this build? (e.g., 'Make the header sticky', 'Add a dark mode toggle')"
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all min-h-[100px] resize-none"
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-nexus-accent/50 transition-all min-h-25 resize-none"
                                   />
                                   <button 
                                     onClick={() => {
@@ -1915,6 +1950,8 @@ export default function App() {
                           }
                         }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-nexus-accent transition-colors"
+                        title="Send chat message"
+                        aria-label="Send chat message"
                       >
                         <Send size={12} />
                       </button>
@@ -1950,6 +1987,8 @@ export default function App() {
               <button 
                 onClick={() => setIsGenerating(false)}
                 className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-rose-500 transition-colors"
+                title="Dismiss build progress"
+                aria-label="Dismiss build progress"
               >
                 <X size={16} />
               </button>
@@ -1966,7 +2005,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center pointer-events-none"
+            className="fixed inset-0 z-100 bg-black/80 backdrop-blur-md flex items-center justify-center pointer-events-none"
           >
             <CommunicationMesh activeAgents={agents.filter(a => a.status === 'working').map(a => a.id)} />
             
@@ -2058,6 +2097,12 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
+      )}
     </div>
   );
 }
+function useCallback(arg0: () => void, arg1: (() => void)[]) {
+  throw new Error('Function not implemented.');
+}
+

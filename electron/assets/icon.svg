@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="iconTitle" preserveAspectRatio="xMidYMid meet">
+  <title id="iconTitle">Odyseus Nexus Pro icon</title>
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="#050816"/>
+  <circle cx="128" cy="128" r="96" fill="url(#iconGrad)"/>
+  <path d="M90 96h76a24 24 0 0 1 0 48h-28v40h-20v-40H90a24 24 0 0 1 0-48Z" fill="#fff" opacity="0.9"/>
+</svg>

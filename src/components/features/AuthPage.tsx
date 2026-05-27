@@ -61,7 +61,7 @@ export const AuthPage = () => {
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed inset-0 z-[150] bg-nexus-bg flex items-center justify-center p-6 overflow-y-auto"
+      className="fixed inset-0 z-150 bg-nexus-bg flex items-center justify-center p-6 overflow-y-auto"
     >
       <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 border-nexus-accent/20 relative overflow-hidden my-auto">
         {isLoading && (
