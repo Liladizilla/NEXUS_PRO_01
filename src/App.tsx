@@ -934,7 +934,7 @@ export default function App() {
         {/* Mobile Sidebar Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-nexus-border">
           <span className="font-bold tracking-tighter">Navigation</span>
-          <button onClick={() => setIsSidebarOpen(false)}><X size={20} /></button>
+<button onClick={() => setIsSidebarOpen(false)} title="Close navigation"><X size={20} /></button>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col">

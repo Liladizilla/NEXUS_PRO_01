@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -5,14 +6,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
-import dotenv from 'dotenv';
 // Use the CJS dist entry for Firebase to avoid ESM resolution issues in this Node environment
 // Firebase imports removed to avoid package export resolution issues during development.
 // We'll dynamically import Firebase only when a config is present AND in production.
 import { readFileSync } from 'fs';
 import { AIService } from './services/ai.service.js';
 import { QueueService } from './services/queue.service.js';
-dotenv.config();
 // --- 0. FIREBASE INITIALIZATION ---
 let db = null;
 try {
@@ -157,11 +156,11 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Global rate limiter - stricter
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 30, // limit each IP to 30 requests per 15 min (~2 per minute)
+    max: process.env.NODE_ENV === 'development' ? 300 : 30,
     message: { error: "Too many requests. Rate limit exceeded." },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/api/health', // Skip health checks
+    skip: (req) => process.env.NODE_ENV === 'development' || req.originalUrl === '/api/health' || req.path === '/health',
 });
 // Strict limiter for expensive operations
 const generateLimiter = rateLimit({
