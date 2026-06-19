@@ -1,7 +1,14 @@
-const { app, BrowserWindow, shell, ipcMain, screen } = require('electron');
-const { join, dirname } = require('path');
-const { spawn } = require('child_process');
-const Store = require('electron-store');
+const { app, BrowserWindow, shell, ipcMain, screen } = require(`electron`);
+const { join, dirname } = require(`path`);
+const { spawn } = require(`child_process`);
+const Store = require(`electron-store`);
+
+// Debug logging for troubleshooting
+console.log(`Electron app starting...`);
+console.log(`Process.argv:`, process.argv);
+console.log(`NODE_ENV:`, process.env.NODE_ENV);
+console.log(`START_SERVER:`, process.env.START_SERVER);
+
 
 // __filename and __dirname are provided by Node CommonJS modules, no redeclaration needed.
 

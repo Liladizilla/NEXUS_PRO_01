@@ -74,6 +74,48 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     }
+  }
+    "appId": "com.odyseus.nexuspro",
+    "productName": "Odyseus Nexus Pro",
+    "directories": {\n        "output": "C:/temp/nexus-release"\n      },\n      "files": [\n        "electron/assets/**/*",\n        "electron/dist/**/*",\n        "electron/server-dist/**/*",\n        "electron/main.cjs",\n        "electron/preload.js",\n        "package.json"\n      ],\n      "asar": true,
+    "asarUnpack": "electron/dist/**/*,electron/server-dist/**/*",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -115,4 +157,10 @@
     "vite": "^6.2.0"
   }
 }
+
+
+
+
+
+
 

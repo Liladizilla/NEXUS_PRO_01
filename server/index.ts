@@ -176,11 +176,11 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Global rate limiter - stricter
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // limit each IP to 30 requests per 15 min (~2 per minute)
+  max: process.env.NODE_ENV === 'development' ? 300 : 30,
   message: { error: "Too many requests. Rate limit exceeded." },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.originalUrl === '/api/health' || req.path === '/health',
+  skip: (req) => process.env.NODE_ENV === 'development' || req.originalUrl === '/api/health' || req.path === '/health',
 });
 
 // Strict limiter for expensive operations
