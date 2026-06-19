@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -5,7 +6,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
-import dotenv from 'dotenv';
 // Use the CJS dist entry for Firebase to avoid ESM resolution issues in this Node environment
 // Firebase imports removed to avoid package export resolution issues during development.
 // We'll dynamically import Firebase only when a config is present AND in production.
@@ -13,8 +13,6 @@ import { readFileSync } from 'fs';
 
 import { AIService } from './services/ai.service.js';
 import { QueueService } from './services/queue.service.js';
-
-dotenv.config();
 
 // --- 0. FIREBASE INITIALIZATION ---
 let db: any = null;
@@ -24,15 +22,17 @@ try {
 
   if (firebaseConfig && firebaseConfig.projectId) {
     if (process.env.NODE_ENV === 'production') {
-      try {
-        const { initializeApp } = await import('firebase/app');
-        const { getFirestore } = await import('firebase/firestore');
-        const app = initializeApp(firebaseConfig);
-        db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
-      } catch (err) {
-        console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase import failed. Task persistence disabled.", err);
-      }
+      void (async () => {
+        try {
+          const { initializeApp } = await import('firebase/app');
+          const { getFirestore } = await import('firebase/firestore');
+          const app = initializeApp(firebaseConfig);
+          db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+          console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
+        } catch (err) {
+          console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase import failed. Task persistence disabled.", err);
+        }
+      })();
     } else {
       console.log('\x1b[36m[ODYSEUS BACKEND]\x1b[0m Skipping Firebase initialization in development.');
     }
@@ -180,7 +180,7 @@ const globalLimiter = rateLimit({
   message: { error: "Too many requests. Rate limit exceeded." },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/health', // Skip health checks
+  skip: (req) => req.originalUrl === '/api/health' || req.path === '/health',
 });
 
 // Strict limiter for expensive operations
@@ -448,66 +448,70 @@ app.get('/api/health', (req, res) => {
 
 const isProd = process.env.NODE_ENV === 'production';
 
-if (!isProd) {
-  // Only use Vite in development
-  const { createServer: createViteServer } = await import('vite');
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  });
-  app.use(vite.middlewares);
-  
-  if (!process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+const bootstrap = async () => {
+  if (!isProd) {
+    // Only use Vite in development
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
     });
-  }
-} else {
-  // In production (including Vercel), serve static files
-  const distPath = path.join(process.cwd(), 'dist');
-  
-  // Performance: Cache static assets (1 year for hashed files)
-  app.use(express.static(distPath, {
-    maxAge: '1y',
-    etag: true,
-    lastModified: true,
-    setHeaders: (res, path) => {
-      if (path.endsWith('.html')) {
-        // Don't cache HTML files
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      }
-    }
-  }));
-  
-  // SPA Fallback: Serve index.html for any non-API routes
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-  
-  // Only listen if not on Vercel
-  if (!process.env.VERCEL) {
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
-    });
-
-    // Graceful Shutdown
-    const shutdown = () => {
-      console.log('\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...');
-      server.close(() => {
-        console.log('\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.');
-        process.exit(0);
+    app.use(vite.middlewares);
+    
+    if (!process.env.VERCEL) {
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
       });
-      // Force close after 10s
-      setTimeout(() => {
-        console.error('\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.');
-        process.exit(1);
-      }, 10000);
-    };
+    }
+  } else {
+    // In production (including Vercel), serve static files
+    const distPath = path.join(process.cwd(), 'dist');
+    
+    // Performance: Cache static assets (1 year for hashed files)
+    app.use(express.static(distPath, {
+      maxAge: '1y',
+      etag: true,
+      lastModified: true,
+      setHeaders: (res, path) => {
+        if (path.endsWith('.html')) {
+          // Don't cache HTML files
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      }
+    }));
+    
+    // SPA Fallback: Serve index.html for any non-API routes
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) return next();
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+    
+    // Only listen if not on Vercel
+    if (!process.env.VERCEL) {
+      const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+      });
 
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+      // Graceful Shutdown
+      const shutdown = () => {
+        console.log('\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...');
+        server.close(() => {
+          console.log('\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.');
+          process.exit(0);
+        });
+        // Force close after 10s
+        setTimeout(() => {
+          console.error('\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.');
+          process.exit(1);
+        }, 10000);
+      };
+
+      process.on('SIGTERM', shutdown);
+      process.on('SIGINT', shutdown);
+    }
   }
-}
+};
+
+void bootstrap();
 
 export default app;

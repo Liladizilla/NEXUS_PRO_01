@@ -21,6 +21,24 @@ try {
 let mainWindow = null;
 let serverProcess = null;
 
+const loadAppWithRetry = async (url, maxAttempts = 8) => {
+  if (!mainWindow) return;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await mainWindow.loadURL(url);
+      return;
+    } catch (error) {
+      console.warn(`Failed to load ${url} (attempt ${attempt}/${maxAttempts}):`, error);
+      if (attempt === maxAttempts) {
+        console.error('Unable to load app URL after retries.');
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+};
+
 const createWindow = () => {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   
@@ -48,7 +66,11 @@ const createWindow = () => {
 
   // Load the app
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
+    const devUrl = 'http://localhost:3000';
+    mainWindow.webContents.once('did-fail-load', () => {
+      loadAppWithRetry(devUrl);
+    });
+    loadAppWithRetry(devUrl);
     mainWindow.webContents.openDevTools();
   } else {
     // In production, dist is copied into electron/dist during build
