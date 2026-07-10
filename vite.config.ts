@@ -8,7 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
+  // Only load GEMINI_* vars into the build. This keeps Supabase/Postgres
+  // secrets out of the Vite process and therefore out of the client bundle.
+  const env = loadEnv(mode, '.', 'GEMINI_');
   return {
     plugins: [react(), tailwindcss()],
     define: {
