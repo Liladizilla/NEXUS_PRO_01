@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Zap, AlertCircle, Globe, Smartphone } from 'lucide-react';
+import { Zap, AlertCircle, Globe, GitBranch } from 'lucide-react';
 import { 
   auth, 
   googleProvider, 
@@ -51,10 +51,30 @@ export const AuthPage = () => {
       } else if (provider === 'GitHub') {
         await signInWithPopup(auth, githubProvider);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : `${provider} login failed`);
+    } catch (err: any) {
+      setError(getAuthErrorMessage(err, provider));
       setIsLoading(false);
     }
+  };
+
+  const getAuthErrorMessage = (err: any, provider: string): string => {
+    const code = err?.code;
+    if (code === 'auth/unauthorized-domain') {
+      return `Sign-in blocked: this app is being served from "${window.location.host}" which isn't authorized in Firebase. The project owner must add it under Authentication → Settings → Authorized domains.`;
+    }
+    if (code === 'auth/popup-closed-by-user') {
+      return 'The sign-in popup was closed before completing. Please try again and allow popups / third-party cookies.';
+    }
+    if (code === 'auth/cancelled-popup-request') {
+      return 'Only one sign-in popup can be open at a time. Please try again.';
+    }
+    if (code === 'auth/popup-blocked') {
+      return 'The sign-in popup was blocked by your browser. Please allow popups for this site.';
+    }
+    if (code === 'auth/operation-not-allowed') {
+      return `${provider} sign-in isn't enabled for this Firebase project. Enable it under Authentication → Sign-in method.`;
+    }
+    return err instanceof Error ? err.message : `${provider} login failed`;
   };
 
   return (
@@ -131,7 +151,7 @@ export const AuthPage = () => {
             onClick={() => handleSocialLogin('GitHub')}
             className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
           >
-            <Smartphone size={14} /> GitHub
+            <GitBranch size={14} /> GitHub
           </button>
         </div>
 

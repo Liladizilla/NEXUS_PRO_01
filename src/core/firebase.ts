@@ -16,12 +16,28 @@ import {
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocFromServer } from 'firebase/firestore';
 import type { DocumentSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
 
-// Import the Firebase configuration
-import firebaseConfig from '../../firebase-applet-config.json' assert { type: 'json' };
+// Firebase configuration is loaded from environment variables (injected by Vite at build time).
+// Do NOT commit real credentials. Use a local .env (gitignored) and set the VITE_FIREBASE_* vars
+// in your hosting provider's environment (e.g. the Vercel dashboard) for production.
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID,
+};
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error(
+    'Missing Firebase configuration. Set the VITE_FIREBASE_* environment variables (see .env.example).'
+  );
+}
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
 
 async function testConnection() {
   try {

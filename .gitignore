@@ -1,9 +1,39 @@
+# Dependencies
 node_modules/
+
+# Build output
 build/
 dist/
 coverage/
-.DS_Store
+.vite/
+.vercel/
+
+# Logs
 *.log
-.env*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment / secrets — NEVER commit real credentials
+.env
+.env.*
 !.env.example
-.txt*
+
+# Local app config containing keys — use .env / hosting env vars instead
+firebase-applet-config.json
+
+# Built Electron artifacts (contain duplicated config)
+electron/dist/
+electron/server-dist/
+
+# Junk scan / build / lint artifacts
+build-*.txt
+lint-*.txt
+tsc-*.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Agent / tooling working directories
+.kilo/
