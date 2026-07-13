@@ -58,7 +58,7 @@ import {
   Columns,
   Bug
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion, useAnimationControls } from 'motion/react';
 import { ProjectTemplates } from './components/features/ProjectTemplates';
 import { KanbanBoard } from './components/features/KanbanBoard';
 import { AIChat } from './components/features/AIChat';
@@ -68,9 +68,9 @@ import { AuthModal } from './components/features/AuthModal';
 import { AuthPage } from './components/features/AuthPage';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
 import { Debugger } from './components/features/Debugger';
-import BorderGlow from './components/ui/BorderGlow';
 import { DesktopApp } from './components/features/DesktopApp';
-import { useNexusStore, AgentStatus } from './core/store';
+import AgentCard from './components/features/AgentCard';
+import { useNexusStore } from './core/store';
 import { generateApp } from './core/ai';
 import { getContrastColor } from './lib/utils';
 import { 
@@ -178,74 +178,7 @@ const TaskBreakdown = ({ tasks }: { tasks: string[] }) => (
   </div>
 );
 
-const AgentCard = ({ agent }: { agent: any }) => {
-  const [isInspecting, setIsInspecting] = useState(false);
-  const statusColors = {
-    idle: 'text-white/30',
-    working: 'text-nexus-accent animate-pulse',
-    completed: 'text-emerald-400',
-    error: 'text-rose-500'
-  };
 
-  const statusLabels = {
-    idle: 'Waiting for task',
-    working: agent.lastAction || 'Processing...',
-    completed: 'Task finished',
-    error: 'Encountered issue'
-  };
-
-  return (
-    <div 
-      onClick={() => setIsInspecting(!isInspecting)}
-      className="flex flex-col gap-2 p-2 rounded-lg bg-white/5 border border-nexus-border/50 group hover:border-nexus-accent/30 transition-all cursor-help relative overflow-hidden"
-      title="Click to inspect agent capabilities and logs"
-    >
-      <div className="flex items-center gap-3">
-        <div className={cn("p-1.5 rounded-md bg-black/40", statusColors[agent.status as AgentStatus])}>
-          <Cpu size={14} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium truncate group-hover:text-nexus-accent transition-colors">{agent.name}</span>
-            <span className={cn("text-[8px] uppercase font-bold tracking-tighter", statusColors[agent.status as AgentStatus])}>
-              {statusLabels[agent.status as AgentStatus]}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] text-white/50 truncate italic">{agent.role}</p>
-            <span className="text-[8px] text-nexus-accent/60 font-mono uppercase truncate opacity-0 group-hover:opacity-100 transition-opacity">{agent.model}</span>
-          </div>
-        </div>
-      </div>
-      
-      <AnimatePresence>
-        {isInspecting && (
-          <motion.div 
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="pt-2 border-t border-white/5 space-y-2"
-          >
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Capabilities</span>
-              <div className="flex flex-wrap gap-1">
-                {['Architecting', 'Code Synthesis', 'Security Scan'].map(cap => (
-                  <span key={cap} className="px-1.5 py-0.5 rounded-sm bg-white/5 text-[8px] text-white/40 border border-white/5">{cap}</span>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Live Logs</span>
-              <div className="text-[8px] font-mono text-nexus-accent/60 leading-tight">
-                {agent.status === 'working' ? '> Initializing neural mesh...' : '> Task execution finalized.'}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
 
 const AGENT_POSITIONS: Record<string, { x: string, y: string }> = {
   architect: { x: '50%', y: '20%' },
@@ -392,6 +325,69 @@ const CommunicationMesh = ({ activeAgents }: { activeAgents: string[] }) => {
 };
 
 const SettingsIcon = LucideSettings;
+
+const HeroHeadline = () => {
+  const reduce = useReducedMotion();
+  const full = 'Roll Your Own Project.';
+  const words = full.split(' ');
+  let charIndex = 0;
+
+  return (
+    <h1
+      className="max-w-3xl mx-auto text-center font-display"
+      style={{ fontSize: '56px', lineHeight: '62px', fontWeight: 600, letterSpacing: '-0.02em' }}
+    >
+      {words.map((word, wi) => {
+        const isGradient = word.startsWith('Project');
+        return (
+          <span key={wi} className="inline-block whitespace-nowrap">
+            {word.split('').map((ch, ci) => {
+              const delay = 0.1 + charIndex * 0.015 + (isGradient ? 0.04 : 0);
+              charIndex++;
+              return (
+                <motion.span
+                  key={ci}
+                  className={cn('inline-block', isGradient && 'bg-gradient-to-r from-accent-ai to-accent-ai-2 bg-clip-text text-transparent')}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: '60%' }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: reduce ? 0.15 : 0.5, delay: reduce ? 0 : delay, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {ch}
+                </motion.span>
+              );
+            })}
+            {wi < words.length - 1 && <span className="inline-block">&nbsp;</span>}
+          </span>
+        );
+      })}
+    </h1>
+  );
+};
+
+const PromptSubmitButton = ({ disabled, onClick }: { disabled: boolean; onClick: () => void }) => {
+  const controls = useAnimationControls();
+  const handle = () => {
+    if (disabled) return;
+    controls.start({ scale: [1, 1.08, 1], transition: { duration: 0.18, ease: 'easeOut' } });
+    onClick();
+  };
+  return (
+    <motion.button
+      animate={controls}
+      onClick={handle}
+      disabled={disabled}
+      aria-label="Build project"
+      className={cn(
+        'w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition-colors focus-ring',
+        disabled
+          ? 'bg-raised text-text-disabled cursor-not-allowed'
+          : 'bg-accent-interactive text-[#04141A] hover:bg-accent-interactive-dim'
+      )}
+    >
+      <Send size={18} />
+    </motion.button>
+  );
+};
 
 export default function App() {
   const { 
@@ -567,6 +563,7 @@ export default function App() {
 
   const [showIntro, setShowIntro] = useState(true);
   const [chatInput, setChatInput] = useState('');
+  const [envOpen, setEnvOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
   const [backendHealth, setBackendHealth] = useState<any>(null);
@@ -642,6 +639,7 @@ export default function App() {
     }
     
     setIsGenerating(true);
+    agents.forEach(a => updateAgent(a.id, { status: 'queued' }));
     setBuildStatus('Analyzing requirements...');
     setBuildProgress(5);
     setTaskBreakdown([
@@ -919,7 +917,7 @@ export default function App() {
           x: (window.innerWidth < 1024 && !isSidebarOpen) ? -280 : 0
         }}
         className={cn(
-          "flex flex-col border-r border-nexus-border bg-black/20 backdrop-blur-md z-[70] lg:z-20",
+          "flex flex-col border-r border-default bg-base z-[70] lg:z-20",
           "fixed lg:relative inset-y-0 left-0 lg:translate-x-0 transition-transform lg:transition-none",
           !isSidebarOpen && "lg:w-[60px]"
         )}
@@ -943,7 +941,7 @@ export default function App() {
               <div className="p-4 space-y-6 overflow-y-auto">
                 <section>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Project</span>
+                    <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold">Project</span>
                     <div className="flex gap-2">
                       <History 
                         size={14} 
@@ -970,7 +968,7 @@ export default function App() {
                 </section>
 
                 <section>
-                  <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold block mb-2">Explorer</span>
+                  <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold block mb-2">Explorer</span>
                   <div className="space-y-0.5">
                     {files.length === 0 ? (
                       <div className="space-y-1 opacity-40">
@@ -1009,10 +1007,13 @@ export default function App() {
                           key={file.path}
                           onClick={() => setActiveFile(file.path)}
                           className={cn(
-                            "flex items-center gap-2 p-1.5 rounded-md text-xs cursor-pointer transition-colors group",
-                            activeFile === file.path ? "bg-white/10 text-white" : "text-white/50 hover:bg-white/5 hover:text-white/80"
+                            "relative flex items-center gap-2 p-1.5 rounded-md text-xs cursor-pointer transition-colors group",
+                            activeFile === file.path ? "bg-raised text-text-primary" : "text-text-muted hover:bg-raised hover:text-text-primary"
                           )}
                         >
+                          {activeFile === file.path && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-accent-interactive" />
+                          )}
                           <FileCode size={14} />
                           <span className="truncate flex-1">{file.path}</span>
                           <Search 
@@ -1030,7 +1031,7 @@ export default function App() {
                 </section>
 
                 <section>
-                  <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold block mb-2">Agents</span>
+                  <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold block mb-2">Agents</span>
                   <div className="space-y-2">
                     {agents.map(agent => (
                       <AgentCard key={agent.id} agent={agent} />
@@ -1072,95 +1073,111 @@ export default function App() {
 
       {/* --- Main Content --- */}
       <div className="flex-1 flex flex-col min-w-0 relative pt-14 lg:pt-0">
-        {/* Header / Tabs */}
-        <div className="h-14 border-b border-nexus-border flex items-center justify-between px-4 lg:px-6 bg-black/10 backdrop-blur-sm overflow-x-auto no-scrollbar">
+        {/* Header / Tabs — Zone A Command Bar (Spec 4.1 / 5.1) */}
+        <div className="h-14 surface-shell flex items-center justify-between px-4 lg:px-6 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
-              <button 
-                onClick={() => setActiveTab('design')}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'design' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
-                )}
-              >
-                <Layout size={14} />
-                Builder
-              </button>
-              <button 
-                onClick={() => setActiveTab('code')}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'code' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
-                )}
-              >
-                <FileCode size={14} />
-                Code
-              </button>
-              <button 
-                onClick={() => setActiveTab('preview')}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'preview' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
-                )}
-              >
-                <Eye size={14} />
-                Preview
-              </button>
-              <button 
-                onClick={() => setActiveTab('debug')}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'debug' ? "bg-nexus-accent text-white" : "text-white/40 hover:text-white"
-                )}
-              >
-                <Bug size={14} />
-                Debug
-              </button>
+            <div className="flex items-center gap-1 bg-raised/60 p-1 rounded-[10px] border border-default">
+              {([
+                { id: 'design', label: 'Builder', Icon: Layout },
+                { id: 'code', label: 'Code', Icon: FileCode },
+                { id: 'preview', label: 'Preview', Icon: Eye },
+                { id: 'debug', label: 'Debug', Icon: Bug },
+              ] as const).map(({ id, label, Icon }) => {
+                const active = activeTab === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={cn(
+                      "relative flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors",
+                      active ? "text-text-primary bg-raised" : "text-text-muted hover:text-text-primary"
+                    )}
+                  >
+                    <Icon size={14} />
+                    {label}
+                    {active && (
+                      <motion.div
+                        layoutId="cmdbar-tab-indicator"
+                        className="absolute -bottom-[5px] left-2 right-2 h-[2px] rounded-full bg-accent-interactive"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <button 
+            <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-1.5 rounded-[6px] bg-raised border border-default text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary hover:border-strong transition-colors disabled:opacity-50"
             >
               {isSaving ? (
                 <>
-                  <Loader2 size={12} className="animate-spin text-nexus-accent" />
+                  <Loader2 size={12} className="animate-spin text-accent-interactive" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <RefreshCw size={12} className="text-nexus-accent" />
+                  <RefreshCw size={12} className="text-accent-interactive" />
                   Save
                 </>
               )}
             </button>
 
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-white/40 text-[10px] font-black uppercase tracking-widest">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            {/* Live status pill — breathing green dot (Spec 5.1) */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-panel border border-default text-[10px] font-black uppercase tracking-widest text-text-muted">
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="live-dot absolute inline-flex w-1.5 h-1.5 rounded-full bg-state-live" />
+                <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-state-live" />
+              </span>
               Live
             </div>
-            
-            <div className="flex items-center gap-1 bg-white/5 border border-white/5 rounded-xl p-1">
-              <select 
-                value={deployTarget}
-                onChange={(e) => setDeployTarget(e.target.value as any)}
-                disabled={isGenerating}
-                className="bg-transparent text-[10px] font-black uppercase tracking-widest text-white/40 focus:outline-none px-2 cursor-pointer hover:text-white transition-colors"
+
+            {/* Environment dropdown — chevron rotates on open (Spec 5.1) */}
+            <div className="relative flex items-center gap-1">
+              <button
+                onClick={() => setEnvOpen(o => !o)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] bg-raised border border-default text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary transition-colors"
               >
-                <option value="railway" className="bg-nexus-bg">Railway</option>
-                <option value="aws-s3" className="bg-nexus-bg">AWS S3</option>
-                <option value="cloudflare-pages" className="bg-nexus-bg">Cloudflare Pages</option>
-              </select>
-              <button 
+                {deployTarget === 'railway' ? 'Railway' : deployTarget === 'aws-s3' ? 'AWS S3' : 'Cloudflare'}
+                <ChevronDown size={12} className={cn('transition-transform duration-150', envOpen && 'rotate-180')} />
+              </button>
+              {envOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setEnvOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-[calc(100%+8px)] w-44 surface-floating rounded-[10px] p-1 z-50"
+                  >
+                    {([
+                      { v: 'railway', l: 'Railway' },
+                      { v: 'aws-s3', l: 'AWS S3' },
+                      { v: 'cloudflare-pages', l: 'Cloudflare Pages' },
+                    ] as const).map(({ v, l }) => (
+                      <button
+                        key={v}
+                        onClick={() => { setDeployTarget(v); setEnvOpen(false); }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-[6px] text-[11px] text-text-muted hover:bg-raised hover:text-text-primary transition-colors"
+                      >
+                        {l}
+                        {deployTarget === v && <Check size={12} className="text-accent-interactive" />}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+              <button
                 onClick={handleDeploy}
                 disabled={isGenerating}
-                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-[6px] bg-raised border border-default hover:border-strong transition-colors"
                 title={`Deploy to ${deployTarget}`}
               >
-                <Play size={14} className="text-nexus-accent" />
+                <Play size={14} className="text-accent-interactive" />
               </button>
             </div>
 
@@ -1195,27 +1212,18 @@ export default function App() {
                 >
                   <div className="max-w-4xl w-full space-y-12">
                     <div className="space-y-4">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-nexus-accent mb-4">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-panel border border-accent-ai/30 text-[10px] font-bold uppercase tracking-widest text-accent-ai mb-4">
                         <Sparkles size={12} />
                         Next-Gen Project Builder
                       </div>
-                      <h1 className="text-7xl font-black tracking-tighter leading-[1.1] max-w-3xl mx-auto text-center">
-                        <span className="text-white">Roll Your Own </span>
-                        <span className="text-nexus-accent">Project.</span>
-                      </h1>
-                      <p className="text-white/40 text-xl max-w-xl mx-auto font-medium">
+                      <HeroHeadline />
+                      <p className="text-text-muted text-xl max-w-xl mx-auto font-medium">
                         Pick your components. We'll architect, build, and deploy your end-to-end type-safe application instantly.
                       </p>
                     </div>
 
                     <div className="relative group max-w-2xl mx-auto w-full">
-                      <BorderGlow
-                        borderRadius={24}
-                        backgroundColor="#000000"
-                        glowColor="180 100 50"
-                        animated={isGenerating}
-                        className="w-full"
-                      >
+                      <div className="prompt-dock surface-floating rounded-[16px] relative w-full transition-shadow focus-within:border-accent-interactive focus-within:shadow-[0_0_0_1px_var(--accent-interactive),0_0_32px_rgba(var(--accent-interactive-rgb),0.2)]">
                         <div className="p-6 flex flex-col gap-4">
                           <textarea 
                             value={prompt}
@@ -1227,10 +1235,10 @@ export default function App() {
                               }
                             }}
                             placeholder="Describe your project vision..."
-                            className="w-full h-24 bg-transparent border-none focus:ring-0 text-xl resize-none placeholder:text-white/10 font-medium"
+                            className="w-full min-h-[96px] bg-transparent border-none focus:ring-0 text-[15px] leading-[22px] font-mono resize-none placeholder:text-text-muted/50 text-text-primary"
                           />
                           
-                          <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                          <div className="flex items-center justify-between pt-4 border-t border-default/70">
                             <div className="flex gap-3">
                               <button 
                                 onClick={() => setShowAssetManager(true)}
@@ -1260,22 +1268,13 @@ export default function App() {
                               </button>
                             </div>
                             
-                            <button 
-                              onClick={handleGenerate}
+                            <PromptSubmitButton
                               disabled={isGenerating || !prompt.trim()}
-                              className={cn(
-                                "ui-btn px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
-                                isGenerating || !prompt.trim() 
-                                  ? "opacity-50 cursor-not-allowed" 
-                                  : ""
-                              )}
-                            >
-                              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
-                              {isGenerating ? 'Building...' : 'Build Project'}
-                            </button>
+                              onClick={handleGenerate}
+                            />
                           </div>
                         </div>
-                      </BorderGlow>
+                      </div>
                     </div>
 
                     {isGenerating && (

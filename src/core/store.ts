@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { getContrastColor } from '../lib/utils';
 
-export type AgentStatus = 'idle' | 'working' | 'completed' | 'error';
+export type AgentStatus = 'idle' | 'queued' | 'thinking' | 'working' | 'completed' | 'error';
 export type DeployTarget = 'railway' | 'aws-s3' | 'cloudflare-pages' | 'vercel' | 'netlify' | 'docker';
 
 export interface Agent {

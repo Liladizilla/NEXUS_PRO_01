@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./design-system.css";
 
 :root {
   /* Accent color - can be overridden dynamically */
