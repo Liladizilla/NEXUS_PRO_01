@@ -1,0 +1,266 @@
+/* ============================================================
+ * Odyseus — UI/UX Implementation Spec
+ * Phase 1: Design System Foundation (Section 3 + 9.2)
+ * Functional color system, spacing, radius, motion tokens.
+ * Integrates with the existing Tailwind v4 @theme so every
+ * component reads from one source of truth.
+ * ============================================================ */
+
+:root {
+  /* ---- Color: Functional System (3.1) ---- */
+  --bg-void: #090C11;
+  --bg-base: #0F141C;
+  --bg-panel: #161C27;
+  --bg-raised: #1E2733;
+
+  --border-default: #2A3140;
+  --border-strong: #3C4657;
+
+  --accent-interactive: #2FD9E8;       /* cyan — can I click / is this focused */
+  --accent-interactive-dim: #13A7B8;
+  --accent-interactive-rgb: 47, 217, 232;
+
+  --state-live: #3DDC84;               /* green — alive / working */
+  --state-live-rgb: 61, 220, 132;
+  --state-error: #F2555A;              /* red — blocked / failed */
+  --state-error-rgb: 242, 85, 90;
+  --state-warning: #FFB454;            /* amber — pending / queued */
+  --state-warning-rgb: 255, 180, 84;
+
+  --accent-ai-primary: #A855F7;        /* purple — AI / generative only */
+  --accent-ai-primary-rgb: 168, 85, 247;
+  --accent-ai-secondary: #E14BD6;      /* magenta — gradient partner */
+  --accent-ai-secondary-rgb: 225, 75, 214;
+
+  --text-primary: #E7ECF3;
+  --text-muted: #8792A2;
+  --text-disabled: #4B5563;
+
+  /* ---- Spacing & Grid (3.3) — 4px base unit ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* ---- Radius (3.3) ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ---- Motion durations (3.5) ---- */
+  --motion-instant: 100ms;
+  --motion-fast: 180ms;
+  --motion-base: 320ms;
+  --motion-slow: 600ms;
+
+  /* ---- Motion easings (3.5) ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Keep legacy tokens in sync so existing components still compile */
+  --nexus-bg: var(--bg-void);
+  --nexus-bg-secondary: var(--bg-base);
+  --nexus-panel: rgba(22, 28, 39, 0.88);
+  --nexus-border: rgba(42, 49, 64, 1);
+  --nexus-text: var(--text-primary);
+  --nexus-text-muted: var(--text-muted);
+  --nexus-accent: var(--accent-interactive);
+  --nexus-accent-contrast: #04141A;
+  --nexus-accent-rgb: var(--accent-interactive-rgb);
+
+  /* Gradient angle driver for the prompt-dock ambient sweep (5.4) */
+  --gradient-angle: 0deg;
+}
+
+/* Register a custom property so the gradient angle can be animated (5.4). */
+@property --gradient-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Tailwind v4 theme extension — generates bg-*, text-*, border-* utilities */
+@theme {
+  --color-void: var(--bg-void);
+  --color-base: var(--bg-base);
+  --color-panel: var(--bg-panel);
+  --color-raised: var(--bg-raised);
+
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent-interactive: var(--accent-interactive);
+  --color-accent-interactive-dim: var(--accent-interactive-dim);
+
+  --color-state-live: var(--state-live);
+  --color-state-error: var(--state-error);
+  --color-state-warning: var(--state-warning);
+
+  --color-accent-ai: var(--accent-ai-primary);
+  --color-accent-ai-2: var(--accent-ai-secondary);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ============================================================
+ * Elevation & Glass Material (3.4) — Adaptive Realistic Glass
+ * Four planes, back to front. Depth from bg lightness + blur + shadow.
+ * ============================================================ */
+
+/* Plane 1 — Shell base (top bar, rail). Flush, no shadow. */
+.surface-shell {
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* Plane 2 — Panel surface (cards, terminal, dropdowns at rest). */
+.surface-panel {
+  background: rgba(22, 28, 39, 0.88);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Plane 3 — Floating (hover / raised). 24px blur + strong border
+   + inner 1px top highlight to fake a light source. */
+.surface-floating {
+  background: rgba(30, 39, 51, 0.92);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+.surface-floating::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding-top: 1px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.10), transparent 35%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Plane 3+ — Focused (accent glow). */
+.surface-focused {
+  background: var(--bg-raised);
+  border: 1px solid var(--accent-interactive);
+  box-shadow:
+    0 0 0 1px var(--accent-interactive),
+    0 0 32px rgba(var(--accent-interactive-rgb), 0.20);
+}
+
+/* Console glass — conceptually "behind glass" looking at raw output. */
+.glass-console {
+  background: var(--bg-void);
+  border-top: 1px solid var(--border-default);
+}
+
+/* ============================================================
+ * Signature interactions (Section 6)
+ * ============================================================ */
+
+/* Live status pill breathing dot (5.1) — 2s opacity loop. */
+@keyframes live-breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.live-dot {
+  animation: live-breathe 2s var(--ease-inout) infinite;
+}
+
+/* Queued agent dot — soft single pulse every 3s (5.3). */
+@keyframes queued-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.queued-dot {
+  animation: queued-pulse 3s var(--ease-inout) infinite;
+}
+
+/* Agent "thinking" gradient ring rotation (5.3 / 6.4). */
+@keyframes spin-linear {
+  to { transform: rotate(360deg); }
+}
+.thinking-ring {
+  animation: spin-linear 2.4s linear infinite;
+}
+
+/* Indeterminate working progress shimmer (5.3). */
+@keyframes indeterminate {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(330%); }
+}
+
+/* Prompt-dock ambient gradient border sweep (5.4 / 6.5). */
+@keyframes dock-sweep {
+  to { --gradient-angle: 360deg; }
+}
+.prompt-dock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    transparent 0deg,
+    var(--accent-ai-primary) 80deg,
+    var(--accent-ai-secondary) 160deg,
+    transparent 280deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  animation: dock-sweep 8s linear infinite;
+  pointer-events: none;
+}
+/* Paused on focus — focus = intent, not idle (5.4). */
+.prompt-dock:focus-within::before {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+/* ============================================================
+ * Accessibility (Section 8) — custom focus ring everywhere.
+ * ============================================================ */
+.focus-ring:focus-visible,
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent-interactive);
+  outline-offset: 2px;
+}
+/* Never ship a naked outline:none without this replacement */
+*:focus { outline-color: var(--accent-interactive); }
+
+/* ============================================================
+ * Reduced motion (Section 8) — remove flourish, keep feedback.
+ * ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .prompt-dock::before { animation: none; opacity: 0.35; }
+  .thinking-ring { animation: none; }
+  .live-dot { animation: none; opacity: 1; }
+  *, *::before, *::after {
+    animation-duration: 0.15s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.15s !important;
+    scroll-behavior: auto !important;
+  }
+}
