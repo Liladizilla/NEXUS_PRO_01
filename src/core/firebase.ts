@@ -29,9 +29,14 @@ const firebaseConfig = {
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID,
 };
 
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  throw new Error(
-    'Missing Firebase configuration. Set the VITE_FIREBASE_* environment variables (see .env.example).'
+// Firebase is optional at import time. If the VITE_FIREBASE_* env vars are
+// missing (e.g. a hosting provider not yet configured), never throw here —
+// a module-evaluation throw blanks the entire SPA before React/ErrorBoundary
+// can mount. Instead run without cloud features so the UI still renders.
+const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+if (!isFirebaseConfigured) {
+  console.warn(
+    '[Odyseus] Firebase is not configured. Set the VITE_FIREBASE_* environment variables to enable auth and persistence. The app will run without cloud features.'
   );
 }
 
@@ -40,6 +45,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
 
 async function testConnection() {
+  if (!isFirebaseConfigured) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     console.log("Firestore connection successful");
