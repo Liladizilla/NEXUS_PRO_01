@@ -29,39 +29,35 @@ const firebaseConfig = {
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID,
 };
 
-// Firebase is optional at import time. If the VITE_FIREBASE_* env vars are
-// missing (e.g. a hosting provider not yet configured), never throw here —
-// a module-evaluation throw blanks the entire SPA before React/ErrorBoundary
-// can mount. Instead run without cloud features so the UI still renders.
-const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
-if (!isFirebaseConfigured) {
+// Firebase is optional at import time. If the VITE_FIREBASE_* env vars
+// are missing (e.g. a hosting provider not yet configured), do NOT
+// initialize the SDK here — getAuth() validates the API key
+// synchronously and throws (auth/invalid-api-key), which blanks the
+// entire SPA before React/ErrorBoundary can mount. Defer init to
+// isFirebaseConfigured and expose null handles when unavailable.
+export const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.projectId
+);
+
+let app: ReturnType<typeof initializeApp> | null = null;
+let db: ReturnType<typeof getFirestore> | null = null;
+let auth: ReturnType<typeof getAuth> | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
+let githubProvider: GithubAuthProvider | null = null;
+
+if (isFirebaseConfigured) {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
+  githubProvider = new GithubAuthProvider();
+} else {
   console.warn(
     '[Odyseus] Firebase is not configured. Set the VITE_FIREBASE_* environment variables to enable auth and persistence. The app will run without cloud features.'
   );
 }
 
-// Initialize Firebase SDK
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
-
-async function testConnection() {
-  if (!isFirebaseConfigured) return;
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firestore connection successful");
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Firestore Error: The client is offline. Please check your Firebase configuration.");
-    } else {
-      console.error("Firestore Connection Test Error:", error);
-    }
-  }
-}
-testConnection();
-
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-export const githubProvider = new GithubAuthProvider();
+export { auth, db, googleProvider, githubProvider };
 
 export {
   signInWithPopup,
@@ -116,12 +112,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
+      providerInfo: auth?.currentUser?.providerData.map(provider => ({
         providerId: provider.providerId,
         displayName: provider.displayName,
         email: provider.email,

@@ -230,7 +230,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   saveCurrentProject: async () => {
     const state = get();
     const { auth, saveProject, saveProjectFile, serverTimestamp } = await import('./firebase');
-    const user = auth.currentUser;
+    const user = auth?.currentUser;
     if (!user) return;
 
     const projectId = state.currentProjectId || `proj_${Math.random().toString(36).substr(2, 9)}`;
@@ -334,9 +334,9 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setTerminalClosed: (val) => set({ isTerminalClosed: val }),
   setApiKeyData: (key, lastReset) => set({ freeApiKey: key, lastApiKeyReset: lastReset }),
   revokeApiKey: async () => {
-    const { auth, db, doc, setDoc, serverTimestamp } = await import('./firebase');
-    const user = auth.currentUser;
-    if (!user) return;
+const { auth, db, doc, setDoc, serverTimestamp } = await import('./firebase');
+    const user = auth?.currentUser;
+    if (!user || !db) return;
 
     try {
       const keyRef = doc(db, 'api_keys', user.uid);
@@ -359,7 +359,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
     }
 
     const { auth, generateUserApiKey } = await import('./firebase');
-    const user = auth.currentUser;
+    const user = auth?.currentUser;
     if (!user) return;
     
     const lastReset = get().lastApiKeyReset;

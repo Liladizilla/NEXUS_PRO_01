@@ -47,8 +47,8 @@ export const UserProfile = () => {
         addLog(`System: GitBranch account @${event.data.user} connected successfully.`);
         
         // Update profile in Firestore
-        if (auth.currentUser) {
-          updateUserProfile(auth.currentUser.uid, {
+        if (auth?.currentUser) {
+          updateUserProfile(auth?.currentUser.uid, {
             githubConnected: true,
             githubUser: event.data.user
           });
@@ -60,13 +60,13 @@ export const UserProfile = () => {
   }, [setGithubConnected, setGithubUser, addLog]);
 
   const handleSave = async () => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     setIsSaving(true);
     try {
-      await updateUserProfile(auth.currentUser.uid, {
+      await updateUserProfile(auth?.currentUser.uid, {
         displayName,
         photoURL: photoURL || null,
-        email: auth.currentUser.email || '',
+        email: auth?.currentUser.email || '',
         bio,
         location,
         website
@@ -96,10 +96,10 @@ export const UserProfile = () => {
   };
 
   const handleResendVerification = async () => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     setIsVerifying(true);
     try {
-      await sendEmailVerification(auth.currentUser);
+      await sendEmailVerification(auth?.currentUser);
       setVerifySent(true);
       addLog("System: Verification email sent.");
       setTimeout(() => setVerifySent(false), 5000);
@@ -110,7 +110,7 @@ export const UserProfile = () => {
     }
   };
 
-  if (!auth.currentUser) {
+  if (!auth?.currentUser) {
     return (
       <div className="p-6 text-center space-y-4">
         <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto">
@@ -121,7 +121,7 @@ export const UserProfile = () => {
     );
   }
 
-  const isEmailVerified = auth.currentUser.emailVerified;
+  const isEmailVerified = auth?.currentUser.emailVerified;
 
   return (
     <div className="space-y-6">

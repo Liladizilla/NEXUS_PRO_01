@@ -22,6 +22,10 @@ export const AuthPage = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    if (!auth) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
@@ -44,6 +48,11 @@ export const AuthPage = () => {
     setIsLoading(true);
     setError(null);
     setLoadingText(`Connecting to ${provider} Gateway...`);
+    if (!auth || !googleProvider || !githubProvider) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+      setIsLoading(false);
+      return;
+    }
     
     try {
       if (provider === 'Google') {
