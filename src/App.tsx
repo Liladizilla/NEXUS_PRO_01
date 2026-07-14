@@ -459,6 +459,11 @@ export default function App() {
     let unsubscribeApiKey: (() => void) | null = null;
     let unsubscribeProjects: (() => void) | null = null;
 
+    if (!auth || !db) {
+      setIsAuthLoading(false);
+      return;
+    }
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       console.log("Auth State Changed:", user ? `Logged in as ${user.email}` : "Logged out");
       setIsAuthLoading(true);
@@ -523,7 +528,7 @@ export default function App() {
   }, []);
 
   const handleSave = async () => {
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
       setShowAuthModal(true);
       return;
     }
@@ -538,6 +543,10 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      if (!auth) {
+        addLog("System: Not currently signed in.");
+        return;
+      }
       await signOut(auth);
       addLog("System: Logged out successfully.");
     } catch (error) {
@@ -1189,7 +1198,7 @@ export default function App() {
                 userProfile?.photoURL ? (
                   <img src={userProfile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  userProfile?.displayName?.[0]?.toUpperCase() || auth.currentUser?.email?.[0]?.toUpperCase() || 'U'
+                  userProfile?.displayName?.[0]?.toUpperCase() || auth?.currentUser?.email?.[0]?.toUpperCase() || 'U'
                 )
               ) : (
                 <User size={14} />

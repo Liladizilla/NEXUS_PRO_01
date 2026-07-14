@@ -44,6 +44,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const handleSocialLogin = async (provider: any) => {
+    if (!auth || !provider) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -93,6 +97,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
 
     setLoading(true);
+    if (!auth) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+      setLoading(false);
+      return;
+    }
     try {
       if (mode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);

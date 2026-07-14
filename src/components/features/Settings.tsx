@@ -259,7 +259,7 @@ export const Settings: React.FC = () => {
 
                 <div className="pt-4 border-t border-white/5">
                   <button 
-                    onClick={() => signOut(auth)}
+                    onClick={() => { if (auth) signOut(auth); }}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold uppercase tracking-widest hover:bg-rose-500/20 transition-all"
                   >
                     <LogOut size={14} />
