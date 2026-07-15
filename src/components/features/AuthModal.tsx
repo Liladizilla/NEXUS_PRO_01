@@ -13,15 +13,14 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { 
-  auth, 
-  googleProvider, 
-  githubProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
   sendPasswordResetEmail,
-  updateProfile
+  updateProfile,
+  isSupabaseConfigured,
+  type AuthUser
 } from '../../core/firebase';
 import { cn } from '../../lib/utils';
 
@@ -43,23 +42,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const handleSocialLogin = async (provider: any) => {
-    if (!auth || !provider) {
-      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
+    if (!isSupabaseConfigured) {
+      setError('Authentication is unavailable. Supabase is not configured for this deployment.');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(provider);
       onClose();
     } catch (err: any) {
       console.error("Social login error:", err);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('The sign-in popup was closed before completion. Please try again and ensure popups and third-party cookies are allowed in your browser.');
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        setError('Only one sign-in popup can be open at a time.');
-      } else if (err.code === 'auth/popup-blocked') {
+      if (err.message?.includes('redirect')) {
+        setError('Sign in will redirect you. Follow the prompts.');
+      } else if (err.message?.includes('popup')) {
         setError('The sign-in popup was blocked by your browser. Please allow popups for this site.');
       } else {
         setError(err.message || 'An unexpected error occurred during social login.');
@@ -97,23 +94,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
 
     setLoading(true);
-    if (!auth) {
-      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
-      setLoading(false);
-      return;
-    }
     try {
       if (mode === 'signup') {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName });
-        await sendEmailVerification(userCredential.user);
+        const result = await createUserWithEmailAndPassword(email, password);
+        const user = result?.user as AuthUser | null;
+        if (user) {
+          await updateProfile(user, { displayName });
+          await sendEmailVerification(user);
+        }
         setSuccess('Account created! Please check your email for verification.');
         setTimeout(() => setMode('signin'), 3000);
       } else if (mode === 'signin') {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(email, password);
         onClose();
       } else if (mode === 'reset') {
-        await sendPasswordResetEmail(auth, email);
+        await sendPasswordResetEmail(email);
         setSuccess('Password reset email sent!');
         setTimeout(() => setMode('signin'), 3000);
       }
@@ -155,7 +150,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => handleSocialLogin(googleProvider)}
+              onClick={() => handleSocialLogin('google')}
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
             >
@@ -163,7 +158,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               Google
             </button>
             <button
-              onClick={() => handleSocialLogin(githubProvider)}
+              onClick={() => handleSocialLogin('github')}
               disabled={loading}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
             >
