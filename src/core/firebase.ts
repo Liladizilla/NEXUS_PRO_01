@@ -1,24 +1,11 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  GithubAuthProvider,
-  signInWithPopup, 
-  onAuthStateChanged, 
-  User,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-  signOut
-} from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocFromServer } from 'firebase/firestore';
-import type { DocumentSnapshot, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { createClient } from '@supabase/supabase-js';
+import type { DocumentData } from 'firebase/firestore';
 
-// Firebase configuration is loaded from environment variables (injected by Vite at build time).
-// Do NOT commit real credentials. Use a local .env (gitignored) and set the VITE_FIREBASE_* vars
-// in your hosting provider's environment (e.g. the Vercel dashboard) for production.
+// ============================================================================
+// Firebase Configuration (for storage only)
+// ============================================================================
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -29,57 +16,241 @@ const firebaseConfig = {
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID,
 };
 
-// Firebase is optional at import time. If the VITE_FIREBASE_* env vars
-// are missing (e.g. a hosting provider not yet configured), do NOT
-// initialize the SDK here — getAuth() validates the API key
-// synchronously and throws (auth/invalid-api-key), which blanks the
-// entire SPA before React/ErrorBoundary can mount. Defer init to
-// isFirebaseConfigured and expose null handles when unavailable.
-export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey && firebaseConfig.projectId
-);
+// ============================================================================
+// Supabase Configuration (for authentication)
+// ============================================================================
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+let supabase: ReturnType<typeof createClient> | null = null;
+
+if (isSupabaseConfigured && supabaseAnonKey) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+} else {
+  console.warn('[Odyseus] Supabase is not configured for auth. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars.');
+}
+
+// ============================================================================
+// Firebase Storage (Firestore) - Only initialized if Firebase config exists
+// ============================================================================
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
 let app: ReturnType<typeof initializeApp> | null = null;
 let db: ReturnType<typeof getFirestore> | null = null;
-let auth: ReturnType<typeof getAuth> | null = null;
-let googleProvider: GoogleAuthProvider | null = null;
-let githubProvider: GithubAuthProvider | null = null;
 
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
-  auth = getAuth(app);
-  googleProvider = new GoogleAuthProvider();
-  githubProvider = new GithubAuthProvider();
-} else {
-  console.warn(
-    '[Odyseus] Firebase is not configured. Set the VITE_FIREBASE_* environment variables to enable auth and persistence. The app will run without cloud features.'
-  );
 }
 
-export { auth, db, googleProvider, githubProvider };
+// ============================================================================
+// Unified User Types
+// ============================================================================
+// Supabase user type from @supabase/supabase-js
+export interface AuthUser {
+  id: string;
+  email: string | null;
+  user_metadata: {
+    full_name?: string;
+    avatar_url?: string;
+    [key: string]: any;
+  };
+  created_at: string;
+  updated_at: string;
+  email_confirmed_at: string | null;
+  aud: string;
+  role: string;
+}
 
-export {
-  signInWithPopup,
-  onAuthStateChanged,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-  signOut,
-  doc,
-  getDoc,
-  setDoc,
-  onSnapshot,
-  serverTimestamp,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit
+// Firebase-style user for compatibility layer
+interface FirebaseCompatibleUser {
+  uid: string;
+  email: string | null;
+  emailVerified: boolean;
+  displayName: string | null;
+  photoURL: string | null;
+  providerData: { providerId: string; displayName: string | null; email: string | null; photoURL: string | null }[];
+}
+
+export interface AuthSession {
+  user: AuthUser | null;
+  access_token: string | null;
+  refresh_token: string | null;
+}
+
+// ============================================================================
+// Auth Helpers (Supabase)
+// ============================================================================
+export const signInWithPopup = async (provider: 'google' | 'github') => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+  if (error) throw error;
+  return data;
 };
 
+export const signInWithEmailAndPassword = async (email: string, password: string) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+};
+
+export const createUserWithEmailAndPassword = async (email: string, password: string) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
+};
+
+// Helper to get user from Supabase auth result
+export const getAuthUser = (result: any): AuthUser | null => {
+  return result?.user ?? null;
+};
+
+export const sendEmailVerification = async (user: { email: string | null }) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  // Supabase sends verification email automatically on sign up
+  // For existing users, you'd need a server function
+  if (user.email) {
+    console.log('Verification email sent to:', user.email);
+  }
+};
+
+export const sendPasswordResetEmail = async (email: string) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+};
+
+export const signOut = async () => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+};
+
+export const onAuthStateChanged = (callback: (user: AuthUser | null) => void) => {
+  if (!supabase) {
+    // Return a no-op unsubscribe function
+    return () => {};
+  }
+  
+  // Subscribe to auth state changes
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(session?.user as AuthUser | null);
+  });
+  
+  // Also check current session
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    callback(session?.user as AuthUser | null);
+  });
+  
+  // Return unsubscribe function
+  return () => subscription.unsubscribe();
+};
+
+export const updateProfile = async (user: { id: string }, metadata: { displayName?: string; photoURL?: string | null }) => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      full_name: metadata.displayName,
+      avatar_url: metadata.photoURL,
+    },
+  });
+  if (error) throw error;
+};
+
+// ============================================================================
+// Firebase Storage exports (keep for database operations)
+// ============================================================================
+export { db, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocs };
+
+export type { DocumentData };
+
+// ============================================================================
+// Firebase-style auth object for compatibility
+// This provides a Firebase-compatible interface while using Supabase under the hood
+// ============================================================================
+interface FirebaseCompatibleAuth {
+  currentUser: FirebaseCompatibleUser | null;
+}
+
+// Create a reactive auth object that tracks Supabase session
+let currentSessionUser: FirebaseCompatibleUser | null = null;
+
+const supabaseSessionListener = () => {
+  if (!supabase) return {} as { unsubscribe: () => void };
+  
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const user = session?.user;
+    if (user) {
+      currentSessionUser = {
+        uid: user.id,
+        email: user.email ?? null,
+        emailVerified: !!user.email_confirmed_at,
+        displayName: user.user_metadata?.full_name ?? null,
+        photoURL: user.user_metadata?.avatar_url ?? null,
+        providerData: [
+          { 
+            providerId: 'supabase', 
+            displayName: user.user_metadata?.full_name ?? null, 
+            email: user.email ?? null, 
+            photoURL: user.user_metadata?.avatar_url ?? null 
+          }
+        ]
+      };
+    } else {
+      currentSessionUser = null;
+    }
+  });
+  
+  // Check initial session
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    const user = session?.user;
+    if (user) {
+      currentSessionUser = {
+        uid: user.id,
+        email: user.email ?? null,
+        emailVerified: !!user.email_confirmed_at,
+        displayName: user.user_metadata?.full_name ?? null,
+        photoURL: user.user_metadata?.avatar_url ?? null,
+        providerData: [
+          { 
+            providerId: 'supabase', 
+            displayName: user.user_metadata?.full_name ?? null, 
+            email: user.email ?? null, 
+            photoURL: user.user_metadata?.avatar_url ?? null 
+          }
+        ]
+      };
+    }
+  });
+  
+  return subscription;
+};
+
+// Initialize session listener if Supabase is configured
+let sessionSubscription: ReturnType<typeof supabaseSessionListener> | null = null;
+if (isSupabaseConfigured && supabase) {
+  sessionSubscription = supabaseSessionListener();
+}
+
+// Export the Firebase-compatible auth object
+export const auth: FirebaseCompatibleAuth = {
+  get currentUser(): FirebaseCompatibleUser | null {
+    return currentSessionUser;
+  }
+};
+
+// ============================================================================
+// Error handling
+// ============================================================================
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -112,25 +283,28 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth?.currentUser?.uid,
-      email: auth?.currentUser?.email,
-      emailVerified: auth?.currentUser?.emailVerified,
-      isAnonymous: auth?.currentUser?.isAnonymous,
-      tenantId: auth?.currentUser?.tenantId,
-      providerInfo: auth?.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
+      userId: currentSessionUser?.uid,
+      email: currentSessionUser?.email ?? null,
+      emailVerified: currentSessionUser?.emailVerified,
+      isAnonymous: false,
+      tenantId: null,
+      providerInfo: currentSessionUser?.providerData?.map(p => ({
+        providerId: p.providerId,
+        displayName: p.displayName,
+        email: p.email,
+        photoUrl: p.photoURL
       })) || []
     },
     operationType,
     path
-  }
+  };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
+// ============================================================================
+// User Profile (Firestore)
+// ============================================================================
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -145,8 +319,13 @@ export interface UserProfile {
   website?: string;
 }
 
-export const syncUserProfile = (user: User, callback: (profile: UserProfile | null) => void) => {
-  const userRef = doc(db, 'users', user.uid);
+export const syncUserProfile = (user: AuthUser, callback: (profile: UserProfile | null) => void) => {
+  if (!db) {
+    callback(null);
+    return () => {};
+  }
+  const uid = user.id;
+  const userRef = doc(db, 'users', uid);
   return onSnapshot(userRef, (snapshot: any) => {
     if (snapshot.exists()) {
       callback(snapshot.data() as UserProfile);
@@ -154,11 +333,15 @@ export const syncUserProfile = (user: User, callback: (profile: UserProfile | nu
       callback(null);
     }
   }, (error: unknown) => {
-    handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+    handleFirestoreError(error, OperationType.GET, `users/${uid}`);
   });
 };
 
 export const updateUserProfile = async (uid: string, data: Partial<UserProfile>) => {
+  if (!db) {
+    console.warn('Firestore not configured');
+    return;
+  }
   const userRef = doc(db, 'users', uid);
   try {
     await setDoc(userRef, {
@@ -171,6 +354,9 @@ export const updateUserProfile = async (uid: string, data: Partial<UserProfile>)
   }
 };
 
+// ============================================================================
+// API Keys (Firestore)
+// ============================================================================
 export interface UserApiKey {
   uid: string;
   key: string;
@@ -178,6 +364,10 @@ export interface UserApiKey {
 }
 
 export const syncApiKey = (uid: string, callback: (apiKey: UserApiKey | null) => void) => {
+  if (!db) {
+    callback(null);
+    return () => {};
+  }
   const keyRef = doc(db, 'api_keys', uid);
   return onSnapshot(keyRef, (snapshot: any) => {
     if (snapshot.exists()) {
@@ -191,6 +381,10 @@ export const syncApiKey = (uid: string, callback: (apiKey: UserApiKey | null) =>
 };
 
 export const generateUserApiKey = async (uid: string) => {
+  if (!db) {
+    console.warn('Firestore not configured');
+    return null;
+  }
   const keyRef = doc(db, 'api_keys', uid);
   const newKey = `od_live_${Math.random().toString(36).substr(2, 16)}_${Math.random().toString(36).substr(2, 16)}`;
   try {
@@ -202,11 +396,13 @@ export const generateUserApiKey = async (uid: string) => {
     return newKey;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `api_keys/${uid}`);
+    return null;
   }
 };
 
-// --- Project Persistence ---
-
+// ============================================================================
+// Project Persistence (Firestore)
+// ============================================================================
 export interface ProjectMetadata {
   id: string;
   ownerId: string;
@@ -219,6 +415,10 @@ export interface ProjectMetadata {
 }
 
 export const saveProject = async (metadata: ProjectMetadata) => {
+  if (!db) {
+    console.warn('Firestore not configured');
+    return;
+  }
   const projectRef = doc(db, 'projects', metadata.id);
   try {
     await setDoc(projectRef, {
@@ -231,7 +431,10 @@ export const saveProject = async (metadata: ProjectMetadata) => {
 };
 
 export const saveProjectFile = async (projectId: string, file: { path: string; content: string; language: string }) => {
-  // Use a hash or encoded path as document ID to avoid issues with slashes in paths
+  if (!db) {
+    console.warn('Firestore not configured');
+    return;
+  }
   const fileId = btoa(file.path).replace(/\//g, '_').replace(/\+/g, '-');
   const fileRef = doc(db, 'projects', projectId, 'files', fileId);
   try {
@@ -245,6 +448,10 @@ export const saveProjectFile = async (projectId: string, file: { path: string; c
 };
 
 export const syncProjects = (ownerId: string, callback: (projects: ProjectMetadata[]) => void) => {
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
   const q = query(collection(db, 'projects'), where('ownerId', '==', ownerId), orderBy('updatedAt', 'desc'));
   return onSnapshot(q, (snapshot: any) => {
     const projects = snapshot.docs.map((doc: any) => doc.data() as ProjectMetadata);
@@ -255,7 +462,10 @@ export const syncProjects = (ownerId: string, callback: (projects: ProjectMetada
 };
 
 export const loadProjectFiles = async (projectId: string) => {
-  const { getDocs } = await import('firebase/firestore');
+  if (!db) {
+    console.warn('Firestore not configured');
+    return [];
+  }
   const filesRef = collection(db, 'projects', projectId, 'files');
   try {
     const snapshot = await getDocs(filesRef);

@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { User, Camera, Save, Loader2, CheckCircle2, Mail, AlertTriangle, GitBranch, Globe, MapPin, Info, BarChart3, Rocket, Cpu } from 'lucide-react';
 import { useNexusStore } from '../../core/store';
-import { auth, updateUserProfile, sendEmailVerification } from '../../core/firebase';
+import { auth, updateUserProfile, sendEmailVerification, type AuthUser } from '../../core/firebase';
 import { motion, AnimatePresence } from 'motion/react';
 
 const PREDEFINED_AVATARS = [

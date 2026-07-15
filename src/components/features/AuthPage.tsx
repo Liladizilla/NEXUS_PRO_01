@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Zap, AlertCircle, Globe, GitBranch } from 'lucide-react';
 import { 
-  auth, 
-  googleProvider, 
-  githubProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  isSupabaseConfigured,
+  type AuthUser
 } from '../../core/firebase';
 
 export const AuthPage = () => {
@@ -22,8 +21,8 @@ export const AuthPage = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-    if (!auth) {
-      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+    if (!isSupabaseConfigured) {
+      setError('Authentication is unavailable. Supabase is not configured for this deployment.');
       return;
     }
     
@@ -33,10 +32,13 @@ export const AuthPage = () => {
     
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(email, password);
       } else {
-        const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(user, { displayName: email.split('@')[0] });
+        const result = await createUserWithEmailAndPassword(email, password);
+        const user = result?.user as AuthUser | null;
+        if (user) {
+          await updateProfile(user, { displayName: email.split('@')[0] });
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
@@ -44,46 +46,22 @@ export const AuthPage = () => {
     }
   };
 
-  const handleSocialLogin = async (provider: string) => {
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
     setIsLoading(true);
     setError(null);
     setLoadingText(`Connecting to ${provider} Gateway...`);
-    if (!auth || !googleProvider || !githubProvider) {
-      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
+    if (!isSupabaseConfigured) {
+      setError('Authentication is unavailable. Supabase is not configured for this deployment.');
       setIsLoading(false);
       return;
     }
     
     try {
-      if (provider === 'Google') {
-        await signInWithPopup(auth, googleProvider);
-      } else if (provider === 'GitHub') {
-        await signInWithPopup(auth, githubProvider);
-      }
+      await signInWithPopup(provider);
     } catch (err: any) {
-      setError(getAuthErrorMessage(err, provider));
+      setError(err.message || `${provider} login failed`);
       setIsLoading(false);
     }
-  };
-
-  const getAuthErrorMessage = (err: any, provider: string): string => {
-    const code = err?.code;
-    if (code === 'auth/unauthorized-domain') {
-      return `Sign-in blocked: this app is being served from "${window.location.host}" which isn't authorized in Firebase. The project owner must add it under Authentication → Settings → Authorized domains.`;
-    }
-    if (code === 'auth/popup-closed-by-user') {
-      return 'The sign-in popup was closed before completing. Please try again and allow popups / third-party cookies.';
-    }
-    if (code === 'auth/cancelled-popup-request') {
-      return 'Only one sign-in popup can be open at a time. Please try again.';
-    }
-    if (code === 'auth/popup-blocked') {
-      return 'The sign-in popup was blocked by your browser. Please allow popups for this site.';
-    }
-    if (code === 'auth/operation-not-allowed') {
-      return `${provider} sign-in isn't enabled for this Firebase project. Enable it under Authentication → Sign-in method.`;
-    }
-    return err instanceof Error ? err.message : `${provider} login failed`;
   };
 
   return (
@@ -151,13 +129,13 @@ export const AuthPage = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <button 
-            onClick={() => handleSocialLogin('Google')}
+            onClick={() => handleSocialLogin('google')}
             className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
           >
             <Globe size={14} /> Google
           </button>
           <button 
-            onClick={() => handleSocialLogin('GitHub')}
+            onClick={() => handleSocialLogin('github')}
             className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-nexus-border hover:bg-white/10 transition-colors text-xs font-bold"
           >
             <GitBranch size={14} /> GitHub

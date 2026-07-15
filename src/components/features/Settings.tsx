@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle, CheckCircle2, Loader2, Layers, Server, Cloud, ExternalLink, Settings2, Copy, Clock, Key } from 'lucide-react';
+import { X, User, Shield, Bell, Zap, Globe, Cpu, Database, Palette, Keyboard, AlertTriangle, CheckCircle2, Loader2, Layers, Server, Cloud, ExternalLink, Settings2, Copy, Clock, Key, LogOut } from 'lucide-react';
 import { useNexusStore } from '../../core/store';
 import { cn } from '../../lib/utils';
 import { UserProfile } from './UserProfile';
-import { auth } from '../../core/firebase';
-import { signOut } from 'firebase/auth';
-import { LogOut } from 'lucide-react';
+import { signOut } from '../../core/firebase';
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
@@ -259,7 +257,7 @@ export const Settings: React.FC = () => {
 
                 <div className="pt-4 border-t border-white/5">
                   <button 
-                    onClick={() => { if (auth) signOut(auth); }}
+                    onClick={() => { signOut(); }}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold uppercase tracking-widest hover:bg-rose-500/20 transition-all"
                   >
                     <LogOut size={14} />

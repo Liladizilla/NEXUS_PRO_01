@@ -459,12 +459,12 @@ export default function App() {
     let unsubscribeApiKey: (() => void) | null = null;
     let unsubscribeProjects: (() => void) | null = null;
 
-    if (!auth || !db) {
+    if (!db) {
       setIsAuthLoading(false);
       return;
     }
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(async (user) => {
       console.log("Auth State Changed:", user ? `Logged in as ${user.email}` : "Logged out");
       setIsAuthLoading(true);
       
@@ -479,14 +479,14 @@ export default function App() {
 
         if (user) {
           // Ensure user profile exists in Firestore
-          const userRef = doc(db, 'users', user.uid);
+          const userRef = doc(db, 'users', user.id);
           const snapshot = await getDoc(userRef);
           if (!snapshot.exists()) {
             await setDoc(userRef, {
-              uid: user.uid,
-              displayName: user.displayName || user.email?.split('@')[0] || 'Odyseus Architect',
+              uid: user.id,
+              displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Odyseus Architect',
               email: user.email || '',
-              photoURL: user.photoURL || null,
+              photoURL: user.user_metadata?.avatar_url || null,
               updatedAt: serverTimestamp()
             });
           }
@@ -496,7 +496,7 @@ export default function App() {
           unsubscribeProfile = syncUserProfile(user, (profile) => {
             setUserProfile(profile);
           });
-          unsubscribeApiKey = syncApiKey(user.uid, (keyData) => {
+          unsubscribeApiKey = syncApiKey(user.id, (keyData) => {
             if (keyData) {
               setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
             }
@@ -504,7 +504,7 @@ export default function App() {
 
           // Sync User Projects
           const { syncProjects } = await import('./core/firebase');
-          unsubscribeProjects = syncProjects(user.uid, (projects: any[]) => {
+          unsubscribeProjects = syncProjects(user.id, (projects: any[]) => {
             setUserProjects(projects);
           });
         } else {
@@ -543,11 +543,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      if (!auth) {
-        addLog("System: Not currently signed in.");
-        return;
-      }
-      await signOut(auth);
+      await signOut();
       addLog("System: Logged out successfully.");
     } catch (error) {
       addLog(`Error: Logout failed. ${error instanceof Error ? error.message : ''}`);
