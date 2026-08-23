@@ -35,7 +35,15 @@ if (isSupabaseConfigured && supabaseAnonKey) {
 // ============================================================================
 // Firebase Storage (Firestore) - Only initialized if Firebase config exists
 // ============================================================================
-export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+// Only initialize Firebase when explicitly enabled. This project uses Supabase
+// for authentication by default, so Firebase is disabled unless the
+// `VITE_ENABLE_FIREBASE` env var is set to 'true'. This avoids Firebase Auth
+// errors (e.g. unauthorized-domain) when Firebase isn't actually used.
+export const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.projectId &&
+  import.meta.env.VITE_ENABLE_FIREBASE === 'true'
+);
 
 let app: ReturnType<typeof initializeApp> | null = null;
 let db: ReturnType<typeof getFirestore> | null = null;

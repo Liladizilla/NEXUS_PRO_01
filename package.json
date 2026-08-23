@@ -77,8 +77,7 @@
       ],
       "category": "Development",
       "maintainer": "Charis Chara <characharis01@gmail.com>",
-      "synopsis": "Odyseus Nexus Pro — AI-powered software builder OS",
-      "desktop": null
+      "synopsis": "Odyseus Nexus Pro — AI-powered software builder OS"
     },
     "nsis": {
       "oneClick": false,
