@@ -503,7 +503,6 @@ export default function App() {
           });
 
           // Sync User Projects
-          const { syncProjects } = await import('./core/firebase');
           unsubscribeProjects = syncProjects(user.id, (projects: any[]) => {
             setUserProjects(projects);
           });

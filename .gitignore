@@ -37,3 +37,9 @@ Thumbs.db
 
 # Agent / tooling working directories
 .kilo/
+
+# Additional ignores added by automation
+.vscode/
+.cache/
+release/
+/.vscode/tmp/

@@ -159,10 +159,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://apis.google.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://*.firebaseapp.com", "https://*.google.com"],
+      scriptSrc: ["'self'", "https://apis.google.com", "https://*.googleapis.com", "https://*.gstatic.com", "https://*.firebaseapp.com", "https://*.google.com"],
       connectSrc: ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.google.com", "wss://*.run.app", "https://*.run.app", "https://api.github.com"],
       imgSrc: ["'self'", "data:", "https:", "https://*.picsum.photos", "https://*.googleusercontent.com", "https://*.githubusercontent.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       frameSrc: ["'self'", "https://*.firebaseapp.com", "https://*.google.com"],
       frameAncestors: ["'self'", "https://*.google.com", "https://*.run.app"],

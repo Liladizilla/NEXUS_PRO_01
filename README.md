@@ -10,6 +10,14 @@ Odyseus AI is now available across multiple platforms:
 - **[Web App](#-web-application)** - Browser-based access from any device
 - **[Mobile App](#-mobile-application)** - Coming soon for iOS and Android
 
+## Packaging Notes
+
+- Linux AppImage builds are produced using `electron-builder` and output to `release/`.
+- Debian (`.deb`) packaging was disabled in CI to avoid `fpm`/Ruby host dependencies on some builders. If you need `.deb` artifacts, install Ruby and `libcrypt`-compatible packages on the build host.
+- Desktop integration: `desktopName` and `linux.syncDesktopName` are set in `package.json` to improve WM_CLASS association on Linux.
+
+If you want me to push release artifacts to GitHub Releases, confirm and I will attach the `release/*.AppImage` files.
+
 ## ✨ Key Features
 
 ### 1. Autonomous Multi-Agent Orchestration
