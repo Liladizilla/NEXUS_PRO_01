@@ -132,7 +132,7 @@ const startServer = () => {
       cwd: process.cwd(),
       stdio: 'pipe',
       shell: true,
-      env: { ...process.env, NODE_ENV: 'production' }
+      env: { ...process.env, NODE_ENV: 'production', ODYSEUS_ELECTRON: 'true' }
     });
   }
 
