@@ -19,17 +19,32 @@ const firebaseConfig = {
 // ============================================================================
 // Supabase Configuration (for authentication)
 // ============================================================================
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const supabaseKey = (
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  ''
+).trim();
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+const isValidSupabaseUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+};
+
+export const isSupabaseConfigured = Boolean(
+  isValidSupabaseUrl(supabaseUrl) && supabaseKey
+);
 
 let supabase: ReturnType<typeof createClient> | null = null;
 
-if (isSupabaseConfigured && supabaseAnonKey) {
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (isSupabaseConfigured) {
+  supabase = createClient(supabaseUrl, supabaseKey);
 } else {
-  console.warn('[Odyseus] Supabase is not configured for auth. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY env vars.');
+  console.warn('[Odyseus] Supabase is not configured for auth. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) env vars.');
 }
 
 // ============================================================================
@@ -110,9 +125,15 @@ export const signInWithEmailAndPassword = async (email: string, password: string
   return data;
 };
 
-export const createUserWithEmailAndPassword = async (email: string, password: string) => {
+export const createUserWithEmailAndPassword = async (email: string, password: string, displayName?: string) => {
   if (!supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      data: displayName?.trim() ? { full_name: displayName.trim() } : undefined,
+    },
+  });
   if (error) throw error;
   return data;
 };
