@@ -1,0 +1,253 @@
+/* Odyseus Industrial Studio UI
+   Solid, tactile surfaces; warm neutral base; functional accent colors. */
+
+:root {
+  color-scheme: dark;
+  --bg-void: #111210;
+  --bg-base: #181916;
+  --bg-panel: #20211e;
+  --bg-raised: #292a26;
+  --border-default: #383a34;
+  --border-strong: #55584f;
+
+  --accent-interactive: #f0a05a;
+  --accent-interactive-dim: #cb7937;
+  --accent-interactive-rgb: 240, 160, 90;
+
+  --state-live: #7bc6a4;
+  --state-live-rgb: 123, 198, 164;
+  --state-error: #ed7773;
+  --state-error-rgb: 237, 119, 115;
+  --state-warning: #e8bb68;
+  --state-warning-rgb: 232, 187, 104;
+
+  --accent-ai-primary: #b7a0e8;
+  --accent-ai-primary-rgb: 183, 160, 232;
+  --accent-ai-secondary: #d7a4bc;
+
+  --text-primary: #f0eee8;
+  --text-muted: #a4a69c;
+  --text-disabled: #686b62;
+
+  --nexus-bg: var(--bg-void);
+  --nexus-bg-secondary: var(--bg-base);
+  --nexus-panel: var(--bg-panel);
+  --nexus-border: var(--border-default);
+  --nexus-text: var(--text-primary);
+  --nexus-text-muted: var(--text-muted);
+  --nexus-accent: var(--accent-interactive);
+  --nexus-accent-contrast: #21170f;
+  --nexus-accent-rgb: var(--accent-interactive-rgb);
+
+  --background: var(--bg-void);
+  --foreground: var(--text-primary);
+  --card: var(--bg-panel);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-base);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-interactive);
+  --primary-foreground: #21170f;
+  --secondary: var(--bg-raised);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-raised);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--accent-ai-primary);
+  --accent-foreground: #21170f;
+  --border: var(--border-default);
+  --input: var(--bg-base);
+  --input-background: var(--bg-base);
+  --ring: var(--accent-interactive);
+  --sidebar: var(--bg-base);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent-interactive);
+  --sidebar-primary-foreground: #21170f;
+  --sidebar-accent: var(--bg-raised);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-default);
+  --sidebar-ring: var(--accent-interactive);
+
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --radius: 0.65rem;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg-void: #f2f0e9;
+  --bg-base: #e8e6de;
+  --bg-panel: #fbfaf6;
+  --bg-raised: #e2dfd5;
+  --border-default: #d1cec3;
+  --border-strong: #aaa79b;
+  --accent-interactive: #a95520;
+  --accent-interactive-dim: #874218;
+  --accent-interactive-rgb: 169, 85, 32;
+  --state-live: #277b59;
+  --state-live-rgb: 39, 123, 89;
+  --state-error: #b33c39;
+  --state-error-rgb: 179, 60, 57;
+  --state-warning: #946314;
+  --state-warning-rgb: 148, 99, 20;
+  --accent-ai-primary: #6f4ca6;
+  --accent-ai-primary-rgb: 111, 76, 166;
+  --accent-ai-secondary: #9c4e79;
+  --text-primary: #25251f;
+  --text-muted: #62645b;
+  --text-disabled: #929389;
+  --nexus-accent-contrast: #fffaf4;
+  --primary-foreground: #fffaf4;
+  --accent-foreground: #fffaf4;
+  --sidebar-primary-foreground: #fffaf4;
+  --background: var(--bg-void);
+  --foreground: var(--text-primary);
+  --card: var(--bg-panel);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-base);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-interactive);
+  --secondary: var(--bg-raised);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-raised);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--accent-ai-primary);
+  --border: var(--border-default);
+  --input: var(--bg-panel);
+  --input-background: var(--bg-panel);
+  --ring: var(--accent-interactive);
+  --sidebar: var(--bg-base);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent-interactive);
+  --sidebar-accent: var(--bg-raised);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-default);
+  --sidebar-ring: var(--accent-interactive);
+}
+
+html[data-theme="cyberpunk"] {
+  --bg-void: #0d0b13;
+  --bg-base: #15121e;
+  --bg-panel: #1d1929;
+  --bg-raised: #292236;
+  --border-default: #40364f;
+  --border-strong: #665579;
+  --accent-interactive: #c1a0ff;
+  --accent-interactive-dim: #9673dc;
+  --accent-interactive-rgb: 193, 160, 255;
+  --nexus-accent-contrast: #1a1027;
+  --primary-foreground: #1a1027;
+}
+
+/* Solid-morphism surfaces: depth comes from contrast and edges, not blur. */
+.glass,
+.surface-panel {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border-default) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.surface-shell {
+  background: var(--bg-base) !important;
+  border-color: var(--border-default) !important;
+}
+
+.surface-floating {
+  background: var(--bg-raised) !important;
+  border-color: var(--border-strong) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.surface-floating::before {
+  display: none !important;
+}
+
+.surface-focused {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--accent-interactive) !important;
+  box-shadow: 0 0 0 1px rgba(var(--accent-interactive-rgb), 0.28) !important;
+}
+
+.glass-console {
+  background: var(--bg-void) !important;
+  border-color: var(--border-default) !important;
+}
+
+.glow-accent,
+.glow-purple {
+  box-shadow: none !important;
+}
+
+/* Normalize the UI's geometry: sturdy controls and restrained corner radii. */
+[class*="rounded-3xl"] { border-radius: 14px !important; }
+[class*="rounded-2xl"] { border-radius: 12px !important; }
+[class*="rounded-xl"] { border-radius: 9px !important; }
+[class*="rounded-full"] { border-radius: 999px; }
+
+button:not([class*="bg-"]) {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+}
+
+button {
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+button:hover {
+  box-shadow: none;
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+button:active { transform: translateY(0); }
+button:disabled { cursor: not-allowed; transform: none; opacity: 0.48; }
+
+input, textarea, select {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+  border-radius: 7px;
+}
+
+input::placeholder, textarea::placeholder { color: var(--text-disabled); }
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+::selection { background: rgba(var(--accent-interactive-rgb), 0.25); color: var(--text-primary); }
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong) !important;
+  border-radius: 2px !important;
+}
+
+.markdown-body,
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 { color: var(--text-primary); }
+
+.markdown-body code {
+  background: var(--bg-raised);
+  color: var(--accent-interactive);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button, .glass, .surface-panel, .surface-floating { transition: none !important; }
+}
+
+/* Legacy white/black utility classes must remain legible in the light theme. */
+html[data-theme="light"] body { color: var(--text-primary); }
+html[data-theme="light"] [class*="text-white/"] { color: var(--text-muted) !important; }
+html[data-theme="light"] .text-white { color: var(--text-primary) !important; }
+html[data-theme="light"] [class*="bg-black/"] { background-color: rgba(37, 37, 31, 0.045) !important; }
+html[data-theme="light"] [class*="bg-white/"] { background-color: rgba(37, 37, 31, 0.035) !important; }
+html[data-theme="light"] [class*="border-white/"] { border-color: var(--border-default) !important; }
+html[data-theme="light"] [class*="text-nexus-accent/"] { color: var(--accent-interactive) !important; }
+html[data-theme="light"] .glass,
+html[data-theme="light"] .surface-panel { box-shadow: 0 2px 0 rgba(37, 37, 31, 0.04), 0 8px 20px rgba(37, 37, 31, 0.04); }
