@@ -16,11 +16,9 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   sendPasswordResetEmail,
   updateProfile,
   isSupabaseConfigured,
-  type AuthUser
 } from '../../core/firebase';
 import { cn } from '../../lib/utils';
 
@@ -96,12 +94,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     try {
       if (mode === 'signup') {
-        const result = await createUserWithEmailAndPassword(email, password);
-        const user = result?.user as AuthUser | null;
-        if (user) {
-          await updateProfile(user, { displayName });
-          await sendEmailVerification(user);
-        }
+        await createUserWithEmailAndPassword(email, password, displayName);
         setSuccess('Account created! Please check your email for verification.');
         setTimeout(() => setMode('signin'), 3000);
       } else if (mode === 'signin') {
