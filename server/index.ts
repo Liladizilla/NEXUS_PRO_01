@@ -524,7 +524,9 @@ const bootstrap = async () => {
     }
   } else {
     // In production (including Vercel), serve static files
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = process.env.ODYSEUS_ELECTRON === 'true'
+      ? path.resolve(__dirname, '../dist')
+      : path.join(process.cwd(), 'dist');
     
     // Performance: Cache static assets (1 year for hashed files)
     app.use(express.static(distPath, {
