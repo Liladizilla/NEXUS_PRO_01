@@ -550,9 +550,21 @@ export default function App() {
   };
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--nexus-accent', accentColor);
-    document.documentElement.style.setProperty('--nexus-accent-contrast', getContrastColor(accentColor));
-  }, [accentColor]);
+    const root = document.documentElement;
+    const activeTheme = theme === 'light' ? 'light' : theme === 'cyberpunk' ? 'cyberpunk' : 'dark';
+    root.dataset.theme = activeTheme;
+    root.classList.toggle('dark', activeTheme !== 'light');
+    root.style.setProperty('--nexus-accent', accentColor);
+    root.style.setProperty('--nexus-accent-contrast', getContrastColor(accentColor));
+
+    const hex = /^#?([0-9a-f]{6})$/i.exec(accentColor.trim())?.[1];
+    if (hex) {
+      const red = Number.parseInt(hex.slice(0, 2), 16);
+      const green = Number.parseInt(hex.slice(2, 4), 16);
+      const blue = Number.parseInt(hex.slice(4, 6), 16);
+      root.style.setProperty('--nexus-accent-rgb', `${red}, ${green}, ${blue}`);
+    }
+  }, [accentColor, theme]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
