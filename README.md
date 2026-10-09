@@ -47,13 +47,18 @@ If you want me to push release artifacts to GitHub Releases, confirm and I will 
 
 ---
 
-## 🎨 Design Language: Glassmorphism 2.0
+## 🎨 Design Language: Industrial Studio
 
-Odyseus AI features a high-fidelity, futuristic interface built on **Glassmorphism** principles:
-*   **Translucent Surfaces:** Backdrop blurs and subtle borders create a sense of depth.
-*   **Vibrant Accents:** A signature "Nexus Accent" (Cyan/Neon) guides the user's attention.
-*   **Fluid Animations:** Powered by Framer Motion for a tactile, responsive feel.
-*   **Responsive Layout:** A desktop-first precision design that adapts seamlessly to different workflows.
+Odyseus uses an **industrial studio** interface built around a clear workspace, solid surfaces, precise borders, and a warm, functional color system.
+
+- **Solid-morphism surfaces:** Distinct panel layers and restrained shadows create depth without covering the workspace in blur.
+- **Functional color:** Warm orange marks primary actions and focus; green, amber, and red communicate live, waiting, and error states. Purple is reserved for AI-specific moments.
+- **Workspace-first layout:** Project explorer and agents sit beside the central builder, code, preview, and debugging views.
+- **Dark, light, and cyberpunk themes:** Appearance settings select a coherent theme, with the accent color applied consistently.
+- **Expressive, purposeful motion:** Short transitions make state changes clear, while reduced-motion preferences are respected.
+- **Responsive behavior:** The workspace adapts to smaller screens without treating a desktop layout as a phone UI.
+
+The goal is a dependable tool for making software, not a neon wallpaper demo.
 
 ---
 
