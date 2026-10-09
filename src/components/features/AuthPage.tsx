@@ -5,9 +5,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile,
   isSupabaseConfigured,
-  type AuthUser
 } from '../../core/firebase';
 
 export const AuthPage = () => {
@@ -34,11 +32,7 @@ export const AuthPage = () => {
       if (isLogin) {
         await signInWithEmailAndPassword(email, password);
       } else {
-        const result = await createUserWithEmailAndPassword(email, password);
-        const user = result?.user as AuthUser | null;
-        if (user) {
-          await updateProfile(user, { displayName: email.split('@')[0] });
-        }
+        await createUserWithEmailAndPassword(email, password, email.split('@')[0]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
