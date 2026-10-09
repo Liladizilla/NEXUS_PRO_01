@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/features/ErrorBoundary';
 import './styles/pro_ui_fonts.css';
 import './styles/index.css';
 import './styles/pro_ui_theme.css';
+import './styles/industrial-overrides.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
