@@ -21,15 +21,22 @@ const firebaseConfig = {
 // ============================================================================
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const supabaseKey = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  ''
-).trim();
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim() ||
+  (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim()
+);
 
 const isValidSupabaseUrl = (value: string) => {
+  // Require an explicit scheme and authority. URL() can normalize malformed
+  // values like "http:192.168.1.10:54321", which Supabase itself rejects.
+  const trimmedValue = value.trim();
+  if (!/^https?:\/\//i.test(trimmedValue)) return false;
+
   try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    const url = new URL(trimmedValue);
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      Boolean(url.hostname)
+    );
   } catch {
     return false;
   }
