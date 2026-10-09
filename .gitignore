@@ -43,3 +43,6 @@ Thumbs.db
 .cache/
 release/
 /.vscode/tmp/
+
+# Temporary local runtime/build caches (never commit these)
+.sandbox_tmp/

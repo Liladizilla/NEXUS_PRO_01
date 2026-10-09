@@ -306,14 +306,45 @@ app.get('/api/auth/github/callback', async (req, res) => {
   }
 });
 
-app.post('/api/generate', async (req, res) => {
-  const { prompt, agents, feedback, isHighThinking, agentModels, result: clientResult, skipProcessing } = req.body;
-  if (!prompt && !skipProcessing) return res.status(400).json({ error: "Prompt is required" });
-
-  // If the client already processed (client-side Gemini), just return the result
-  if (skipProcessing && clientResult) {
-    return res.json({ taskId: 'client-side', plan: { agents: agents || [], systemLoad: 0, complexity: 0 } });
+app.post('/api/chat', async (req, res, next) => {
+  try {
+    const { messages, systemInstruction } = req.body || {};
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) {
+      return res.status(400).json({ error: "Provide between 1 and 100 chat messages." });
+    }
+    const validMessages = messages.every((message: any) =>
+      (message?.role === 'user' || message?.role === 'model') &&
+      Array.isArray(message?.parts) &&
+      message.parts.length > 0 &&
+      message.parts.every((part: any) => typeof part?.text === 'string' && part.text.length <= 20000)
+    );
+    if (!validMessages) return res.status(400).json({ error: "Chat message format is invalid." });
+    const text = await aiService.chat(messages, typeof systemInstruction === 'string' ? systemInstruction.slice(0, 4000) : undefined);
+    res.json({ text });
+  } catch (error) {
+    next(error);
   }
+});
+
+app.post('/api/complex', async (req, res, next) => {
+  try {
+    const prompt = req.body?.prompt;
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: "Prompt is required." });
+    }
+    if (prompt.length > 50000) return res.status(413).json({ error: "Prompt is too long." });
+    const text = await aiService.complex(prompt);
+    res.json({ text });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/generate', async (req, res, next) => {
+  try {
+  const { prompt, agents, feedback, isHighThinking, agentModels } = req.body || {};
+  if (typeof prompt !== 'string' || !prompt.trim()) return res.status(400).json({ error: "Prompt is required" });
+  if (prompt.length > 50000) return res.status(413).json({ error: "Prompt is too long." });
 
   const activeTasks = await queueService.getActiveTasksCount();
   const plan = getAutoscalingPlan(prompt, activeTasks, agents || []);
@@ -351,12 +382,7 @@ app.post('/api/generate', async (req, res) => {
       const stagingUrl = `${process.env.APP_URL || 'http://localhost:3000'}/staging/${taskId}`;
       await queueService.updateTask(taskId, 'completed', 100, { ...parsedResult, stagingUrl });
     } catch (error) {
-      let errorMsg = "Pipeline: Generation failed during synthesis";
-      if (error instanceof SyntaxError) {
-        errorMsg = "AI Mesh Failure: LLM output malformed or incomplete";
-      } else if (error instanceof Error && error.message.includes('timeout')) {
-        errorMsg = "CI/CD Failure: Build pipeline timed out during deployment";
-      }
+      const errorMsg = error instanceof Error ? error.message : "Generation failed for an unknown reason.";
       await queueService.updateTask(taskId, 'failed', 0, { error: errorMsg });
     }
   };
@@ -380,6 +406,9 @@ app.post('/api/generate', async (req, res) => {
   }
 
   res.json({ taskId, plan });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get('/api/tasks/:id', async (req, res) => {
@@ -447,18 +476,30 @@ app.get('/staging/:taskId/*', async (req, res) => {
   res.type(mimeTypes[ext] || 'text/plain').send(file.content);
 });
 
-// Health Check (Monitoring)
+// Health check reports configuration rather than claiming every subsystem is online.
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: "ok", 
-    services: {
-      ai: "online",
-      queue: "online",
-      auth: "online",
-      storage: "online"
-    },
-    mesh: "stable",
+  const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
+  const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+  const services = {
+    ai: aiConfigured ? "configured" : "missing-credentials",
+    queue: "online",
+    auth: githubConfigured ? "configured" : "not-configured",
+    storage: db ? "configured" : "ephemeral"
+  };
+  res.status(aiConfigured ? 200 : 503).json({
+    status: aiConfigured ? "ok" : "degraded",
+    services,
     uptime: process.uptime()
+  });
+});
+
+// Final error handler must be registered after routes for Express to reach it.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("API request failed:", err);
+  if (res.headersSent) return;
+  const message = err instanceof Error ? err.message : "Unexpected server error.";
+  res.status(500).json({
+    error: process.env.NODE_ENV === "development" ? message : "The server could not complete this request."
   });
 });
 
@@ -483,7 +524,9 @@ const bootstrap = async () => {
     }
   } else {
     // In production (including Vercel), serve static files
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = process.env.ODYSEUS_ELECTRON === 'true'
+      ? path.resolve(__dirname, '../dist')
+      : path.join(process.cwd(), 'dist');
     
     // Performance: Cache static assets (1 year for hashed files)
     app.use(express.static(distPath, {

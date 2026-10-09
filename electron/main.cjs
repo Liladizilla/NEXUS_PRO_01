@@ -80,9 +80,8 @@ const createWindow = () => {
     loadAppWithRetry(devUrl);
     mainWindow.webContents.openDevTools();
   } else {
-    // In production, dist is copied into electron/dist during build
-    const distPath = join(__dirname, 'dist', 'index.html');
-    mainWindow.loadFile(distPath);
+    // Load the bundled Express server origin so relative /api requests work in packaged builds.
+    loadAppWithRetry('http://127.0.0.1:3000');
   }
 
   // Handle external links
@@ -133,7 +132,7 @@ const startServer = () => {
       cwd: process.cwd(),
       stdio: 'pipe',
       shell: true,
-      env: { ...process.env, NODE_ENV: 'production' }
+      env: { ...process.env, NODE_ENV: 'production', ODYSEUS_ELECTRON: 'true' }
     });
   }
 
