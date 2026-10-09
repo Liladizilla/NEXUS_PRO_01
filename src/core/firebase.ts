@@ -26,9 +26,17 @@ const supabaseKey = (
 );
 
 const isValidSupabaseUrl = (value: string) => {
+  // Require an explicit scheme and authority. URL() can normalize malformed
+  // values like "http:192.168.1.10:54321", which Supabase itself rejects.
+  const trimmedValue = value.trim();
+  if (!/^https?:\/\//i.test(trimmedValue)) return false;
+
   try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
+    const url = new URL(trimmedValue);
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      Boolean(url.hostname)
+    );
   } catch {
     return false;
   }
