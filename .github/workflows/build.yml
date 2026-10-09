@@ -3,6 +3,8 @@ name: Build Desktop (Electron)
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 # Build each target on its native runner. electron-builder cannot
