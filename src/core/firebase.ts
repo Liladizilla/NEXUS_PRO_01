@@ -21,15 +21,14 @@ const firebaseConfig = {
 // ============================================================================
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
 const supabaseKey = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  ''
-).trim();
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim() ||
+  (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim()
+);
 
 const isValidSupabaseUrl = (value: string) => {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    return url.protocol === 'https:' || url.protocol === 'http:';
   } catch {
     return false;
   }
