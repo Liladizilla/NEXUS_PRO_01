@@ -1522,7 +1522,7 @@ export default function App() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex-1 p-6 overflow-auto bg-[#0a0a0a]"
+                  className="flex-1 p-6 overflow-auto bg-nexus-bg text-text-primary"
                 >
                   <div className="max-w-5xl mx-auto space-y-6">
                     <div className="flex items-center justify-between">
