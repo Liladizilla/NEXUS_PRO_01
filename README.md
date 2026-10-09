@@ -14,7 +14,7 @@ Odyseus AI is now available across multiple platforms:
 
 - Linux AppImage builds are produced using `electron-builder` and output to `release/`.
 - Debian (`.deb`) packaging was disabled in CI to avoid `fpm`/Ruby host dependencies on some builders. If you need `.deb` artifacts, install Ruby and `libcrypt`-compatible packages on the build host.
-- Desktop integration: `desktopName` and `linux.syncDesktopName` are set in `package.json` to improve WM_CLASS association on Linux.
+- Desktop integration: the unsupported `desktopName` and `linux.syncDesktopName` options are intentionally omitted; the supported top-level `productName` remains configured in `package.json`.
 
 If you want me to push release artifacts to GitHub Releases, confirm and I will attach the `release/*.AppImage` files.
 
