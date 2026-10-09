@@ -84,6 +84,30 @@ export class AIService {
     }
   }
 
+  async chat(messages: { role: 'user' | 'model'; parts: { text: string }[] }[], systemInstruction?: string): Promise<string> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) throw new Error("AI chat is unavailable: configure GEMINI_API_KEY on the server.");
+    const response = await this.ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: messages,
+      config: { systemInstruction, tools: [{ googleSearch: {} }] }
+    });
+    if (!response.text) throw new Error("AI chat returned an empty response.");
+    return response.text;
+  }
+
+  async complex(prompt: string): Promise<string> {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) throw new Error("Complex AI requests are unavailable: configure GEMINI_API_KEY on the server.");
+    const response = await this.ai.models.generateContent({
+      model: "gemini-3.1-pro-preview",
+      contents: prompt,
+      config: { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } }
+    });
+    if (!response.text) throw new Error("Complex AI request returned an empty response.");
+    return response.text;
+  }
+
   async debug(code: string, error: string | null): Promise<any> {
     try {
       const response = await this.ai.models.generateContent({
