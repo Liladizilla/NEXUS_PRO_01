@@ -476,18 +476,30 @@ app.get('/staging/:taskId/*', async (req, res) => {
   res.type(mimeTypes[ext] || 'text/plain').send(file.content);
 });
 
-// Health Check (Monitoring)
+// Health check reports configuration rather than claiming every subsystem is online.
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: "ok", 
-    services: {
-      ai: "online",
-      queue: "online",
-      auth: "online",
-      storage: "online"
-    },
-    mesh: "stable",
+  const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
+  const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+  const services = {
+    ai: aiConfigured ? "configured" : "missing-credentials",
+    queue: "online",
+    auth: githubConfigured ? "configured" : "not-configured",
+    storage: db ? "configured" : "ephemeral"
+  };
+  res.status(aiConfigured ? 200 : 503).json({
+    status: aiConfigured ? "ok" : "degraded",
+    services,
     uptime: process.uptime()
+  });
+});
+
+// Final error handler must be registered after routes for Express to reach it.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("API request failed:", err);
+  if (res.headersSent) return;
+  const message = err instanceof Error ? err.message : "Unexpected server error.";
+  res.status(500).json({
+    error: process.env.NODE_ENV === "development" ? message : "The server could not complete this request."
   });
 });
 
