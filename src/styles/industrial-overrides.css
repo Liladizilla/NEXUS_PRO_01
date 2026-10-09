@@ -223,8 +223,12 @@ body {
 ::selection { background: rgba(var(--accent-interactive-rgb), 0.25); color: var(--text-primary); }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong) !important;
+  background: rgba(var(--nexus-accent-rgb), 0.72) !important;
   border-radius: 2px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--nexus-accent) !important;
 }
 
 .markdown-body,
