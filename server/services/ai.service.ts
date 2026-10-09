@@ -15,10 +15,7 @@ export class AIService {
   async generate(prompt: string, isHighThinking: boolean = false, agentModels?: Record<string, string>): Promise<string> {
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
-      return JSON.stringify({
-        projectName: "API Key Missing",
-        files: [{ path: "ERROR.md", content: "# Configuration Error\n\nNeither GEMINI_API_KEY nor API_KEY is set in the environment variables. Please add it to your project settings." }]
-      });
+      throw new Error("AI generation is unavailable: configure GEMINI_API_KEY on the server.");
     }
     try {
       const model = isHighThinking ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
@@ -80,17 +77,10 @@ export class AIService {
       return response.text;
     } catch (error) {
       console.error("AIService: Primary Gemini Mesh failed.", error);
-      console.warn("Switching to Secondary AI Mesh (Fallback Logic)...");
-      
-      return JSON.stringify({
-        projectName: "Odyseus Failsafe Project",
-        files: [
-          { 
-            path: "README.md", 
-            content: "# Odyseus Failsafe\n\nThe primary AI mesh is currently experiencing high latency or an outage. This project was generated using the secondary mesh logic.\n\nOriginal Request: " + prompt 
-          }
-        ]
-      });
+      // Never report a fabricated README as a successful generated project.
+      // Let the API layer return a real error so the UI can offer a retry.
+      const message = error instanceof Error ? error.message : "Unknown AI provider error";
+      throw new Error(`AI generation failed: ${message}`);
     }
   }
 
