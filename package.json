@@ -15,9 +15,9 @@
     "build:server": "tsc -p server/tsconfig.json",
     "copy:dist": "node scripts/copy-dist.cjs",
     "prepack": "npm run copy:dist",
-    "electron:build": "vite build && npm run build:server && npm run copy:dist && electron-builder build",
-    "electron:build:win": "vite build && npm run build:server && npm run copy:dist && electron-builder build --win",
-    "electron:build:mac": "vite build && npm run build:server && npm run copy:dist && electron-builder build --mac",
+    "electron:build": "vite build && npm run build:server && npm run copy:dist && electron-builder build --publish never",
+    "electron:build:win": "vite build && npm run build:server && npm run copy:dist && electron-builder build --win --publish never",
+    "electron:build:mac": "vite build && npm run build:server && npm run copy:dist && electron-builder build --mac --publish never",
     "electron:build:linux": "vite build && npm run build:server && npm run copy:dist && electron-builder build --linux"
   },
   "main": "electron/main.cjs",
@@ -71,7 +71,9 @@
       "category": "Development",
       "maintainer": "Charis Chara <characharis01@gmail.com>",
       "synopsis": "Odyseus Nexus Pro — AI-powered software builder OS",
+      "syncDesktopName": true
     },
+    "desktopName": "Odyseus Nexus Pro",
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
