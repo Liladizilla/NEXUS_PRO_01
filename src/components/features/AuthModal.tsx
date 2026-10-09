@@ -17,7 +17,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  updateProfile,
   isSupabaseConfigured,
 } from '../../core/firebase';
 import { cn } from '../../lib/utils';
