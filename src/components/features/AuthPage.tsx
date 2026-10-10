@@ -5,7 +5,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  isSupabaseConfigured,
+  isFirebaseConfigured,
 } from '../../core/firebase';
 
 export const AuthPage = () => {
@@ -19,8 +19,8 @@ export const AuthPage = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-    if (!isSupabaseConfigured) {
-      setError('Authentication is unavailable. Supabase is not configured for this deployment.');
+    if (!isFirebaseConfigured) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
       return;
     }
     
@@ -44,8 +44,8 @@ export const AuthPage = () => {
     setIsLoading(true);
     setError(null);
     setLoadingText(`Connecting to ${provider} Gateway...`);
-    if (!isSupabaseConfigured) {
-      setError('Authentication is unavailable. Supabase is not configured for this deployment.');
+    if (!isFirebaseConfigured) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
       setIsLoading(false);
       return;
     }
