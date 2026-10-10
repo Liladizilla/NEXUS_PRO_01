@@ -18,7 +18,7 @@ import {
 import type { DocumentData } from 'firebase/firestore';
 
 // ============================================================================
-// Firebase Configuration (for storage only)
+// Firebase configuration for Authentication and Firestore
 // ============================================================================
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -57,7 +57,7 @@ if (isFirebaseConfigured) {
 // ============================================================================
 // Unified User Types
 // ============================================================================
-// Supabase user type from @supabase/supabase-js
+// Normalized Firebase user shape used by the application
 export interface AuthUser {
   id: string;
   email: string | null;
@@ -73,7 +73,7 @@ export interface AuthUser {
   role: string;
 }
 
-// Firebase-style user for compatibility layer
+// Small Firebase user snapshot used for Firestore error diagnostics
 interface FirebaseCompatibleUser {
   uid: string;
   email: string | null;
