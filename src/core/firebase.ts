@@ -1,6 +1,20 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import { createClient } from '@supabase/supabase-js';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  signInWithPopup as firebaseSignInWithPopup,
+  signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword,
+  createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword,
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+  sendEmailVerification as firebaseSendEmailVerification,
+  signOut as firebaseSignOut,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+  updateProfile as firebaseUpdateProfile,
+  type Auth,
+  type User,
+} from 'firebase/auth';
 import type { DocumentData } from 'firebase/firestore';
 
 // ============================================================================
@@ -17,62 +31,27 @@ const firebaseConfig = {
 };
 
 // ============================================================================
-// Supabase Configuration (for authentication)
-// ============================================================================
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-const supabaseKey = (
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim() ||
-  (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim()
-);
-
-const isValidSupabaseUrl = (value: string) => {
-  // Require an explicit scheme and authority. URL() can normalize malformed
-  // values like "http:192.168.1.10:54321", which Supabase itself rejects.
-  const trimmedValue = value.trim();
-  if (!/^https?:\/\//i.test(trimmedValue)) return false;
-
-  try {
-    const url = new URL(trimmedValue);
-    return (
-      (url.protocol === 'https:' || url.protocol === 'http:') &&
-      Boolean(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-};
-
-export const isSupabaseConfigured = Boolean(
-  isValidSupabaseUrl(supabaseUrl) && supabaseKey
-);
-
-let supabase: ReturnType<typeof createClient> | null = null;
-
-if (isSupabaseConfigured) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-  console.warn('[Odyseus] Supabase is not configured for auth. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) env vars.');
-}
-
-// ============================================================================
-// Firebase Storage (Firestore) - Only initialized if Firebase config exists
-// ============================================================================
-// Only initialize Firebase when explicitly enabled. This project uses Supabase
-// for authentication by default, so Firebase is disabled unless the
-// `VITE_ENABLE_FIREBASE` env var is set to 'true'. This avoids Firebase Auth
-// errors (e.g. unauthorized-domain) when Firebase isn't actually used.
+ // Firebase Authentication + Firestore Configuration
+ // ============================================================================
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
   firebaseConfig.projectId &&
-  import.meta.env.VITE_ENABLE_FIREBASE === 'true'
+  firebaseConfig.appId
 );
 
 let app: ReturnType<typeof initializeApp> | null = null;
 let db: ReturnType<typeof getFirestore> | null = null;
+export let auth: Auth | null = null;
 
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig);
-  db = getFirestore(app, firebaseConfig.firestoreDatabaseId as string);
+  auth = getAuth(app);
+  db = firebaseConfig.firestoreDatabaseId
+    ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+    : getFirestore(app);
+} else {
+  console.warn('[Odyseus] Firebase is not configured. Set the VITE_FIREBASE_* environment variables to enable authentication and Firestore.');
 }
 
 // ============================================================================
@@ -104,6 +83,42 @@ interface FirebaseCompatibleUser {
   providerData: { providerId: string; displayName: string | null; email: string | null; photoURL: string | null }[];
 }
 
+let currentSessionUser: FirebaseCompatibleUser | null = null;
+
+const toFirebaseCompatibleUser = (user: User | null): FirebaseCompatibleUser | null => {
+  if (!user) return null;
+  return {
+    uid: user.uid,
+    email: user.email,
+    emailVerified: user.emailVerified,
+    displayName: user.displayName,
+    photoURL: user.photoURL,
+    providerData: user.providerData.map((provider) => ({
+      providerId: provider.providerId,
+      displayName: provider.displayName,
+      email: provider.email,
+      photoURL: provider.photoURL,
+    })),
+  };
+};
+
+const toAuthUser = (user: User | null): AuthUser | null => {
+  if (!user) return null;
+  return {
+    id: user.uid,
+    email: user.email,
+    user_metadata: {
+      full_name: user.displayName ?? undefined,
+      avatar_url: user.photoURL ?? undefined,
+    },
+    created_at: user.metadata.creationTime ?? new Date().toISOString(),
+    updated_at: user.metadata.lastSignInTime ?? user.metadata.creationTime ?? new Date().toISOString(),
+    email_confirmed_at: user.emailVerified ? (user.metadata.creationTime ?? new Date().toISOString()) : null,
+    aud: 'authenticated',
+    role: 'authenticated',
+  };
+};
+
 export interface AuthSession {
   user: AuthUser | null;
   access_token: string | null;
@@ -111,95 +126,75 @@ export interface AuthSession {
 }
 
 // ============================================================================
-// Auth Helpers (Supabase)
-// ============================================================================
+ // Firebase Authentication Helpers
+ // ============================================================================
+const requireFirebaseAuth = (): Auth => {
+  if (!auth) throw new Error('Firebase Authentication is not configured for this deployment. Set the VITE_FIREBASE_* environment variables.');
+  return auth;
+};
+
 export const signInWithPopup = async (provider: 'google' | 'github') => {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
-  if (error) throw error;
-  return data;
+  const firebaseAuth = requireFirebaseAuth();
+  const oauthProvider = provider === 'google'
+    ? new GoogleAuthProvider()
+    : new GithubAuthProvider();
+  if (provider === 'google') oauthProvider.setCustomParameters({ prompt: 'select_account' });
+  return firebaseSignInWithPopup(firebaseAuth, oauthProvider);
 };
 
 export const signInWithEmailAndPassword = async (email: string, password: string) => {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data;
+  return firebaseSignInWithEmailAndPassword(requireFirebaseAuth(), email.trim(), password);
 };
 
 export const createUserWithEmailAndPassword = async (email: string, password: string, displayName?: string) => {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { data, error } = await supabase.auth.signUp({
-    email: email.trim(),
-    password,
-    options: {
-      data: displayName?.trim() ? { full_name: displayName.trim() } : undefined,
-    },
-  });
-  if (error) throw error;
-  return data;
-};
-
-// Helper to get user from Supabase auth result
-export const getAuthUser = (result: any): AuthUser | null => {
-  return result?.user ?? null;
-};
-
-export const sendEmailVerification = async (user: { email: string | null }) => {
-  if (!supabase) throw new Error('Supabase not configured');
-  // Supabase sends verification email automatically on sign up
-  // For existing users, you'd need a server function
-  if (user.email) {
-    console.log('Verification email sent to:', user.email);
+  const credential = await firebaseCreateUserWithEmailAndPassword(requireFirebaseAuth(), email.trim(), password);
+  if (displayName?.trim()) {
+    await firebaseUpdateProfile(credential.user, { displayName: displayName.trim() });
   }
+  await firebaseSendEmailVerification(credential.user);
+  return credential;
+};
+
+export const getAuthUser = (result: any): AuthUser | null => {
+  return toAuthUser(result?.user ?? null);
+};
+
+export const sendEmailVerification = async (user: User | null) => {
+  if (!user) throw new Error('Sign in before requesting email verification.');
+  await firebaseSendEmailVerification(user);
 };
 
 export const sendPasswordResetEmail = async (email: string) => {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
-  if (error) throw error;
+  await firebaseSendPasswordResetEmail(requireFirebaseAuth(), email.trim());
 };
 
 export const signOut = async () => {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  await firebaseSignOut(requireFirebaseAuth());
 };
 
 export const onAuthStateChanged = (callback: (user: AuthUser | null) => void) => {
-  if (!supabase) {
-    // Return a no-op unsubscribe function
+  if (!auth) {
+    callback(null);
     return () => {};
   }
-  
-  // Subscribe to auth state changes
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    callback(session?.user as AuthUser | null);
+  return firebaseOnAuthStateChanged(auth, (user) => {
+    currentSessionUser = toFirebaseCompatibleUser(user);
+    callback(toAuthUser(user));
   });
-  
-  // Also check current session
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    callback(session?.user as AuthUser | null);
-  });
-  
-  // Return unsubscribe function
-  return () => subscription.unsubscribe();
 };
 
-export const updateProfile = async (user: { id: string }, metadata: { displayName?: string; photoURL?: string | null }) => {
-  if (!supabase) throw new Error('Supabase not configured');
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      full_name: metadata.displayName,
-      avatar_url: metadata.photoURL,
-    },
+export const updateProfile = async (
+  user: { id: string },
+  metadata: { displayName?: string; photoURL?: string | null }
+) => {
+  const currentUser = requireFirebaseAuth().currentUser;
+  if (!currentUser || currentUser.uid !== user.id) {
+    throw new Error('The signed-in Firebase user does not match the profile being updated.');
+  }
+  await firebaseUpdateProfile(currentUser, {
+    displayName: metadata.displayName,
+    photoURL: metadata.photoURL ?? null,
   });
-  if (error) throw error;
 };
 
 // ============================================================================
@@ -208,81 +203,6 @@ export const updateProfile = async (user: { id: string }, metadata: { displayNam
 export { db, doc, getDoc, setDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, limit, getDocs };
 
 export type { DocumentData };
-
-// ============================================================================
-// Firebase-style auth object for compatibility
-// This provides a Firebase-compatible interface while using Supabase under the hood
-// ============================================================================
-interface FirebaseCompatibleAuth {
-  currentUser: FirebaseCompatibleUser | null;
-}
-
-// Create a reactive auth object that tracks Supabase session
-let currentSessionUser: FirebaseCompatibleUser | null = null;
-
-const supabaseSessionListener = () => {
-  if (!supabase) return {} as { unsubscribe: () => void };
-  
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    const user = session?.user;
-    if (user) {
-      currentSessionUser = {
-        uid: user.id,
-        email: user.email ?? null,
-        emailVerified: !!user.email_confirmed_at,
-        displayName: user.user_metadata?.full_name ?? null,
-        photoURL: user.user_metadata?.avatar_url ?? null,
-        providerData: [
-          { 
-            providerId: 'supabase', 
-            displayName: user.user_metadata?.full_name ?? null, 
-            email: user.email ?? null, 
-            photoURL: user.user_metadata?.avatar_url ?? null 
-          }
-        ]
-      };
-    } else {
-      currentSessionUser = null;
-    }
-  });
-  
-  // Check initial session
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    const user = session?.user;
-    if (user) {
-      currentSessionUser = {
-        uid: user.id,
-        email: user.email ?? null,
-        emailVerified: !!user.email_confirmed_at,
-        displayName: user.user_metadata?.full_name ?? null,
-        photoURL: user.user_metadata?.avatar_url ?? null,
-        providerData: [
-          { 
-            providerId: 'supabase', 
-            displayName: user.user_metadata?.full_name ?? null, 
-            email: user.email ?? null, 
-            photoURL: user.user_metadata?.avatar_url ?? null 
-          }
-        ]
-      };
-    }
-  });
-  
-  return subscription;
-};
-
-// Initialize session listener if Supabase is configured
-let sessionSubscription: ReturnType<typeof supabaseSessionListener> | null = null;
-if (isSupabaseConfigured && supabase) {
-  sessionSubscription = supabaseSessionListener();
-}
-
-// Export the Firebase-compatible auth object
-export const auth: FirebaseCompatibleAuth = {
-  get currentUser(): FirebaseCompatibleUser | null {
-    return currentSessionUser;
-  }
-};
 
 // ============================================================================
 // Error handling
