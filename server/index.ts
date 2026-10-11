@@ -16,6 +16,7 @@ import { QueueService } from './services/queue.service.js';
 
 // --- 0. FIREBASE INITIALIZATION ---
 let db: any = null;
+const queueService = new QueueService(null);
 try {
   // Prefer environment variables (set in the hosting provider dashboard for production).
   const firebaseConfig: any = {
@@ -46,6 +47,7 @@ try {
           const { getFirestore } = await import('firebase/firestore');
           const app = initializeApp(firebaseConfig);
           db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+          queueService.setDatabase(db);
           console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
         } catch (err) {
           console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase import failed. Task persistence disabled.", err);
@@ -64,7 +66,6 @@ const __dirname = path.dirname(__filename);
 
 // --- 1. CORE BACKEND ARCHITECTURE (Service Simulation) ---
 const aiService = new AIService();
-const queueService = new QueueService(db);
 
 // --- 2. AUTOSCALING LOGIC ---
 
@@ -346,7 +347,7 @@ app.post('/api/generate/stream', async (req, res, next) => {
   let streamOpen = true;
   const emit = (event: Record<string, unknown>) => {
     if (!streamOpen || res.writableEnded) return;
-    res.write(`${JSON.stringify(event)}\\n`);
+    res.write(`${JSON.stringify(event)}\n`);
     // Flush compression middleware buffers when supported so progress is visible immediately.
     (res as any).flush?.();
   };
@@ -390,7 +391,7 @@ app.post('/api/generate/stream', async (req, res, next) => {
     let raw: string;
     try {
       const finalPrompt = feedback
-        ? `Original request: ${prompt}\\nUser feedback on previous iteration: ${feedback}\\nPlease refine the application based on this feedback.`
+        ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
         : prompt;
       raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels);
     } finally {
@@ -420,7 +421,7 @@ app.post('/api/generate/stream', async (req, res, next) => {
       if (!file || typeof file.path !== 'string' || typeof file.content !== 'string' || !file.path.trim()) {
         throw new Error('A generated file is missing its path or text content.');
       }
-      const normalizedPath = file.path.replace(/\\\\/g, '/').replace(/^\\/+/, '');
+      const normalizedPath = file.path.replace(/\\/g, '/').replace(/^\\/+/, '');
       if (normalizedPath.split('/').some((part: string) => part === '..') || /^[a-zA-Z]:/.test(normalizedPath)) {
         throw new Error(`Unsafe file path returned by the model: ${file.path}`);
       }
