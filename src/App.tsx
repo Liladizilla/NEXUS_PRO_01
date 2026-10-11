@@ -2093,6 +2093,14 @@ export default function App() {
         <button type="button" aria-current={activeTab === 'debug' ? 'page' : undefined} className={activeTab === 'debug' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('debug'); }}><Bug size={20}/><span>Debug</span></button>
       </nav>
 
+      {activeTab === 'preview' && (
+        <form className="odyseus-preview-refine-dock" onSubmit={event => { event.preventDefault(); if (prompt.trim().length >= 10 && !isGenerating) handleGenerate(); }}>
+          <label className="sr-only" htmlFor="odyseus-preview-refine">Ask Odyseus to refine the preview</label>
+          <input id="odyseus-preview-refine" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Ask for a change" />
+          <button type="submit" disabled={prompt.trim().length < 10 || isGenerating} aria-label="Apply change"><Send size={18}/><span>Apply</span></button>
+        </form>
+      )}
+
       {/* --- AI Assistant & Feedback Loop --- */}
       <AIChat />
       <AnimatePresence>
