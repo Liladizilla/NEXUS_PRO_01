@@ -599,6 +599,18 @@ app.get(['/staging/:taskId', '/staging/:taskId/*', '/api/staging/:taskId', '/api
 });
 
 // Health check reports configuration rather than claiming every subsystem is online.
+// Report billing readiness truthfully. Checkout must stay disabled until
+// a provider verification flow and server-owned entitlements are implemented.
+app.get('/api/billing/status', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    enabled: false,
+    checkoutConfigured: false,
+    verificationConfigured: false,
+    message: 'Billing setup incomplete: checkout and server-side purchase verification are not connected yet.'
+  });
+});
+
 app.get('/api/health', (req, res) => {
   const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
   const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
