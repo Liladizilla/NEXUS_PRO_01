@@ -114,5 +114,5 @@ export async function generateApp(
   }
 
   if (!completed) throw new Error('The generation stream closed before the server returned a completed project.');
-  return completed;
+  return completed as { result: GeneratedApp; plan: BuildResult['plan'] };
 }
