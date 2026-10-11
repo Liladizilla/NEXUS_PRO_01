@@ -12,6 +12,14 @@ export const Paywall: React.FC = () => {
   });
 
   useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowPaywall(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [setShowPaywall]);
+
+  useEffect(() => {
     let active = true;
     fetch('/api/billing/status', { cache: 'no-store' })
       .then(async response => {
@@ -77,7 +85,7 @@ export const Paywall: React.FC = () => {
         'Priority AI Mesh access',
         'Custom domain support'
       ],
-      buttonText: billingStatus.enabled && checkoutUrls.pro ? 'Continue to checkout' : 'Billing setup incomplete',
+      buttonText: billingStatus.enabled && checkoutUrls.pro ? 'Continue to checkout' : 'Checkout unavailable',
       disabled: !billingStatus.enabled || !checkoutUrls.pro,
       highlight: true,
       icon: Zap
@@ -97,7 +105,7 @@ export const Paywall: React.FC = () => {
         '24/7 Concierge support',
         'SLA guarantees'
       ],
-      buttonText: billingStatus.enabled && checkoutUrls.enterprise ? 'Continue to checkout' : 'Billing setup incomplete',
+      buttonText: billingStatus.enabled && checkoutUrls.enterprise ? 'Continue to checkout' : 'Checkout unavailable',
       disabled: !billingStatus.enabled || !checkoutUrls.enterprise,
       highlight: false,
       icon: Rocket
@@ -109,24 +117,25 @@ export const Paywall: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPaywall(false); }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="relative w-full max-w-5xl bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-nexus-accent/10">
+      <div className="relative my-auto w-full max-w-5xl max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-32px)] overflow-y-auto bg-nexus-bg border border-white/10 rounded-xl shadow-2xl shadow-black/40">
         {/* Close Button */}
         <button 
           onClick={() => setShowPaywall(false)}
-          className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10"
+          className="sticky top-2 float-right mr-2 mt-2 p-2 bg-raised border border-default hover:bg-white/10 transition-colors z-20" aria-label="Close billing dialog" title="Close"
         >
           <X size={20} className="text-white/40" />
         </button>
 
-        <div className="p-8 md:p-12 space-y-10">
-          <div className="text-center space-y-4">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
+          <div className="text-center space-y-3 clear-both">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-nexus-accent/10 border border-nexus-accent/20 text-nexus-accent text-[10px] font-bold uppercase tracking-wider">
               <Shield size={12} />
               {usageCount >= usageLimit ? 'Usage Limit Reached' : 'Exclusive Feature'}
             </div>
-            <h2 className="text-4xl font-black tracking-tight text-white">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
               Unlock the Full Power of <span className="text-nexus-accent">Odyseus AI</span>
             </h2>
             <p className="text-white/40 max-w-2xl mx-auto">
@@ -136,14 +145,14 @@ export const Paywall: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {tiers.map((tier) => (
               <div 
                 key={tier.id}
                 className={cn(
-                  "relative flex flex-col p-8 rounded-2xl border transition-all duration-500",
+                  "relative flex flex-col p-4 sm:p-5 rounded-lg border transition-colors duration-150",
                   tier.highlight 
-                    ? "bg-white/5 border-nexus-accent shadow-lg shadow-nexus-accent/5 scale-105 z-10" 
+                    ? "bg-white/5 border-nexus-accent z-10" 
                     : "bg-white/[0.02] border-white/5 hover:border-white/10"
                 )}
               >
@@ -196,7 +205,7 @@ export const Paywall: React.FC = () => {
           </div>
 
           <div className="text-center space-y-2">
-            <p className="text-xs text-amber-200/80">{billingStatus.message}</p>
+            <p className="text-xs text-amber-200/80 break-words">{billingStatus.message}</p>
             <p className="text-[10px] text-white/30 uppercase tracking-widest">
               Paid features stay locked until purchase verification and account entitlements are connected.
             </p>
