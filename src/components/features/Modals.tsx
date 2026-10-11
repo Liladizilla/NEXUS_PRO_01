@@ -24,8 +24,10 @@ export const AssetManager: React.FC = () => {
   const [assets, setAssets] = useState<LocalAsset[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const assetsRef = useRef<LocalAsset[]>([]);
 
-  useEffect(() => () => assets.forEach(asset => URL.revokeObjectURL(asset.url)), [assets]);
+  useEffect(() => { assetsRef.current = assets; }, [assets]);
+  useEffect(() => () => assetsRef.current.forEach(asset => URL.revokeObjectURL(asset.url)), []);
 
   if (!showAssetManager) return null;
 
