@@ -9,12 +9,20 @@ export const Paywall: React.FC = () => {
 
   if (!showPaywall) return null;
 
+  const checkoutUrls = {
+    pro: (import.meta as any).env?.VITE_GUMROAD_PRO_URL as string | undefined,
+    enterprise: (import.meta as any).env?.VITE_GUMROAD_ENTERPRISE_URL as string | undefined
+  };
+
   const handleUpgrade = (tier: 'pro' | 'enterprise') => {
-    // In a real app, this would redirect to Stripe
-    // For this demo, we'll simulate a successful upgrade
-    useNexusStore.getState().setSubscription(tier);
-    useNexusStore.getState().addLog(`Subscription: Upgraded to ${tier.toUpperCase()} tier.`);
-    setShowPaywall(false);
+    const checkoutUrl = checkoutUrls[tier];
+    if (!checkoutUrl) {
+      useNexusStore.getState().addLog(`[BILLING] ${tier.toUpperCase()} checkout is not configured. No payment was taken and your plan was not changed.`);
+      return;
+    }
+    // Opening checkout is not proof of payment. The plan stays unchanged until
+    // a verified provider webhook activates it on the server.
+    window.location.assign(checkoutUrl);
   };
 
   const tiers = [
@@ -47,8 +55,8 @@ export const Paywall: React.FC = () => {
         'Priority AI Mesh access',
         'Custom domain support'
       ],
-      buttonText: 'Upgrade to Pro',
-      disabled: false,
+      buttonText: checkoutUrls.pro ? 'Continue to checkout' : 'Checkout not configured',
+      disabled: !checkoutUrls.pro,
       highlight: true,
       icon: Zap
     },
@@ -67,8 +75,8 @@ export const Paywall: React.FC = () => {
         '24/7 Concierge support',
         'SLA guarantees'
       ],
-      buttonText: 'Go Enterprise',
-      disabled: false,
+      buttonText: checkoutUrls.enterprise ? 'Continue to checkout' : 'Checkout not configured',
+      disabled: !checkoutUrls.enterprise,
       highlight: false,
       icon: Rocket
     }
@@ -165,9 +173,10 @@ export const Paywall: React.FC = () => {
             ))}
           </div>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
+            <p className="text-[10px] text-amber-200/70">Paid tiers are not activated by clicking a button. Payment confirmation must be verified by the server.</p>
             <p className="text-[10px] text-white/20 uppercase tracking-widest">
-              Secure payments powered by <span className="text-white/40 font-bold">Gumroad</span>. Cancel anytime.
+              Checkout links and server-side payment verification must be configured before paid plans can activate.
             </p>
           </div>
         </div>
