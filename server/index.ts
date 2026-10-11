@@ -340,6 +340,132 @@ app.post('/api/complex', async (req, res, next) => {
   }
 });
 
+// Streaming generation keeps the serverless request alive while the model works.
+app.post('/api/generate/stream', async (req, res, next) => {
+  let taskId: string | null = null;
+  let streamOpen = true;
+  const emit = (event: Record<string, unknown>) => {
+    if (!streamOpen || res.writableEnded) return;
+    res.write(`${JSON.stringify(event)}\\n`);
+    // Flush compression middleware buffers when supported so progress is visible immediately.
+    (res as any).flush?.();
+  };
+
+  try {
+    const { prompt, agents, feedback, isHighThinking, agentModels } = req.body || {};
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: 'Describe the application you want to build first.' });
+    }
+    if (prompt.length > 50000) return res.status(413).json({ error: 'Prompt is too long.' });
+
+    res.status(200);
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+    res.on('close', () => { streamOpen = false; });
+
+    const activeTasks = await queueService.getActiveTasksCount();
+    const plan = getAutoscalingPlan(prompt, activeTasks, Array.isArray(agents) ? agents : []);
+    taskId = await queueService.createTask();
+    await queueService.updateTask(taskId, 'processing', 10, undefined, plan.agents);
+    emit({ type: 'progress', taskId, status: 'processing', progress: 10, message: 'Request accepted; planning the application.' });
+
+    await queueService.updateTask(taskId, 'synthesizing', 20);
+    emit({ type: 'progress', taskId, status: 'synthesizing', progress: 20, message: 'Sending the prompt to the AI provider.' });
+
+    let elapsedSeconds = 0;
+    const heartbeat = setInterval(() => {
+      elapsedSeconds += 5;
+      emit({
+        type: 'progress',
+        taskId,
+        status: 'synthesizing',
+        progress: 20,
+        message: `Waiting for the AI provider response (${elapsedSeconds}s elapsed).`
+      });
+    }, 5000);
+
+    let raw: string;
+    try {
+      const finalPrompt = feedback
+        ? `Original request: ${prompt}\\nUser feedback on previous iteration: ${feedback}\\nPlease refine the application based on this feedback.`
+        : prompt;
+      raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels);
+    } finally {
+      clearInterval(heartbeat);
+    }
+
+    let generated: any;
+    try {
+      generated = JSON.parse(raw);
+    } catch {
+      throw new Error('The AI provider returned invalid project JSON. Retry the build or simplify the prompt.');
+    }
+
+    emit({ type: 'progress', taskId, status: 'building', progress: 45, message: 'Validating generated files and paths.' });
+    await queueService.updateTask(taskId, 'building', 45, undefined, plan.agents);
+
+    if (!generated || typeof generated.projectName !== 'string' || !generated.projectName.trim() ||
+        !Array.isArray(generated.files) || generated.files.length === 0) {
+      throw new Error('The AI response did not contain a project name and at least one file.');
+    }
+    if (generated.files.length > 150) {
+      throw new Error('The generated project contains too many files (limit: 150). Narrow the request and retry.');
+    }
+
+    const seenPaths = new Set<string>();
+    for (const file of generated.files) {
+      if (!file || typeof file.path !== 'string' || typeof file.content !== 'string' || !file.path.trim()) {
+        throw new Error('A generated file is missing its path or text content.');
+      }
+      const normalizedPath = file.path.replace(/\\\\/g, '/').replace(/^\\/+/, '');
+      if (normalizedPath.split('/').some((part: string) => part === '..') || /^[a-zA-Z]:/.test(normalizedPath)) {
+        throw new Error(`Unsafe file path returned by the model: ${file.path}`);
+      }
+      if (seenPaths.has(normalizedPath)) throw new Error(`The generated project contains a duplicate path: ${normalizedPath}`);
+      seenPaths.add(normalizedPath);
+      file.path = normalizedPath;
+      if (!file.language) {
+        const ext = normalizedPath.split('.').pop()?.toLowerCase();
+        file.language = ({ tsx: 'typescript', ts: 'typescript', jsx: 'javascript', js: 'javascript', css: 'css', html: 'html', json: 'json', md: 'markdown' } as Record<string, string>)[ext || ''] || 'text';
+      }
+    }
+
+    emit({ type: 'progress', taskId, status: 'testing', progress: 70, message: `Structure checks passed for ${generated.files.length} files.` });
+    await queueService.updateTask(taskId, 'testing', 70, undefined, plan.agents);
+
+    emit({ type: 'progress', taskId, status: 'deploying', progress: 90, message: 'Preparing the preview route.' });
+    await queueService.updateTask(taskId, 'deploying', 90, undefined, plan.agents);
+
+    const stagingUrl = `${process.env.APP_URL || 'https://nexus-pro-01.vercel.app'}/staging/${taskId}`;
+    const result = {
+      projectName: generated.projectName.trim(),
+      description: typeof generated.description === 'string' ? generated.description : '',
+      files: generated.files,
+      stagingUrl
+    };
+    await queueService.updateTask(taskId, 'completed', 100, result, plan.agents);
+    emit({ type: 'progress', taskId, status: 'completed', progress: 100, message: 'Generated project passed file-structure checks.' });
+    emit({ type: 'complete', taskId, plan, result });
+    streamOpen = false;
+    res.end();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Generation failed for an unknown reason.';
+    if (taskId) {
+      try { await queueService.updateTask(taskId, 'failed', 0, { error: message }); } catch {}
+    }
+    if (res.headersSent) {
+      emit({ type: 'error', taskId, message });
+      streamOpen = false;
+      res.end();
+    } else {
+      next(error);
+    }
+  }
+});
+
 app.post('/api/generate', async (req, res, next) => {
   try {
   const { prompt, agents, feedback, isHighThinking, agentModels } = req.body || {};
