@@ -1,8 +1,7 @@
-/** Vercel-native streaming endpoint. Avoid importing the Express app here: Vercel
- * bundles each function independently and a runtime import of server/index.ts
- * fails because TypeScript source files are not present in the deployed runtime.
+/** Vercel-native streaming endpoint.
+ * Load the provider service lazily so a module initialization failure cannot
+ * crash the function before it can return a useful HTTP response.
  */
-import { AIService } from "../../server/services/ai.service";
 
 export const config = { maxDuration: 60 };
 
@@ -50,6 +49,11 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Describe the application you want to build first." });
   }
   if (prompt.length > 50000) return res.status(413).json({ error: "Prompt is too long." });
+  if (!process.env.GEMINI_API_KEY && !process.env.API_KEY) {
+    return res.status(503).json({
+      error: "AI generation is not configured on this deployment. Add GEMINI_API_KEY to the Vercel environment and redeploy."
+    });
+  }
 
   res.status(200);
   res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
@@ -77,6 +81,9 @@ export default async function handler(req: any, res: any) {
     const finalPrompt = feedback
       ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
       : prompt;
+
+    // Keep provider and service initialization inside the guarded request path.
+    const { AIService } = await import("../../server/services/ai.service");
     const service = new AIService();
     const raw = await service.generate(finalPrompt, Boolean(isHighThinking), agentModels, ({ characters, preview }) => {
       emit({
@@ -109,6 +116,7 @@ export default async function handler(req: any, res: any) {
     return res.end();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Generation failed for an unknown reason.";
+    console.error("[GENERATION_HANDLER_FAILURE]", message, error);
     if (res.headersSent) {
       emit({ type: "error", message });
       streamOpen = false;
