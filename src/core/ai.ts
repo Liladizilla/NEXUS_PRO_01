@@ -54,54 +54,64 @@ export async function generateApp(
   agents: any[],
   feedback?: string,
   isHighThinking?: boolean,
-  onProgress?: (status: string, progress: number) => void,
+  onProgress?: (status: string, progress: number, message?: string) => void,
   agentModels?: Record<string, string>
 ): Promise<BuildResult> {
   if (!prompt.trim()) throw new Error('Describe the application you want to build first.');
 
-  const { taskId, plan } = await readJson<{ taskId: string; plan: BuildResult['plan'] }>(
-    await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, agents, feedback, isHighThinking, agentModels })
-    })
-  );
+  const response = await fetch('/api/generate/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/x-ndjson' },
+    body: JSON.stringify({ prompt, agents, feedback, isHighThinking, agentModels })
+  });
 
-  if (!taskId) throw new Error('The server did not return a generation task ID.');
+  if (!response.ok) {
+    const body = await response.json().catch(async () => ({ error: (await response.text().catch(() => '')).slice(0, 500) }));
+    const message = typeof body?.error === 'string' ? body.error
+      : typeof body?.message === 'string' ? body.message
+      : `Generation request failed (HTTP ${response.status}).`;
+    throw new Error(message);
+  }
+  if (!response.body) throw new Error('The server opened the generation request without a live response stream.');
 
-  const startedAt = Date.now();
-  let lastStatus = '';
-  while (Date.now() - startedAt < 5 * 60 * 1000) {
-    const task = await readJson<{
-      status: string;
-      progress?: number;
-      result?: GeneratedApp & { error?: string };
-      agents?: any[];
-    }>(await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, { cache: 'no-store' }));
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let completed: { result: GeneratedApp; plan: BuildResult['plan'] } | null = null;
 
-    if (task.status !== lastStatus) {
-      lastStatus = task.status;
-      onProgress?.(task.status, task.progress ?? 0);
-    } else if (task.progress != null) {
-      onProgress?.(task.status, task.progress);
-    }
+  const handleLine = (line: string) => {
+    if (!line.trim()) return;
+    let event: any;
+    try { event = JSON.parse(line); }
+    catch { throw new Error('The generation stream returned malformed progress data.'); }
 
-    if (task.status === 'completed') {
-      if (!task.result || !Array.isArray(task.result.files)) {
-        throw new Error('Generation was marked complete but the server returned no project files.');
+    if (event.type === 'progress') {
+      onProgress?.(event.status, event.progress ?? 0);
+      if (event.message) onProgress?.(event.status, event.progress ?? 0, event.message);
+    } else if (event.type === 'complete') {
+      if (!event.result || !Array.isArray(event.result.files) || !event.result.files.length) {
+        throw new Error('Generation finished but returned no usable project files.');
       }
-      return {
-        result: task.result,
-        plan: { ...plan, agents: task.agents?.length ? task.agents : plan.agents }
-      };
+      completed = { result: event.result, plan: event.plan };
+    } else if (event.type === 'error') {
+      throw new Error(event.message || 'Generation failed on the server.');
     }
+  };
 
-    if (task.status === 'failed') {
-      throw new Error(task.result?.error || 'Generation failed on the server.');
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const lines = buffer.split('\\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) handleLine(line);
+      if (done) break;
     }
-
-    await new Promise(resolve => setTimeout(resolve, 900));
+    if (buffer.trim()) handleLine(buffer);
+  } finally {
+    reader.releaseLock();
   }
 
-  throw new Error('Generation is taking too long. Check the task status before retrying.');
+  if (!completed) throw new Error('The generation stream closed before the server returned a completed project.');
+  return completed;
 }
