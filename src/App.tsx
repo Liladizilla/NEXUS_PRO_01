@@ -1382,7 +1382,7 @@ export default function App() {
                             
                             <PromptSubmitButton
                               disabled={isGenerating || !prompt.trim()}
-                              onClick={handleGenerate}
+                              onClick={() => handleGenerate()}
                             />
                           </div>
                         </div>
