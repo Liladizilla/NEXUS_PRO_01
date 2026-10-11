@@ -1145,7 +1145,7 @@ export default function App() {
                 { id: 'preview', label: 'Preview', Icon: Eye },
                 { id: 'debug', label: 'Debug', Icon: Bug },
               ] as const).map(({ id, label, Icon }) => {
-                const active = activeTab === id;
+                const active = activeTab === id && !(id === 'design' && showDashboardHome);
                 return (
                   <button
                     key={id}
