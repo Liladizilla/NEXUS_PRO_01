@@ -1,12 +1,26 @@
 /**
- * Vercel catch-all function for the existing Express API.
- *
- * API routes must be deployed as functions, not rewritten to the SPA's
- * static HTML entry point. Importing the Express app preserves its existing
- * route handlers while allowing /api/* requests to execute server-side.
+ * Vercel catch-all adapter for the Express API.
+ * Catch initialization failures so users receive actionable JSON instead of
+ * Vercel's opaque FUNCTION_INVOCATION_FAILED page.
  */
-import app from "../server/index.ts";
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export const config = { maxDuration: 60 };
 
-export default app;
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    const module = await import('../server/index.ts');
+    const app = module.default;
+    if (typeof app !== 'function') {
+      return res.status(500).json({ error: 'API initialization failed', detail: 'Express app export is missing.' });
+    }
+    return app(req, res);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error('[API BOOT FAILURE]', detail);
+    return res.status(500).json({
+      error: 'API handler failed to initialize',
+      detail: detail.slice(0, 500)
+    });
+  }
+}
