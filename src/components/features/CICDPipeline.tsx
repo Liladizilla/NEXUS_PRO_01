@@ -8,10 +8,10 @@ interface CICDPipelineProps {
 }
 
 const steps = [
-  { id: 'processing', label: 'AI Generation', icon: Terminal },
-  { id: 'building', label: 'Build Artifacts', icon: Loader2 },
-  { id: 'testing', label: 'Security Scan & Tests', icon: ShieldCheck },
-  { id: 'deploying', label: 'Staging Deployment', icon: Rocket },
+  { id: 'processing', label: 'Request & planning', icon: Terminal },
+  { id: 'building', label: 'Validate generated files', icon: Loader2 },
+  { id: 'testing', label: 'Project structure checks', icon: ShieldCheck },
+  { id: 'deploying', label: 'Prepare preview route', icon: Rocket },
 ];
 
 export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) => {
@@ -99,8 +99,8 @@ export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) 
             <Rocket className="w-4 h-4 text-black" />
           </div>
           <div>
-            <div className="text-sm font-bold text-emerald-400">Deployment Successful</div>
-            <div className="text-xs text-emerald-400/60">Staging environment is live and ready for testing.</div>
+            <div className="text-sm font-bold text-emerald-400">Generation Complete</div>
+            <div className="text-xs text-emerald-400/60">Generated files passed basic structure checks. This is not a production deployment.</div>
           </div>
         </motion.div>
       )}
