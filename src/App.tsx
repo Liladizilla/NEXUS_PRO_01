@@ -1889,13 +1889,6 @@ export default function App() {
                       </div>
                     );
                   })}
-                  {isGenerating && (
-                    <div className="flex gap-3 items-center text-emerald-400/80">
-                      <span className="w-5 text-right text-white/20">{logs.length + 1}</span>
-                      <span className="animate-pulse">▍</span>
-                      <span className="text-white/40">Waiting for the next backend event…</span>
-                    </div>
-                  )}
                   {buildStatus === 'failed' && (
                     <div className="mt-4 p-3 border border-rose-500/30 bg-rose-500/5 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2 text-rose-400">
