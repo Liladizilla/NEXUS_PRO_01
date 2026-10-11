@@ -94,8 +94,24 @@ export const Settings: React.FC = () => {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      try {
+        localStorage.setItem('odyseus.settings.v1', JSON.stringify({
+          projectName,
+          projectDescription,
+          projectFramework,
+          projectLanguage,
+          theme,
+          accentColor,
+          autonomousMode,
+          parallelSynthesis,
+          notificationsEnabled,
+          deployTarget
+        }));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch {
+        setSaveStatus('idle');
+      }
     }, 1000);
 
     return () => {
@@ -118,11 +134,17 @@ export const Settings: React.FC = () => {
 
   const handleBlur = () => {
     if (saveStatus === 'saving') {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      try {
+        localStorage.setItem('odyseus.settings.v1', JSON.stringify({
+          projectName, projectDescription, projectFramework, projectLanguage,
+          theme, accentColor, autonomousMode, parallelSynthesis, notificationsEnabled, deployTarget
+        }));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch {
+        setSaveStatus('idle');
       }
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
@@ -853,9 +875,9 @@ export const Settings: React.FC = () => {
                           <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Configure your target-specific credentials</p>
                         </div>
                       </div>
-                      <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-                        <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                        Ready to Connect
+                      <div className="px-3 py-1 border border-default bg-raised text-[8px] font-bold uppercase tracking-widest text-text-muted flex items-center gap-1.5">
+                        <div className="w-1 h-1 bg-text-muted" />
+                        Not verified
                       </div>
                     </div>
 
