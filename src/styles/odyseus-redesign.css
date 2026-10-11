@@ -70,7 +70,7 @@ button:disabled { background:var(--ody-raised)!important; color:var(--text-disab
 .template-preview-chart { height:calc(100% - 29px); display:flex; align-items:flex-end; gap:5%; padding:5px; border:1px solid #e3dfd7; }.template-preview-chart i { flex:1; height:40%; background:#d9a16e; }.template-preview-chart i:nth-child(2){height:68%}.template-preview-chart i:nth-child(3){height:53%}.template-preview-chart i:nth-child(4){height:82%}.template-preview-chart i:nth-child(5){height:62%}.template-preview-chart i:nth-child(6){height:92%}.template-preview-chart.is-analytics i { background:#77746d; }
 .template-preview-portfolio { padding:5px; }.template-preview-portfolio>b { display:block; width:55%; height:9px; margin:3px 0; background:#44423e; }.template-preview-portfolio>span { display:block; width:80%; height:3px; margin:4px 0; background:#bdb9b0; }.template-preview-portfolio>div { display:flex; gap:4px; margin-top:7px; }.template-preview-portfolio i { flex:1; height:22px; background:#d5d0c7; }
 .template-preview-products { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }.template-preview-products i { height:34px; background:#d5d0c7; border-bottom:5px solid #b9b4aa; }
-.template-preview-kanban { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }.template-preview-kanban i { height:38px; background:repeating-linear-gradient(to bottom,#d5d0c7 0 5px,transparent 5px 10px); border-top:3px solid #8f8a80; }
+.template-preview-kanban { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }.template-preview-kanban i { height:38px; background:#d5d0c7; border-top:3px solid #8f8a80; }
 .odyseus-template-name { font-size:14px; line-height:20px; font-weight:600; }.odyseus-template-description { color:var(--ody-muted); font-size:12px; line-height:16px; }
 .odyseus-continue { display:grid; grid-template-columns:180px minmax(0,1fr) minmax(220px,.7fr); gap:20px; padding:16px; border:1px solid var(--ody-border); border-radius:12px; background:var(--ody-surface); }
 .odyseus-project-thumbnail .template-preview { height:100%; min-height:120px; aspect-ratio:auto; }.odyseus-continue-copy { align-self:center; }.odyseus-continue-copy h2 { margin:0; font-size:20px; line-height:26px; font-weight:600; }.odyseus-continue-copy>p:not(.odyseus-section-kicker) { margin:5px 0 14px; color:var(--ody-muted); font-size:14px; }.odyseus-inline-actions { display:flex; flex-wrap:wrap; gap:8px; }
@@ -119,4 +119,10 @@ button:disabled { background:var(--ody-raised)!important; color:var(--text-disab
   .odyseus-preview-refine-dock input::placeholder { color:var(--ody-muted); }
   .odyseus-preview-refine-dock button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:0 12px; border:1px solid var(--ody-accent); border-radius:8px; background:var(--ody-accent); color:var(--ody-on-accent); font-size:14px; }
   .odyseus-preview-refine-dock button:disabled { background:var(--ody-raised); border-color:var(--ody-border); color:var(--text-disabled); }
+}
+
+/* Enforce the minimum readable caption size used throughout the specification. */
+@media(max-width:639px) {
+  [class*="text-[8px]"],[class*="text-[9px]"],[class*="text-[10px]"],[class*="text-[11px]"] { font-size:12px!important; line-height:16px!important; letter-spacing:normal!important; }
+  .odyseus-mobile-topbar .tracking-tighter { letter-spacing:-.02em; }
 }
