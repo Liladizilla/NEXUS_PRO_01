@@ -1886,7 +1886,7 @@ export default function App() {
                     <div className="mt-4 p-3 border border-rose-500/30 bg-rose-500/5 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2 text-rose-400">
                         <AlertCircle size={14} />
-                        <span>Build pipeline halted. Action required.</span>
+                        <span>Build failed. Review the error above before retrying.</span>
                       </div>
                       <button 
                         onClick={() => handleGenerate()}
