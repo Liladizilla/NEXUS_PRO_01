@@ -1860,22 +1860,27 @@ export default function App() {
                   </div>
                 </div>
                 {!isTerminalMinimized && (
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 font-mono text-[11px] space-y-1 text-white/60">
+                  <div ref={scrollRef} role="log" aria-live="polite" aria-label="Live build output" className="flex-1 overflow-y-auto p-4 font-mono text-[11px] leading-5 space-y-1 text-white/60 bg-[#07090d]">
                   {logs.map((log, i) => {
                     const isCritical = log.includes('[CRITICAL]');
                     const isAdvice = log.includes('[ADVICE]');
+                    const isBuild = log.includes('[BUILD]') || log.includes('[STREAM]');
                     const isUser = log.includes('User:');
                     const isAI = log.includes('AI:');
+                    const isSuccess = log.includes('completed') || log.includes('Successfully generated');
 
                     return (
-                      <div key={i} className="flex gap-2">
+                      <div key={i} className="group flex gap-3 min-w-0">
+                        <span className="select-none shrink-0 w-5 text-right text-white/20 tabular-nums">{i + 1}</span>
                         <span className={cn(
-                          "shrink-0",
-                          isCritical ? "text-rose-500" : isAdvice ? "text-amber-400" : "text-nexus-accent/50"
-                        )}>âžœ</span>
+                          "shrink-0 select-none",
+                          isCritical ? "text-rose-500" : isAdvice ? "text-amber-400" : isBuild ? "text-sky-400" : "text-emerald-500/70"
+                        )}>{isCritical ? '×' : isSuccess ? '✓' : isBuild ? '↳' : '›'}</span>
                         <span className={cn(
-                          isCritical ? "text-rose-400 font-bold" : 
-                          isAdvice ? "text-amber-200/80 italic" : 
+                          "min-w-0 whitespace-pre-wrap break-words",
+                          isCritical ? "text-rose-300 font-semibold" :
+                          isAdvice ? "text-amber-200/80" :
+                          isBuild ? "text-sky-100/90" :
                           isUser ? "text-nexus-accent" :
                           isAI ? "text-purple-300" : ""
                         )}>
@@ -1884,6 +1889,13 @@ export default function App() {
                       </div>
                     );
                   })}
+                  {isGenerating && (
+                    <div className="flex gap-3 items-center text-emerald-400/80">
+                      <span className="w-5 text-right text-white/20">{logs.length + 1}</span>
+                      <span className="animate-pulse">▍</span>
+                      <span className="text-white/40">Waiting for the next backend event…</span>
+                    </div>
+                  )}
                   {buildStatus === 'failed' && (
                     <div className="mt-4 p-3 border border-rose-500/30 bg-rose-500/5 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2 text-rose-400">
