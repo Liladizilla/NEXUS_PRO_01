@@ -421,7 +421,7 @@ app.post('/api/generate/stream', async (req, res, next) => {
       if (!file || typeof file.path !== 'string' || typeof file.content !== 'string' || !file.path.trim()) {
         throw new Error('A generated file is missing its path or text content.');
       }
-      const normalizedPath = file.path.replace(/\\/g, '/').replace(/^\\/+/, '');
+      const normalizedPath = file.path.replace(/\\/g, '/').replace(/^\/+/, '');
       if (normalizedPath.split('/').some((part: string) => part === '..') || /^[a-zA-Z]:/.test(normalizedPath)) {
         throw new Error(`Unsafe file path returned by the model: ${file.path}`);
       }
