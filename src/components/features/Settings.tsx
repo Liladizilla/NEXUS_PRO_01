@@ -80,6 +80,28 @@ export const Settings: React.FC = () => {
     }
   };
 
+  // Restore the preferences that were actually saved in this browser.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('odyseus.settings.v1');
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const state = useNexusStore.getState();
+      if (typeof saved.projectName === 'string') state.setProjectName(saved.projectName);
+      if (typeof saved.projectDescription === 'string') state.setProjectDescription(saved.projectDescription);
+      if (typeof saved.projectFramework === 'string') state.setProjectFramework(saved.projectFramework);
+      if (typeof saved.projectLanguage === 'string') state.setProjectLanguage(saved.projectLanguage);
+      if (['dark', 'light', 'cyberpunk'].includes(saved.theme)) state.setTheme(saved.theme);
+      if (typeof saved.accentColor === 'string') state.setAccentColor(saved.accentColor);
+      if (typeof saved.autonomousMode === 'boolean') state.setAutonomousMode(saved.autonomousMode);
+      if (typeof saved.parallelSynthesis === 'boolean') state.setParallelSynthesis(saved.parallelSynthesis);
+      if (typeof saved.notificationsEnabled === 'boolean') state.setNotificationsEnabled(saved.notificationsEnabled);
+      if (['railway', 'vercel', 'netlify', 'aws-s3', 'cloudflare-pages', 'docker'].includes(saved.deployTarget)) state.setDeployTarget(saved.deployTarget);
+    } catch {
+      // Ignore invalid or unavailable local settings; defaults remain usable.
+    }
+  }, []);
+
   // Auto-save logic
   useEffect(() => {
     if (isInitialMount.current) {
