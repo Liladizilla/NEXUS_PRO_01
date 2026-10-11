@@ -657,61 +657,62 @@ const bootstrap = async () => {
       });
     }
   } else {
-    // In production (including Vercel), serve static files
+    // Vercel serves the SPA from its static output. Only attach API routes here;
+    // don't rely on a dist directory or register a competing SPA fallback.
+    if (process.env.VERCEL) return;
+
     const distPath = process.env.ODYSEUS_ELECTRON === 'true'
       ? path.resolve(__dirname, '../dist')
       : path.join(process.cwd(), 'dist');
-    
-    // Performance: Cache static assets (1 year for hashed files)
+
     app.use(express.static(distPath, {
       maxAge: '1y',
       etag: true,
       lastModified: true,
-      setHeaders: (res, path) => {
-        if (path.endsWith('.html')) {
-          // Don't cache HTML files
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         }
       }
     }));
-    
-    // SPA Fallback: Serve index.html for any non-API routes
+
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(distPath, 'index.html'));
     });
-    
-    // Only listen if not on Vercel
-    if (!process.env.VERCEL) {
-      const server = app.listen(PORT, '0.0.0.0', () => {
-        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+    });
+
+    const shutdown = () => {
+      console.log(`\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...`);
+      server.close(() => {
+        console.log(`\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.`);
+        process.exit(0);
       });
+      setTimeout(() => {
+        console.error(`\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.`);
+        process.exit(1);
+      }, 10000);
+    };
 
-      // Graceful Shutdown
-      const shutdown = () => {
-        console.log('\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...');
-        server.close(() => {
-          console.log('\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.');
-          process.exit(0);
-        });
-        // Force close after 10s
-        setTimeout(() => {
-          console.error('\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.');
-          process.exit(1);
-        }, 10000);
-      };
-
-      process.on('SIGTERM', shutdown);
-      process.on('SIGINT', shutdown);
-    }
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   }
 };
 
-// Vercel serves the frontend from its static output and invokes this Express
-// app only for API requests. Do not start Vite middleware or a listener inside
-// a serverless function; local desktop/server runs still bootstrap normally.
+// The Vercel function adapters await this before dispatching Express requests.
+// Keep initialization idempotent because a warm serverless instance can handle
+// multiple requests. Local development still starts itself automatically.
+let bootstrapPromise: Promise<void> | null = null;
+export function initializeServer(): Promise<void> {
+  if (!bootstrapPromise) bootstrapPromise = bootstrap();
+  return bootstrapPromise;
+}
+
 if (!process.env.VERCEL) {
-  void bootstrap();
+  void initializeServer();
 }
 
 export default app;
