@@ -9,7 +9,7 @@
       "destination": "/api/staging/:taskId"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
