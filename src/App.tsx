@@ -401,7 +401,7 @@ export default function App() {
     files, setFiles,
     activeFile, setActiveFile,
     agents, updateAgent, setAgents,
-    logs, addLog,
+    logs, addLog, clearLogs,
     isAuthenticated, login,
     showPaywall, setShowPaywall, incrementUsage, usageCount, usageLimit,
     showSettings, setShowSettings,
@@ -647,7 +647,8 @@ export default function App() {
       advice = "Lost connection to the Odyseus backend. Please verify your network stability and ensure the gateway is online (check the health indicator in the footer).";
     }
 
-    addLog(`[CRITICAL] ${detailedMessage}`);
+    addLog(`[CRITICAL] ${message}`);
+    if (detailedMessage !== `Error: ${message}`) addLog(`[DIAGNOSIS] ${detailedMessage}`);
     if (advice) {
       addLog(`[ADVICE] ${advice}`);
     }
@@ -685,15 +686,29 @@ export default function App() {
         return acc;
       }, {} as Record<string, string>);
 
-      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress) => {
+      let lastLoggedStatus = '';
+      let lastLoggedDetail = '';
+      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress, detail) => {
         const statusMap: Record<string, string> = {
-          'building': 'Synthesizing components...',
-          'testing': 'Running security & type checks...',
-          'deploying': 'Pushing to edge network...',
-          'completed': 'Stack ready'
+          'queued': 'Queued for generation',
+          'processing': 'Analyzing requirements',
+          'synthesizing': 'Generating application files',
+          'building': 'Validating generated files',
+          'testing': 'Checking project structure',
+          'deploying': 'Preparing preview',
+          'completed': 'Generation complete',
+          'failed': 'Build failed'
         };
         setBuildStatus(statusMap[status] || status);
         setBuildProgress(progress);
+        if (status !== lastLoggedStatus) {
+          addLog(`[BUILD] ${statusMap[status] || status} (${progress}%)`);
+          lastLoggedStatus = status;
+        }
+        if (detail && detail !== lastLoggedDetail) {
+          addLog(`[STREAM] ${detail}`);
+          lastLoggedDetail = detail;
+        }
         
         // Update task breakdown based on progress
         if (progress > 20) setTaskBreakdown(prev => [...prev, 'Generating UI components']);
@@ -1805,11 +1820,22 @@ export default function App() {
                     {!isTerminalMinimized && (
                       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
                         <Activity size={12} />
-                        Logs
+                        Build Output
                       </div>
+                      <span className={cn(
+                        "rounded px-2 py-0.5 text-[9px] font-bold tracking-widest",
+                        isGenerating ? "bg-emerald-500/15 text-emerald-400" :
+                        buildStatus === 'failed' ? "bg-rose-500/15 text-rose-400" :
+                        buildStatus === 'completed' ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-white/40"
+                      )}>{isGenerating ? "LIVE" : buildStatus === 'failed' ? "FAILED" : buildStatus === 'completed' ? "DONE" : "READY"}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
+                    <button
+                      className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/35 hover:text-white hover:bg-white/10 rounded"
+                      onClick={(e) => { e.stopPropagation(); clearLogs(); }}
+                      title="Clear build output"
+                    >Clear</button>
                     <button 
                       className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-white" 
                       onClick={(e) => { e.stopPropagation(); setTerminalMinimized(!isTerminalMinimized); }}
@@ -1836,10 +1862,10 @@ export default function App() {
                 {!isTerminalMinimized && (
                   <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 font-mono text-[11px] space-y-1 text-white/60">
                   {logs.map((log, i) => {
-                    const isCritical = log.startsWith('[CRITICAL]');
-                    const isAdvice = log.startsWith('[ADVICE]');
-                    const isUser = log.startsWith('User:');
-                    const isAI = log.startsWith('AI:');
+                    const isCritical = log.includes('[CRITICAL]');
+                    const isAdvice = log.includes('[ADVICE]');
+                    const isUser = log.includes('User:');
+                    const isAI = log.includes('AI:');
 
                     return (
                       <div key={i} className="flex gap-2">
