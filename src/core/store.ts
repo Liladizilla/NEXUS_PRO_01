@@ -110,7 +110,6 @@ interface NexusState {
   login: (email: string) => void;
   logout: () => void;
   incrementUsage: () => void;
-  setSubscription: (tier: 'free' | 'pro' | 'enterprise') => void;
   setDeployTarget: (target: DeployTarget) => void;
   setShowPaywall: (val: boolean) => void;
   setShowSettings: (val: boolean) => void;
@@ -317,12 +316,6 @@ export const useNexusStore = create<NexusState>((set, get) => ({
       usageCount: newCount,
       showPaywall: shouldShowPaywall
     };
-  }),
-  setSubscription: (tier) => set({ 
-    isPro: tier === 'pro', 
-    isEnterprise: tier === 'enterprise',
-    usageLimit: tier === 'free' ? 3 : (tier === 'pro' ? 100 : 999999),
-    showPaywall: false 
   }),
   setDeployTarget: (target) => set({ deployTarget: target }),
   setShowPaywall: (val) => set({ showPaywall: val }),
