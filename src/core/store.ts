@@ -102,6 +102,7 @@ interface NexusState {
   setFiles: (files: ProjectFile[]) => void;
   setActiveFile: (path: string | null) => void;
   addLog: (log: string) => void;
+  clearLogs: () => void;
   setAgents: (agents: Agent[]) => void;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   setAgentModel: (id: string, model: string) => void;
@@ -298,6 +299,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setFiles: (files) => set({ files }),
   setActiveFile: (path) => set({ activeFile: path }),
   addLog: (log) => set((state) => ({ logs: [...state.logs, `[${new Date().toLocaleTimeString()}] ${log}`] })),
+  clearLogs: () => set({ logs: [] }),
   updateAgent: (id, updates) => set((state) => ({
     agents: state.agents.map((a) => (a.id === id ? { ...a, ...updates } : a)),
   })),
