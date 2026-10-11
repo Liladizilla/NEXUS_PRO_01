@@ -409,7 +409,6 @@ export default function App() {
     showTemplateSearch, setShowTemplateSearch,
     showTaskModal, setShowTaskModal,
     showHistory, setShowHistory,
-    setSubscription,
     deployTarget, setDeployTarget,
     previewMode, setPreviewMode,
     stagingUrl, setStagingUrl,
@@ -581,11 +580,10 @@ export default function App() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success')) {
-      // In a real app, we'd verify the session on the backend
-      // For this demo, we'll just set the subscription
-      setSubscription('pro');
-      addLog("Subscription successful! Welcome to Odyseus Pro.");
-      window.history.replaceState({}, document.title, "/");
+      // A redirect is not proof of payment. Only a verified server-side
+      // provider callback may activate a paid plan.
+      addLog("[BILLING] Checkout returned to the app. Plan activation is pending verified payment confirmation.");
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
