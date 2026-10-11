@@ -1300,6 +1300,7 @@ export default function App() {
             onOpenPreview={() => { setShowDashboardHome(false); setActiveTab('preview'); }}
             onOpenHistory={() => setShowHistory(true)}
             onOpenAssets={() => setShowAssetManager(true)}
+            onUpgrade={() => setShowPaywall(true)}
             files={files}
             agents={agents}
             logs={logs}
