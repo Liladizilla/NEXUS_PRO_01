@@ -707,6 +707,11 @@ const bootstrap = async () => {
   }
 };
 
-void bootstrap();
+// Vercel serves the frontend from its static output and invokes this Express
+// app only for API requests. Do not start Vite middleware or a listener inside
+// a serverless function; local desktop/server runs still bootstrap normally.
+if (!process.env.VERCEL) {
+  void bootstrap();
+}
 
 export default app;
