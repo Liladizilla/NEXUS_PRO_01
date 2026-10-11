@@ -50,6 +50,7 @@ export const Settings: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [hasSelectedApiKey, setHasSelectedApiKey] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [integrationCheck, setIntegrationCheck] = useState<{ loading: boolean; message: string; configured?: boolean }>({ loading: false, message: '' });
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
 
@@ -79,6 +80,28 @@ export const Settings: React.FC = () => {
     }
   };
 
+  // Restore the preferences that were actually saved in this browser.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('odyseus.settings.v1');
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const state = useNexusStore.getState();
+      if (typeof saved.projectName === 'string') state.setProjectName(saved.projectName);
+      if (typeof saved.projectDescription === 'string') state.setProjectDescription(saved.projectDescription);
+      if (typeof saved.projectFramework === 'string') state.setProjectFramework(saved.projectFramework);
+      if (typeof saved.projectLanguage === 'string') state.setProjectLanguage(saved.projectLanguage);
+      if (['dark', 'light', 'cyberpunk'].includes(saved.theme)) state.setTheme(saved.theme);
+      if (typeof saved.accentColor === 'string') state.setAccentColor(saved.accentColor);
+      if (typeof saved.autonomousMode === 'boolean') state.setAutonomousMode(saved.autonomousMode);
+      if (typeof saved.parallelSynthesis === 'boolean') state.setParallelSynthesis(saved.parallelSynthesis);
+      if (typeof saved.notificationsEnabled === 'boolean') state.setNotificationsEnabled(saved.notificationsEnabled);
+      if (['railway', 'vercel', 'netlify', 'aws-s3', 'cloudflare-pages', 'docker'].includes(saved.deployTarget)) state.setDeployTarget(saved.deployTarget);
+    } catch {
+      // Ignore invalid or unavailable local settings; defaults remain usable.
+    }
+  }, []);
+
   // Auto-save logic
   useEffect(() => {
     if (isInitialMount.current) {
@@ -93,8 +116,24 @@ export const Settings: React.FC = () => {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      try {
+        localStorage.setItem('odyseus.settings.v1', JSON.stringify({
+          projectName,
+          projectDescription,
+          projectFramework,
+          projectLanguage,
+          theme,
+          accentColor,
+          autonomousMode,
+          parallelSynthesis,
+          notificationsEnabled,
+          deployTarget
+        }));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch {
+        setSaveStatus('idle');
+      }
     }, 1000);
 
     return () => {
@@ -117,11 +156,17 @@ export const Settings: React.FC = () => {
 
   const handleBlur = () => {
     if (saveStatus === 'saving') {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      try {
+        localStorage.setItem('odyseus.settings.v1', JSON.stringify({
+          projectName, projectDescription, projectFramework, projectLanguage,
+          theme, accentColor, autonomousMode, parallelSynthesis, notificationsEnabled, deployTarget
+        }));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch {
+        setSaveStatus('idle');
       }
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
@@ -131,6 +176,64 @@ export const Settings: React.FC = () => {
     useNexusStore.getState().reset();
     setShowSettings(false);
     setShowDeleteConfirm(false);
+  };
+
+  const handleArchiveProject = () => {
+    const state = useNexusStore.getState();
+    const snapshot = {
+      format: 'odyseus-project-archive-v1',
+      exportedAt: new Date().toISOString(),
+      project: {
+        id: state.currentProjectId,
+        name: state.projectName,
+        description: state.projectDescription,
+        framework: state.projectFramework,
+        language: state.projectLanguage,
+        files: state.files
+      },
+      recentActivity: state.logs.slice(-100)
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${(state.projectName || 'odyseus-project').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase()}-archive.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    state.addLog('Project archive exported as a JSON backup.');
+  };
+
+  const handleCheckIntegration = async () => {
+    setIntegrationCheck({ loading: true, message: 'Checking server-side provider configuration…' });
+    try {
+      const response = await fetch('/api/integrations/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: deployTarget })
+      });
+      const data = await response.json().catch(() => ({}));
+      setIntegrationCheck({
+        loading: false,
+        configured: Boolean(data.configured),
+        message: data.message || (response.ok ? 'Configuration check completed.' : `Configuration check failed (HTTP ${response.status}).`)
+      });
+      useNexusStore.getState().addLog(`Integration config [${deployTarget}]: ${data.message || response.statusText}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Network request failed';
+      setIntegrationCheck({ loading: false, configured: false, message: `Could not check provider configuration: ${message}` });
+    }
+  };
+
+  const openProviderDocs = (webhooks = false) => {
+    const docs: Record<string, { setup: string; webhooks: string }> = {
+      railway: { setup: 'https://docs.railway.com/guides/cli', webhooks: 'https://docs.railway.com' },
+      vercel: { setup: 'https://vercel.com/docs/rest-api', webhooks: 'https://vercel.com/docs/webhooks' },
+      netlify: { setup: 'https://docs.netlify.com/api-and-cli-guides/api-guides/', webhooks: 'https://docs.netlify.com' },
+      'aws-s3': { setup: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html', webhooks: 'https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html' },
+      'cloudflare-pages': { setup: 'https://developers.cloudflare.com/api/', webhooks: 'https://developers.cloudflare.com/workers/configuration/queues/' },
+      docker: { setup: 'https://docs.docker.com/engine/security/protect-access/', webhooks: 'https://docs.docker.com/build/ci/github-actions/' }
+    };
+    window.open(docs[deployTarget][webhooks ? 'webhooks' : 'setup'], '_blank', 'noopener,noreferrer');
   };
 
   const sections = [
@@ -400,7 +503,7 @@ export const Settings: React.FC = () => {
                       >
                         Delete Project
                       </button>
-                      <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">Archive Ecosystem</button>
+                      <button onClick={handleArchiveProject} className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Export Project Archive</button>
                     </div>
                   )}
                 </div>
@@ -794,53 +897,31 @@ export const Settings: React.FC = () => {
                           <p className="text-[10px] text-white/20 uppercase font-bold tracking-widest">Configure your target-specific credentials</p>
                         </div>
                       </div>
-                      <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-                        <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                        Ready to Connect
+                      <div className="px-3 py-1 border border-default bg-raised text-[8px] font-bold uppercase tracking-widest text-text-muted flex items-center gap-1.5">
+                        <div className="w-1 h-1 bg-text-muted" />
+                        Not verified
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      {deployTarget === 'docker' ? (
-                        <>
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Host Address</label>
-                            <input type="text" placeholder="e.g. 192.168.1.100" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">SSH Port</label>
-                            <input type="text" placeholder="22" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Username</label>
-                            <input type="text" placeholder="root" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">SSH Key / Password</label>
-                            <input type="password" placeholder="••••••••" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">API Token / Secret Key</label>
-                            <input type="password" placeholder="Enter token..." className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-bold uppercase tracking-widest text-white/30 ml-1">Project ID / Slug</label>
-                            <input type="text" placeholder="Enter ID..." className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-nexus-accent/50" />
-                          </div>
-                        </>
+                    <div className="space-y-3">
+                      <div className="border border-default bg-raised p-4">
+                        <p className="text-xs font-semibold text-text-primary">Server-side credentials only</p>
+                        <p className="mt-1 text-xs text-text-muted">Secrets entered in a browser form are not stored or used by this app. Configure the provider's environment variables in your deployment settings. This page never exposes secret values.</p>
+                      </div>
+                      {integrationCheck.message && (
+                        <div role="status" className={cn("border p-3 text-xs", integrationCheck.configured ? "border-emerald-500/30 text-emerald-300 bg-emerald-500/5" : "border-amber-500/30 text-amber-200 bg-amber-500/5")}>
+                          {integrationCheck.message}
+                        </div>
                       )}
                     </div>
 
                     <div className="flex items-center gap-3 pt-2">
-                      <button className="flex-1 py-2.5 rounded-xl bg-nexus-accent/10 border border-nexus-accent/20 text-nexus-accent text-[10px] font-bold uppercase tracking-widest hover:bg-nexus-accent/20 transition-all flex items-center justify-center gap-2">
-                        Test Connection
-                        <ExternalLink size={12} />
+                      <button onClick={handleCheckIntegration} disabled={integrationCheck.loading} className="flex-1 py-2.5 border border-accent/30 bg-accent/10 text-accent text-[10px] font-bold uppercase tracking-widest hover:bg-accent/20 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                        {integrationCheck.loading ? 'Checking…' : 'Check Server Config'}
+                        {integrationCheck.loading ? <Loader2 size={12} className="animate-spin" /> : <ExternalLink size={12} />}
                       </button>
-                      <button className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
-                        View Documentation
+                      <button onClick={() => openProviderDocs(false)} className="flex-1 py-2.5 border border-default bg-raised text-text-secondary text-[10px] font-bold uppercase tracking-widest hover:text-text-primary transition-colors">
+                        Provider Docs
                       </button>
                     </div>
                   </motion.div>
@@ -853,7 +934,7 @@ export const Settings: React.FC = () => {
                       <p className="text-xs text-white/40">Automatically deploy to your chosen target after every successful build.</p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Configure Webhooks</button>
+                      <button onClick={() => openProviderDocs(true)} className="px-4 py-2 border border-default bg-raised text-[10px] font-bold uppercase tracking-widest hover:text-text-primary transition-colors">Webhook Docs</button>
                     </div>
                   </div>
                 </div>
