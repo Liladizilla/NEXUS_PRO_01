@@ -758,25 +758,32 @@ export default function App() {
   };
 
   const handleDeploy = async () => {
+    if (!files.length) {
+      addLog('[DEPLOY] Generate an app before requesting deployment.');
+      return;
+    }
     setIsGenerating(true);
-    addLog(`DevOps Agent: Initializing cloud deployment mesh for ${deployTarget.toUpperCase()}...`);
-    
-    const targetConfig = {
-      'railway': { name: 'Railway', url: 'nexus-ai.run', action: 'Deploying to Railway...' },
-      'vercel': { name: 'Vercel', url: 'vercel.app', action: 'Deploying to Vercel Edge...' },
-      'netlify': { name: 'Netlify', url: 'netlify.app', action: 'Deploying to Netlify CDN...' },
-      'aws-s3': { name: 'AWS S3', url: 's3-website.aws.com', action: 'Provisioning S3 Bucket & CloudFront...' },
-      'cloudflare-pages': { name: 'Cloudflare Pages', url: 'pages.dev', action: 'Syncing with Cloudflare Edge...' },
-      'docker': { name: 'Docker Host', url: 'docker-container.local', action: 'Building Docker Image & Pushing to Registry...' }
-    }[deployTarget];
-
-    updateAgent('devops', { status: 'working', lastAction: targetConfig.action });
-    await new Promise(r => setTimeout(r, 2500));
-    updateAgent('devops', { status: 'completed' });
-    
-    const deployUrl = `https://${projectName.toLowerCase().replace(/\s+/g, '-')}.${targetConfig.url}`;
-    addLog(`Deployment successful! App live on ${targetConfig.name} at: ${deployUrl}`);
-    setIsGenerating(false);
+    updateAgent('devops', { status: 'working', lastAction: `Checking ${deployTarget} deployment readiness…` });
+    addLog(`[DEPLOY] Requesting ${deployTarget} deployment for ${projectName}…`);
+    try {
+      const response = await fetch('/api/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: deployTarget, projectName, files })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || data?.error || `Deployment request failed (HTTP ${response.status}).`);
+      if (typeof data?.url !== 'string' || !data.url) throw new Error('The deployment service returned no verified live URL.');
+      updateAgent('devops', { status: 'completed', lastAction: `Deployed to ${deployTarget}` });
+      addLog(`[DEPLOY] Verified deployment URL: ${data.url}`);
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown deployment error';
+      updateAgent('devops', { status: 'error', lastAction: message });
+      addLog(`[DEPLOY] Not deployed: ${message}`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDebug = async () => {
@@ -1218,7 +1225,7 @@ export default function App() {
                 onClick={() => setEnvOpen(o => !o)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-[6px] bg-raised border border-default text-[10px] font-black uppercase tracking-widest text-text-muted hover:text-text-primary transition-colors"
               >
-                {deployTarget === 'railway' ? 'Railway' : deployTarget === 'aws-s3' ? 'AWS S3' : 'Cloudflare'}
+                {({ railway: 'Railway', 'aws-s3': 'AWS S3', 'cloudflare-pages': 'Cloudflare Pages', vercel: 'Vercel', netlify: 'Netlify', docker: 'Docker' } as Record<string, string>)[deployTarget]}
                 <ChevronDown size={12} className={cn('transition-transform duration-150', envOpen && 'rotate-180')} />
               </button>
               {envOpen && (
@@ -1230,10 +1237,14 @@ export default function App() {
                     transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                     className="absolute right-0 top-[calc(100%+8px)] w-44 surface-floating rounded-[10px] p-1 z-50"
                   >
+                    <div className="max-h-[min(70vh,320px)] overflow-y-auto">
                     {([
                       { v: 'railway', l: 'Railway' },
-                      { v: 'aws-s3', l: 'AWS S3' },
+                      { v: 'vercel', l: 'Vercel' },
+                      { v: 'netlify', l: 'Netlify' },
                       { v: 'cloudflare-pages', l: 'Cloudflare Pages' },
+                      { v: 'aws-s3', l: 'AWS S3' },
+                      { v: 'docker', l: 'Docker Host' },
                     ] as const).map(({ v, l }) => (
                       <button
                         key={v}
@@ -1244,6 +1255,7 @@ export default function App() {
                         {deployTarget === v && <Check size={12} className="text-accent-interactive" />}
                       </button>
                     ))}
+                    </div>
                   </motion.div>
                 </>
               )}
