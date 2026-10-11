@@ -41,13 +41,15 @@ export const Settings: React.FC = () => {
     usageLimit,
     freeApiKey,
     lastApiKeyReset,
-    generateFreeApiKey
+    generateFreeApiKey,
+    logs
   } = useNexusStore();
   
   const [activeSection, setActiveSection] = useState('project');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [hasSelectedApiKey, setHasSelectedApiKey] = useState(false);
+  const [showFullHistory, setShowFullHistory] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialMount = useRef(true);
 
@@ -534,27 +536,29 @@ export const Settings: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-white uppercase tracking-tight">Security Logs</h4>
-                <button className="text-[10px] text-nexus-accent hover:underline uppercase font-bold tracking-widest">View Full History</button>
+              <div className="flex items-center justify-between gap-3">
+                <h4 className="text-sm font-bold text-white uppercase tracking-tight">Recent Activity</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowFullHistory(value => !value)}
+                  className="text-[10px] text-nexus-accent hover:underline uppercase font-bold tracking-widest"
+                  aria-expanded={showFullHistory}
+                >
+                  {showFullHistory ? 'Show Recent' : 'View Full History'}
+                </button>
               </div>
               <div className="space-y-2">
-                {[
-                  { event: 'API Key Generated', time: '2 hours ago', status: 'SUCCESS' },
-                  { event: 'New Login Detected', time: '5 hours ago', status: 'WARNING' },
-                  { event: 'Password Changed', time: '2 days ago', status: 'SUCCESS' },
-                ].map((log, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/5">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-medium text-white/80">{log.event}</span>
-                      <span className="text-[8px] text-white/30 uppercase font-bold tracking-widest">{log.time}</span>
-                    </div>
-                    <span className={cn(
-                      "text-[8px] font-bold uppercase tracking-widest",
-                      log.status === 'SUCCESS' ? "text-emerald-400" : "text-rose-500"
-                    )}>{log.status}</span>
+                {logs.length ? logs.slice(showFullHistory ? -30 : -3).reverse().map((entry, i) => (
+                  <div key={`${i}-${entry}`} className="flex items-start gap-3 p-3 rounded-lg bg-black/20 border border-white/5">
+                    <CheckCircle2 size={13} className="mt-0.5 shrink-0 text-nexus-accent/70" />
+                    <span className="min-w-0 break-words text-[10px] leading-5 text-white/70">{entry}</span>
                   </div>
-                ))}
+                )) : (
+                  <p className="p-3 text-xs text-white/40">No activity has been recorded in this session yet.</p>
+                )}
+                {showFullHistory && logs.length > 30 && (
+                  <p className="text-[10px] text-white/30">Showing the latest 30 events.</p>
+                )}
               </div>
             </div>
 
