@@ -1,7 +1,4 @@
-/** Billing is deliberately disabled until provider verification is implemented. */
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default function handler(_req: VercelRequest, res: VercelResponse) {
+export default function handler(_req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
   return res.status(200).json({
     enabled: false,
