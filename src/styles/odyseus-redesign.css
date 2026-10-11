@@ -108,3 +108,16 @@ button:disabled { background:var(--ody-raised)!important; color:var(--text-disab
   .fixed.bottom-6.right-6 { display:none!important; }
 }
 @media(min-width:640px) { .odyseus-mobile-tabs { display:none!important; } }
+
+.odyseus-preview-refine-dock { display:none; }
+@media(max-width:639px) {
+  .odyseus-preview-refine-dock {
+    display:flex; align-items:center; gap:8px; position:fixed; z-index:75; left:12px; right:12px;
+    bottom:calc(64px + env(safe-area-inset-bottom)); padding:8px;
+    background:var(--ody-surface); border:1px solid var(--ody-border); border-radius:12px;
+  }
+  .odyseus-preview-refine-dock input { flex:1; min-width:0; min-height:44px; padding:0 10px; color:var(--ody-text); background:transparent; border:0; outline:0; font-size:16px!important; }
+  .odyseus-preview-refine-dock input::placeholder { color:var(--ody-muted); }
+  .odyseus-preview-refine-dock button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:0 12px; border:1px solid var(--ody-accent); border-radius:8px; background:var(--ody-accent); color:var(--ody-on-accent); font-size:14px; }
+  .odyseus-preview-refine-dock button:disabled { background:var(--ody-raised); border-color:var(--ody-border); color:var(--text-disabled); }
+}
