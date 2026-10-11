@@ -1,0 +1,86 @@
+name: Capture authentic workspace screenshot
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/screenshots/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: authentic-workspace-screenshot
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Build the real application
+        run: npm run build
+
+      - name: Start the built frontend
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/odyseus-preview.log 2>&1 &
+          echo $! > /tmp/odyseus-preview.pid
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/odyseus-preview.log
+          exit 1
+
+      - name: Install Chromium for screenshot capture
+        run: |
+          npx --yes playwright@1.55.0 install --with-deps chromium
+
+      - name: Capture the built application (not a mockup)
+        run: |
+          mkdir -p docs/screenshots
+          npx --yes playwright@1.55.0 screenshot \
+            --browser chromium \
+            --viewport-size "1440,1000" \
+            --wait-for-timeout 3000 \
+            --full-page \
+            http://127.0.0.1:4173/ \
+            docs/screenshots/workspace.png
+          file docs/screenshots/workspace.png
+
+      - name: Upload screenshot as a CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: odyseus-workspace-screenshot
+          path: docs/screenshots/workspace.png
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Commit screenshot for the README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/workspace.png
+          if git diff --cached --quiet; then
+            echo "Screenshot unchanged."
+            exit 0
+          fi
+          git commit -m "docs: refresh authentic workspace screenshot"
+          git push origin HEAD:main
