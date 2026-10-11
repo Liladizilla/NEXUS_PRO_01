@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { ArrowUpRight, Code2, FileCode2, Layers3, Paperclip, Send, ChevronDown } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 
@@ -43,10 +43,11 @@ export const DashboardHome: React.FC<DashboardProps> = ({
   onOpenHistory, onOpenAssets, files, usageCount, usageLimit, isGenerating
 }) => {
   const reduceMotion = useReducedMotion();
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const hasProject = files.length > 0;
   const recentFiles = useMemo(() => files.slice(0, 4), [files]);
   const canBuild = prompt.trim().length >= 10 && !isGenerating;
-  const choosePrompt = (value:string) => { setPrompt(value); onOpenBuilder(); };
+  const choosePrompt = (value:string) => { setPrompt(value); composerRef.current?.focus(); };
 
   return (
     <main className="odyseus-home flex-1 min-h-0 overflow-y-auto" aria-label="Build workspace">
@@ -76,7 +77,7 @@ export const DashboardHome: React.FC<DashboardProps> = ({
         <section className="odyseus-composer-section" aria-labelledby="composer-title">
           <div className="odyseus-composer">
             <label className="sr-only" htmlFor="odyseus-build-prompt">Describe the app you want to build</label>
-            <textarea id="odyseus-build-prompt" value={prompt} onChange={event => setPrompt(event.target.value)}
+            <textarea ref={composerRef} id="odyseus-build-prompt" value={prompt} onChange={event => setPrompt(event.target.value)}
               onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && canBuild) { event.preventDefault(); onBuild(); } }}
               placeholder={hasProject ? 'Describe a new build or a change to this project…' : 'A booking app for a dental clinic with a calendar, email reminders and card payments'}
               aria-describedby="odyseus-composer-help"/>
