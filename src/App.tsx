@@ -69,6 +69,7 @@ import { AuthPage } from './components/features/AuthPage';
 import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './components/features/Modals';
 import { Debugger } from './components/features/Debugger';
 import { DesktopApp } from './components/features/DesktopApp';
+import { DashboardHome } from './components/features/DashboardHome';
 import AgentCard from './components/features/AgentCard';
 import { useNexusStore } from './core/store';
 import { generateApp } from './core/ai';
@@ -451,6 +452,7 @@ export default function App() {
 
   const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showDashboardHome, setShowDashboardHome] = useState(true);
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -965,6 +967,39 @@ export default function App() {
             <>
               <div className="p-4 space-y-6 overflow-y-auto">
                 <section>
+                  <span className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-text-muted">Workspace</span>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => { setActiveTab('design'); setShowDashboardHome(true); }}
+                      className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", activeTab === 'design' && showDashboardHome ? "border-accent-interactive/40 bg-accent-interactive/10 text-text-primary" : "border-transparent text-text-muted hover:border-default hover:bg-raised hover:text-text-primary")}
+                    >
+                      <LayoutDashboard size={17} className="shrink-0 text-accent-interactive" />
+                      <span>Dashboard</span>
+                    </button>
+                    <button
+                      onClick={() => { setActiveTab('design'); setShowDashboardHome(false); }}
+                      className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", activeTab === 'design' && !showDashboardHome ? "border-accent-interactive/40 bg-accent-interactive/10 text-text-primary" : "border-transparent text-text-muted hover:border-default hover:bg-raised hover:text-text-primary")}
+                    >
+                      <Wand2 size={17} className="shrink-0" />
+                      <span>Builder</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowDashboardHome(false); setActiveTab('code'); }}
+                      className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", activeTab === 'code' ? "border-accent-interactive/40 bg-accent-interactive/10 text-text-primary" : "border-transparent text-text-muted hover:border-default hover:bg-raised hover:text-text-primary")}
+                    >
+                      <Code2 size={17} className="shrink-0" />
+                      <span>Code & files</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowDashboardHome(false); setActiveTab('preview'); }}
+                      className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", activeTab === 'preview' ? "border-accent-interactive/40 bg-accent-interactive/10 text-text-primary" : "border-transparent text-text-muted hover:border-default hover:bg-raised hover:text-text-primary")}
+                    >
+                      <Eye size={17} className="shrink-0" />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+                </section>
+                <section>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold">Project</span>
                     <div className="flex gap-2">
@@ -1067,6 +1102,8 @@ export default function App() {
             </>
           ) : (
             <div className="flex flex-col items-center py-4 gap-6">
+              <LayoutDashboard size={20} className="text-white/40 hover:text-nexus-accent cursor-pointer transition-colors" onClick={() => { setActiveTab('design'); setShowDashboardHome(true); }} />
+              <Wand2 size={20} className="text-white/40 hover:text-nexus-accent cursor-pointer transition-colors" onClick={() => { setActiveTab('design'); setShowDashboardHome(false); }} />
               <Box size={20} className="text-white/40 hover:text-nexus-accent cursor-pointer transition-colors" onClick={() => setActiveTab('design')} />
               <FolderTree size={20} className="text-white/40 hover:text-nexus-accent cursor-pointer transition-colors" onClick={() => setActiveTab('code')} />
               <Cpu size={20} className="text-white/40 hover:text-nexus-accent cursor-pointer transition-colors" onClick={() => setShowSettings(true)} />
@@ -1108,11 +1145,11 @@ export default function App() {
                 { id: 'preview', label: 'Preview', Icon: Eye },
                 { id: 'debug', label: 'Debug', Icon: Bug },
               ] as const).map(({ id, label, Icon }) => {
-                const active = activeTab === id;
+                const active = activeTab === id && !(id === 'design' && showDashboardHome);
                 return (
                   <button
                     key={id}
-                    onClick={() => setActiveTab(id)}
+                    onClick={() => { if (id === 'design') setShowDashboardHome(false); setActiveTab(id); }}
                     className={cn(
                       "relative flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors",
                       active ? "text-text-primary bg-raised" : "text-text-muted hover:text-text-primary"
@@ -1223,11 +1260,31 @@ export default function App() {
           </div>
         </div>
 
+        {/* Dashboard home: a real workspace overview, separate from the app builder. */}
+        {activeTab === 'design' && showDashboardHome && (
+          <DashboardHome
+            projectName={projectName}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            onBuild={handleGenerate}
+            onOpenBuilder={() => { setShowDashboardHome(false); setActiveTab('design'); }}
+            onOpenCode={() => { setShowDashboardHome(false); setActiveTab('code'); }}
+            onOpenPreview={() => { setShowDashboardHome(false); setActiveTab('preview'); }}
+            onOpenHistory={() => setShowHistory(true)}
+            files={files}
+            agents={agents}
+            logs={logs}
+            usageCount={usageCount}
+            usageLimit={usageLimit}
+            isGenerating={isGenerating}
+          />
+        )}
+
         {/* Workspace */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className={cn("flex-1 flex overflow-hidden", activeTab === 'design' && showDashboardHome && "hidden")}>
           <div className="flex-1 flex flex-col min-w-0">
             <AnimatePresence mode="wait">
-              {activeTab === 'design' && (
+              {activeTab === 'design' && !showDashboardHome && (
                 <motion.div 
                   key="design"
                   initial={{ opacity: 0, y: 10 }}
