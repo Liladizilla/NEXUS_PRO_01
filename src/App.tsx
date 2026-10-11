@@ -456,6 +456,7 @@ export default function App() {
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [refinePrompt, setRefinePrompt] = useState('');
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
@@ -655,8 +656,9 @@ export default function App() {
     agents.forEach(a => updateAgent(a.id, { status: 'error' }));
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  const handleGenerate = async (promptOverride?: string) => {
+    const requestPrompt = promptOverride ?? prompt;
+    if (requestPrompt.trim().length < 10) return;
     
     // Check usage limit
     if (usageCount >= usageLimit) {
@@ -675,7 +677,7 @@ export default function App() {
       'Mapping dependency graph',
       'Initializing CI/CD pipeline'
     ]);
-    addLog(`Starting generation for: ${prompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
+    addLog(`Starting generation for: ${requestPrompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
       // Derive agent models for orchestration
@@ -686,7 +688,7 @@ export default function App() {
 
       let lastLoggedStatus = '';
       let lastLoggedDetail = '';
-      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress, detail) => {
+      const { result, plan } = await generateApp(requestPrompt, agents, feedback, isHighThinking, (status, progress, detail) => {
         const statusMap: Record<string, string> = {
           'queued': 'Queued for generation',
           'processing': 'Analyzing requirements',
@@ -2094,10 +2096,10 @@ export default function App() {
       </nav>
 
       {activeTab === 'preview' && (
-        <form className="odyseus-preview-refine-dock" onSubmit={event => { event.preventDefault(); if (prompt.trim().length >= 10 && !isGenerating) handleGenerate(); }}>
+        <form className="odyseus-preview-refine-dock" onSubmit={event => { event.preventDefault(); const request = refinePrompt.trim(); if (request.length >= 10 && !isGenerating) { setPrompt(request); setRefinePrompt(''); handleGenerate(request); } }}>
           <label className="sr-only" htmlFor="odyseus-preview-refine">Ask Odyseus to refine the preview</label>
-          <input id="odyseus-preview-refine" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Ask for a change" />
-          <button type="submit" disabled={prompt.trim().length < 10 || isGenerating} aria-label="Apply change"><Send size={18}/><span>Apply</span></button>
+          <input id="odyseus-preview-refine" value={refinePrompt} onChange={event => setRefinePrompt(event.target.value)} placeholder="Ask for a change" />
+          <button type="submit" disabled={refinePrompt.trim().length < 10 || isGenerating} aria-label="Apply change"><Send size={18}/><span>Apply</span></button>
         </form>
       )}
 
