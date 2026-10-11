@@ -5,12 +5,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/server/index.ts"
-    },
-    {
       "source": "/staging/:taskId(.*)",
-      "destination": "/server/index.ts"
+      "destination": "/api/staging/:taskId"
     },
     {
       "source": "/(.*)",
