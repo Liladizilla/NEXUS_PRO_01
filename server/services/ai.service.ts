@@ -36,6 +36,11 @@ export class AIService {
         3. Use multiple programming languages where appropriate (e.g., Rust for performance-critical parts, Go for microservices, TypeScript for frontend).
         4. Ensure the file structure is professional (e.g., /src, /server, /infra, /core, /scripts).
         5. Include detailed README.md and documentation.
+        6. Make the interface feel like a polished professional product, not a generic AI template.
+        7. Use consistent, purposeful icons from lucide-react when the generated stack supports it. Never invent fake brand logos, use emoji as primary navigation icons, or mix unrelated icon styles.
+        8. Use a restrained geometry system: 4-8px corners for controls, 8-12px for panels, square edges for dense data tables and tool surfaces. Avoid pill-shaped cards, excessive rounded corners, random gradients, and glowing blobs.
+        9. Give every visible button a real, implemented action. If an integration is unavailable, clearly label it as unavailable instead of pretending it worked.
+        10. Prioritize readable spacing, keyboard focus states, responsive overflow, and useful empty/error states.
         ${modelContext}
         
         You must ALWAYS respond with a valid JSON object containing 'projectName' and 'files' (an array of {path, content} objects).`,
