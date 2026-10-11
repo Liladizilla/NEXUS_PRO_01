@@ -17,7 +17,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  isSupabaseConfigured,
+  isFirebaseConfigured,
 } from '../../core/firebase';
 import { cn } from '../../lib/utils';
 
@@ -40,8 +40,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
-    if (!isSupabaseConfigured) {
-      setError('Authentication is unavailable. Supabase is not configured for this deployment.');
+    if (!isFirebaseConfigured) {
+      setError('Authentication is unavailable. Firebase is not configured for this deployment.');
       return;
     }
     setLoading(true);

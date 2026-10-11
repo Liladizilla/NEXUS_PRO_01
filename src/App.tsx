@@ -77,6 +77,7 @@ import {
   auth, 
   syncUserProfile, 
   syncApiKey,
+  syncProjects,
   onAuthStateChanged,
   signOut,
   doc,
@@ -458,29 +459,46 @@ export default function App() {
     let unsubscribeProfile: (() => void) | null = null;
     let unsubscribeApiKey: (() => void) | null = null;
     let unsubscribeProjects: (() => void) | null = null;
+    let authRevision = 0;
+
+    const clearUserListeners = () => {
+      unsubscribeProfile?.();
+      unsubscribeApiKey?.();
+      unsubscribeProjects?.();
+      unsubscribeProfile = null;
+      unsubscribeApiKey = null;
+      unsubscribeProjects = null;
+    };
 
     if (!db) {
       setIsAuthLoading(false);
       return;
     }
 
-    const unsubscribeAuth = onAuthStateChanged(async (user) => {
+    const unsubscribeAuth = onAuthStateChanged((user) => {
+      const revision = ++authRevision;
+      clearUserListeners();
       console.log("Auth State Changed:", user ? `Logged in as ${user.email}` : "Logged out");
-      setIsAuthLoading(true);
-      
-      try {
-        // Clean up existing listeners if user changes
-        if (unsubscribeProfile) unsubscribeProfile();
-        if (unsubscribeApiKey) unsubscribeApiKey();
-        if (unsubscribeProjects) unsubscribeProjects();
-        unsubscribeProfile = null;
-        unsubscribeApiKey = null;
-        unsubscribeProjects = null;
 
-        if (user) {
-          // Ensure user profile exists in Firestore
+      if (!user) {
+        useNexusStore.getState().logout();
+        setUserProfile(null);
+        setApiKeyData(null, null);
+        setIsAuthLoading(false);
+        return;
+      }
+
+      // Firebase Auth is the source of truth. Do not block the app on Firestore
+      // profile reads/writes, which can be slow or denied by rules.
+      useNexusStore.getState().login(user.email || 'user@odyseus.ai');
+      setIsAuthLoading(false);
+
+      void (async () => {
+        try {
           const userRef = doc(db, 'users', user.id);
           const snapshot = await getDoc(userRef);
+          if (revision !== authRevision) return;
+
           if (!snapshot.exists()) {
             await setDoc(userRef, {
               uid: user.id,
@@ -490,39 +508,30 @@ export default function App() {
               updatedAt: serverTimestamp()
             });
           }
+          if (revision !== authRevision) return;
 
-          useNexusStore.getState().login(user.email || 'user@odyseus.ai');
-          
           unsubscribeProfile = syncUserProfile(user, (profile) => {
-            setUserProfile(profile);
+            if (revision === authRevision) setUserProfile(profile);
           });
           unsubscribeApiKey = syncApiKey(user.id, (keyData) => {
-            if (keyData) {
+            if (revision === authRevision && keyData) {
               setApiKeyData(keyData.key, keyData.lastGeneratedAt?.toMillis() || null);
             }
           });
-
-          // Sync User Projects
           unsubscribeProjects = syncProjects(user.id, (projects: any[]) => {
-            setUserProjects(projects);
+            if (revision === authRevision) setUserProjects(projects);
           });
-        } else {
-          useNexusStore.getState().logout();
-          setUserProfile(null);
-          setApiKeyData(null, null);
+        } catch (error) {
+          // Keep the authenticated session even if profile/project sync is unavailable.
+          console.error("Auth profile sync error:", error);
         }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-      } finally {
-        setIsAuthLoading(false);
-      }
+      })();
     });
 
     return () => {
+      authRevision++;
       unsubscribeAuth();
-      if (unsubscribeProfile) unsubscribeProfile();
-      if (unsubscribeApiKey) unsubscribeApiKey();
-      if (unsubscribeProjects) unsubscribeProjects();
+      clearUserListeners();
     };
   }, []);
 
