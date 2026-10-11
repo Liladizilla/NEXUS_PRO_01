@@ -440,7 +440,8 @@ app.post('/api/generate/stream', async (req, res, next) => {
     emit({ type: 'progress', taskId, status: 'deploying', progress: 90, message: 'Preparing the preview route.' });
     await queueService.updateTask(taskId, 'deploying', 90, undefined, plan.agents);
 
-    const stagingUrl = `${process.env.APP_URL || 'https://nexus-pro-01.vercel.app'}/staging/${taskId}`;
+    const appBaseUrl = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const stagingUrl = `${appBaseUrl}/staging/${taskId}`;
     const result = {
       projectName: generated.projectName.trim(),
       description: typeof generated.description === 'string' ? generated.description : '',
@@ -566,7 +567,7 @@ app.post('/api/format', async (req, res) => {
 });
 
 // --- 3.2 STAGING SERVER (THE SANDBOX) ---
-app.get('/staging/:taskId/*', async (req, res) => {
+app.get(['/staging/:taskId', '/staging/:taskId/*', '/api/staging/:taskId', '/api/staging/:taskId/*'], async (req, res) => {
   const { taskId } = req.params as { taskId: string };
   const params = req.params as Record<string, string | undefined>;
   const filePath = params['0'] || 'index.html';
