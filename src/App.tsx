@@ -1816,16 +1816,18 @@ export default function App() {
                       Terminal
                     </div>
                     {!isTerminalMinimized && (
-                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
-                        <Activity size={12} />
-                        Build Output
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                          <Activity size={12} />
+                          Build Output
+                        </div>
+                        <span className={cn(
+                          "rounded px-2 py-0.5 text-[9px] font-bold tracking-widest",
+                          isGenerating ? "bg-emerald-500/15 text-emerald-400" :
+                          buildStatus === 'failed' ? "bg-rose-500/15 text-rose-400" :
+                          buildStatus === 'completed' ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-white/40"
+                        )}>{isGenerating ? "LIVE" : buildStatus === 'failed' ? "FAILED" : buildStatus === 'completed' ? "DONE" : "READY"}</span>
                       </div>
-                      <span className={cn(
-                        "rounded px-2 py-0.5 text-[9px] font-bold tracking-widest",
-                        isGenerating ? "bg-emerald-500/15 text-emerald-400" :
-                        buildStatus === 'failed' ? "bg-rose-500/15 text-rose-400" :
-                        buildStatus === 'completed' ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-white/40"
-                      )}>{isGenerating ? "LIVE" : buildStatus === 'failed' ? "FAILED" : buildStatus === 'completed' ? "DONE" : "READY"}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
