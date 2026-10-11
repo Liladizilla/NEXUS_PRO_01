@@ -942,7 +942,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- Mobile Header --- */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-nexus-border z-[60] flex items-center justify-between px-4">
+      <div className="odyseus-mobile-topbar lg:hidden fixed top-0 left-0 right-0 h-12 bg-[var(--ody-bg)] border-b border-[var(--ody-border)] z-[60] flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50">
             <Zap size={18} className="text-nexus-accent" />
@@ -1297,6 +1297,7 @@ export default function App() {
             onOpenCode={() => { setShowDashboardHome(false); setActiveTab('code'); }}
             onOpenPreview={() => { setShowDashboardHome(false); setActiveTab('preview'); }}
             onOpenHistory={() => setShowHistory(true)}
+            onOpenAssets={() => setShowAssetManager(true)}
             files={files}
             agents={agents}
             logs={logs}
@@ -2083,6 +2084,14 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Mobile workspace navigation: the desktop rail remains available through the top-bar menu. */}
+      <nav className="odyseus-mobile-tabs" aria-label="Workspace tabs">
+        <button type="button" aria-current={activeTab === 'design' && showDashboardHome ? 'page' : undefined} className={activeTab === 'design' && showDashboardHome ? 'is-active' : ''} onClick={() => { setActiveTab('design'); setShowDashboardHome(true); }}><Wand2 size={20}/><span>Build</span></button>
+        <button type="button" aria-current={activeTab === 'code' ? 'page' : undefined} className={activeTab === 'code' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('code'); }}><Code2 size={20}/><span>Code</span></button>
+        <button type="button" aria-current={activeTab === 'preview' ? 'page' : undefined} className={activeTab === 'preview' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('preview'); }}><Eye size={20}/><span>Preview</span></button>
+        <button type="button" aria-current={activeTab === 'debug' ? 'page' : undefined} className={activeTab === 'debug' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('debug'); }}><Bug size={20}/><span>Debug</span></button>
+      </nav>
 
       {/* --- AI Assistant & Feedback Loop --- */}
       <AIChat />
