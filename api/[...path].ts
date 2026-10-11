@@ -1,15 +1,9 @@
-/**
- * Vercel adapter for the existing Express API.
- * Report module initialization failures as JSON so the build UI can show the cause.
- */
+/** Vercel adapter for the Express API. */
+import app, { initializeServer } from "../server/index.ts";
 export const config = { maxDuration: 60 };
-
 export default async function handler(req: any, res: any) {
   try {
     await initializeServer();
-    if (typeof app !== 'function') {
-      return res.status(500).json({ error: 'API initialization failed', detail: 'Express app export is missing.' });
-    }
     return app(req, res);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
