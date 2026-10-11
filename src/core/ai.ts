@@ -66,10 +66,12 @@ export async function generateApp(
   });
 
   if (!response.ok) {
-    const body = await response.json().catch(async () => ({ error: (await response.text().catch(() => '')).slice(0, 500) }));
+    const rawError = await response.text().catch(() => '');
+    let body: any = {};
+    try { body = JSON.parse(rawError); } catch { body = {}; }
     const message = typeof body?.error === 'string' ? body.error
       : typeof body?.message === 'string' ? body.message
-      : `Generation request failed (HTTP ${response.status}).`;
+      : rawError.trim().slice(0, 500) || `Generation request failed (HTTP ${response.status}).`;
     throw new Error(message);
   }
   if (!response.body) throw new Error('The server opened the generation request without a live response stream.');
@@ -86,8 +88,7 @@ export async function generateApp(
     catch { throw new Error('The generation stream returned malformed progress data.'); }
 
     if (event.type === 'progress') {
-      onProgress?.(event.status, event.progress ?? 0);
-      if (event.message) onProgress?.(event.status, event.progress ?? 0, event.message);
+      onProgress?.(event.status, event.progress ?? 0, event.message);
     } else if (event.type === 'complete') {
       if (!event.result || !Array.isArray(event.result.files) || !event.result.files.length) {
         throw new Error('Generation finished but returned no usable project files.');
