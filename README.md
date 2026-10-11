@@ -1,203 +1,116 @@
-# Odyseus AI – Autonomous Software Builder OS
+# Odyseus Nexus Pro
 
-Odyseus AI is a next-generation, autonomous software development platform designed to transform natural language prompts into production-ready, full-stack applications. It acts as an "AI Operating System" for software architecture, managing everything from initial design and component selection to deployment and real-time debugging.
+Odyseus Nexus Pro is an AI-assisted software-building workspace for turning project goals into code, then reviewing and refining the result. The repository contains a React/Vite web interface, an Express API, and an Electron desktop build.
 
-## 🚀 Available Platforms
+> **Project status:** actively developed. Some workflows depend on external API keys or provider adapters that must be configured separately. A visible control is not proof that a remote integration is connected.
 
-Odyseus AI is now available across multiple platforms:
+## Workspace screenshot
 
-- **[Desktop App](#-desktop-application)** - Native desktop experience for Windows, macOS, and Linux
-- **[Web App](#-web-application)** - Browser-based access from any device
-- **[Mobile App](#-mobile-application)** - Coming soon for iOS and Android
+<!-- This image is captured from the built application by GitHub Actions. It is not a mockup. -->
+![Odyseus Nexus Pro workspace, captured from the built application in CI](docs/screenshots/workspace.png)
 
-## Packaging Notes
+The screenshot is generated from the checked-in source using Chromium in GitHub Actions and refreshed after relevant pushes to `main`. It shows the default workspace, not a claim that every external service is configured.
 
-- Linux AppImage builds are produced using `electron-builder` and output to `release/`.
-- Debian (`.deb`) packaging was disabled in CI to avoid `fpm`/Ruby host dependencies on some builders. If you need `.deb` artifacts, install Ruby and `libcrypt`-compatible packages on the build host.
-- Desktop integration: the unsupported `desktopName` and `linux.syncDesktopName` options are intentionally omitted; the supported top-level `productName` remains configured in `package.json`.
+## What is included
 
-If you want me to push release artifacts to GitHub Releases, confirm and I will attach the `release/*.AppImage` files.
+- **Project builder UI:** project context, prompt-driven build workflow, file workspace, and preview areas.
+- **AI assistance:** Gemini-backed generation and refinement when the required server-side API key is configured.
+- **Developer tools:** task composition, activity logs, debugging and formatting endpoints, and a CI/CD status interface.
+- **Project utilities:** browser-local settings persistence, a JSON project archive export, and a local asset manager for image, SVG, and JSON files.
+- **Deployment configuration checks:** reports whether required provider environment variables exist. This check does **not** verify remote credentials or deploy an application.
+- **Desktop packaging:** Electron build targets for Windows, macOS, and Linux through GitHub Actions.
 
-## ✨ Key Features
+## Current integration boundaries
 
-### 1. Autonomous Multi-Agent Orchestration
-*   **Architect Agent:** Analyzes prompts to define the optimal tech stack and data schema.
-*   **Frontend/Backend Agents:** Work in parallel (Parallel Synthesis) to build out the UI and server-side logic.
-*   **Security Agent:** Automatically generates and validates Firestore security rules.
-*   **DevOps Agent:** Manages the CI/CD pipeline and deployment status.
+Please don't mistake a polished button for a magical backend. The following require additional configuration or implementation:
 
-### 2. Next-Gen Project Builder
-*   **Natural Language Interface:** Describe your app, and Odyseus handles the rest.
-*   **Stack Customization:** Choose from modern frameworks like React (TanStack), Next.js, or Astro.
-*   **Database Integration:** Seamlessly provisions Firestore with automated schema mapping.
+- **AI generation:** configure `GEMINI_API_KEY` on the server.
+- **Billing:** checkout and server-side purchase verification must be implemented and configured before paid plans can be activated.
+- **Deployment providers:** provider-specific adapters and server-side credentials are required. A configuration check alone does not deploy.
+- **Asset storage:** the Asset Manager currently previews files locally in the browser session; it does not upload them to cloud storage.
+- **Settings:** user preferences are stored in the current browser's local storage, not synced to an account.
+- **Mobile:** a native iOS/Android application is a roadmap item, not a released app.
 
-### 3. Integrated AI Assistant (Odyseus AI)
-*   **Dual-Mode Interface:** A unified widget for both real-time **Chat** support and a **Refinement Loop**.
-*   **Context-Aware:** The assistant understands your project's current state and can help debug or extend features.
-*   **Refine Tab:** Directly provide feedback to the AI to iterate on the current build.
+## Tech stack
 
-### 4. Developer Tools & Observability
-*   **Visual CI/CD Pipeline:** Track every stage of the build process—from synthesis to deployment—in real-time.
-*   **Real-Time Debugger:** Inspect the "Neural Mesh" logs and step through the AI's decision-making process.
-*   **Kanban Board:** Automatically generated task lists to track the progress of the autonomous agents.
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS
+- **State:** Zustand
+- **Motion:** Motion
+- **Icons:** Lucide React
+- **Backend:** Express and TypeScript
+- **AI SDK:** Google GenAI
+- **Authentication/data:** Firebase integration points
+- **Desktop:** Electron and electron-builder
+- **CI:** GitHub Actions builds on Ubuntu, Windows, and macOS
 
-### 5. Enterprise-Grade Security & Auth
-*   **Firebase Integration:** Built-in authentication and secure database configuration.
-*   **Type-Safe Architecture:** Ensures consistent data flow across the entire application.
+## Getting started
 
----
+### Requirements
 
-## 🎨 Design Language: Industrial Studio
+- Node.js 20 or newer
+- npm
+- A Gemini API key for AI-powered generation
 
-Odyseus uses an **industrial studio** interface built around a clear workspace, solid surfaces, precise borders, and a warm, functional color system.
-
-- **Solid-morphism surfaces:** Distinct panel layers and restrained shadows create depth without covering the workspace in blur.
-- **Functional color:** Warm orange marks primary actions and focus; green, amber, and red communicate live, waiting, and error states. Purple is reserved for AI-specific moments.
-- **Workspace-first layout:** Project explorer and agents sit beside the central builder, code, preview, and debugging views.
-- **Dark, light, and cyberpunk themes:** Appearance settings select a coherent theme, with the accent color applied consistently.
-- **Expressive, purposeful motion:** Short transitions make state changes clear, while reduced-motion preferences are respected.
-- **Responsive behavior:** The workspace adapts to smaller screens without treating a desktop layout as a phone UI.
-
-The goal is a dependable tool for making software, not a neon wallpaper demo.
-
----
-
-## 🛠️ Technical Stack
-
-*   **Frontend:** React 18+, Vite, TypeScript.
-*   **Styling:** Tailwind CSS (Utility-first, mobile-first).
-*   **Animations:** Framer Motion (`motion/react`).
-*   **State Management:** Zustand (for a lightweight, high-performance global store).
-*   **Backend/Database:** Firebase (Authentication, Firestore).
-*   **AI Engine:** Google Gemini 3.1 Pro via the `@google/genai` SDK.
-*   **Icons:** Lucide React.
-
----
-
-## 📂 Project Structure
-
-```text
-/src
-  /components
-    /features      # Core functional modules (AIChat, Debugger, Kanban, etc.)
-    /ui            # Reusable atomic design components (Buttons, Cards, Modals)
-  /core
-    ai.ts          # Gemini API integration and prompt engineering
-    firebase.ts    # Firebase initialization and Firestore helpers
-    store.ts       # Zustand global state management
-  /lib             # Utility functions and shared helpers
-  /types           # Global TypeScript definitions
-  App.tsx          # Main application entry and routing logic
-  main.tsx         # React DOM mounting
-```
-
----
-
-## 🛠️ Getting Started
-
-1.  **Environment Variables:**
-    *   Ensure `GEMINI_API_KEY` is set in your environment.
-    *   Firebase configuration should be present in `firebase-applet-config.json`.
-
-2.  **Installation:**
-    ```bash
-    npm install
-    ```
-
-3.  **Development:**
-    ```bash
-    npm run dev
-    ```
-
-4.  **Build:**
-    ```bash
-    npm run build
-    ```
-
----
-
-## 🛡️ Security Rules
-
-Odyseus AI automatically generates a `firestore.rules` file based on your project's `firebase-blueprint.json`. These rules implement:
-*   **Default Deny:** All access is restricted unless explicitly allowed.
-*   **Ownership Validation:** Users can only access their own data.
-*   **Schema Enforcement:** Strict type and length checking for all document fields.
-
----
-
-## 📈 Roadmap
-
-*   **V2.0:** Support for mobile app generation (React Native).
-*   **V2.1:** Advanced "Time Travel" debugging for AI logic.
-*   **V2.2:** Multi-user collaborative architecting.
-
----
-
-## 💻 Desktop Application
-
-Odyseus AI is now available as a native desktop application built with Electron! This brings enhanced performance and native system integration to your development workflow.
-
-### Features
-- **Native Window Controls**: Minimize, maximize, and close buttons integrated into the app
-- **System Integration**: Access to system information and native APIs
-- **Persistent Settings**: Electron Store for local configuration
-- **Built-in Server**: Embedded Express server for local development
-- **Cross-Platform**: Available for Windows, macOS, and Linux
-
-### Installation
-
-Download the latest release for your platform from [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases):
-
-- **Windows**: `NexusPro-Setup-1.0.0.exe` (NSIS installer)
-- **macOS**: `NexusPro-1.0.0.dmg` (Disk image)
-- **Linux**: `NexusPro-1.0.0.AppImage` (AppImage)
-
-### Building from Source
+### Install and run
 
 ```bash
-# Install dependencies
-npm install
+git clone https://github.com/Liladizilla/NEXUS_PRO_01.git
+cd NEXUS_PRO_01
+npm ci
+npm run dev
+```
 
-# Build the web application
+The development command starts the Express application. Use the Vite scripts below when you specifically need the frontend development server or a production-style frontend preview.
+
+```bash
+# Frontend development server
+npx vite --host 127.0.0.1
+
+# Build the frontend
 npm run build
 
-# Build desktop application
+# Preview the built frontend
+npm run preview
+
+# TypeScript check
+npm run lint
+
+# Build the desktop packages
 npm run electron:build
 ```
 
-For more information, see [DESKTOP_README.md](DESKTOP_README.md).
+Configure secrets in the server environment. Do not place private provider credentials in frontend variables or commit them to the repository.
 
----
+## Desktop builds
 
-## 📱 Mobile Application
+GitHub Actions builds desktop packages on native runners for Windows, macOS, and Linux. Open the [Actions page](https://github.com/Liladizilla/NEXUS_PRO_01/actions) to inspect the latest build and download available workflow artifacts.
 
-Odyseus AI is coming to mobile devices! We're developing a cross-platform mobile application for iOS and Android using React Native.
+Published installers should be downloaded from [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases) when a release exists. Workflow artifacts are not the same thing as a published release.
 
-### Planned Features
-- AI-powered code generation on the go
-- Project management from your phone
-- Real-time debugging tools
-- Push notifications for build status
-- Biometric authentication
-- Offline mode for core functionality
+## Repository layout
 
-### Technology Stack
-- **React Native** with **Expo**
-- **Native Performance**: Near-native UI/UX
-- **Code Sharing**: 70-80% shared with web version
-- **Cross-Platform**: Single codebase for iOS and Android
+```text
+src/
+  components/features/   Main workspace features
+  core/                  State, AI and Firebase integration
+  styles/                Design system and theme styles
+server/                  Express API and service logic
+api/                     Serverless API handlers
+electron/                Electron entry points and assets
+scripts/                 Build helpers
+docs/                    Architecture notes and screenshots
+.github/workflows/       CI and screenshot capture
+```
 
-### Timeline
-- **Phase 1** (Weeks 1-4): Foundation & Setup
-- **Phase 2** (Weeks 5-8): UI/UX Adaptation
-- **Phase 3** (Weeks 9-16): Feature Implementation
-- **Phase 4** (Weeks 17-20): Native Integration
-- **Phase 5** (Weeks 21-24): Testing & Deployment
+## Contributing and verification
 
-For detailed roadmap, see [MOBILE_ROADMAP.md](MOBILE_ROADMAP.md).
+1. Create a feature branch.
+2. Run `npm ci`, `npm run lint`, and `npm run build` where applicable.
+3. Describe which integrations were actually exercised and which require credentials.
+4. Include screenshots captured from the running build when changing UI. Do not use fabricated screenshots as evidence of working behavior.
 
----
+See [Architecture](docs/ARCHITECTURE.md) and [API specification](docs/API_SPEC.md) for additional context.
 
-## 📈 Future Roadmap
+## License
 
-*Architected by Odyseus AI.*
+See the repository's license file for the applicable terms.
