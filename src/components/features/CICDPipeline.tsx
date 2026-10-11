@@ -9,14 +9,15 @@ interface CICDPipelineProps {
 
 const steps = [
   { id: 'processing', label: 'Request & planning', icon: Terminal },
-  { id: 'building', label: 'Validate generated files', icon: Loader2 },
-  { id: 'testing', label: 'Project structure checks', icon: ShieldCheck },
+  { id: 'synthesizing', label: 'AI file generation', icon: Loader2 },
+  { id: 'building', label: 'Validate generated files', icon: ShieldCheck },
+  { id: 'testing', label: 'Project structure checks', icon: CheckCircle2 },
   { id: 'deploying', label: 'Prepare preview route', icon: Rocket },
 ];
 
 export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) => {
   const getStepStatus = (stepId: string) => {
-    const statusOrder = ['queued', 'processing', 'building', 'testing', 'deploying', 'completed'];
+    const statusOrder = ['queued', 'processing', 'synthesizing', 'building', 'testing', 'deploying', 'completed'];
     const currentIdx = statusOrder.indexOf(status);
     const stepIdx = statusOrder.indexOf(stepId);
 
