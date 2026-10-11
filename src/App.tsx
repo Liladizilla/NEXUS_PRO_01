@@ -1911,9 +1911,10 @@ export default function App() {
                     </div>
                   )}
                   {isGenerating && (
-                    <div className="flex gap-2 text-nexus-accent animate-pulse">
-                      <span className="shrink-0">âžœ</span>
-                      <span>Processing build stack...</span>
+                    <div className="flex gap-3 items-center text-emerald-400/80">
+                      <span className="w-5 text-right text-white/20">{logs.length + 1}</span>
+                      <span className="animate-pulse">▍</span>
+                      <span className="text-white/40">Stream open. Waiting for the next provider or pipeline event…</span>
                     </div>
                   )}
                 </div>
