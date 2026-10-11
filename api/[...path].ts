@@ -6,8 +6,7 @@ export const config = { maxDuration: 60 };
 
 export default async function handler(req: any, res: any) {
   try {
-    const module = await import('../server/index.ts');
-    const app = module.default;
+    await initializeServer();
     if (typeof app !== 'function') {
       return res.status(500).json({ error: 'API initialization failed', detail: 'Express app export is missing.' });
     }
