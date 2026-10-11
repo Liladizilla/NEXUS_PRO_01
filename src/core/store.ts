@@ -102,6 +102,7 @@ interface NexusState {
   setFiles: (files: ProjectFile[]) => void;
   setActiveFile: (path: string | null) => void;
   addLog: (log: string) => void;
+  clearLogs: () => void;
   setAgents: (agents: Agent[]) => void;
   updateAgent: (id: string, updates: Partial<Agent>) => void;
   setAgentModel: (id: string, model: string) => void;
@@ -109,7 +110,6 @@ interface NexusState {
   login: (email: string) => void;
   logout: () => void;
   incrementUsage: () => void;
-  setSubscription: (tier: 'free' | 'pro' | 'enterprise') => void;
   setDeployTarget: (target: DeployTarget) => void;
   setShowPaywall: (val: boolean) => void;
   setShowSettings: (val: boolean) => void;
@@ -298,6 +298,7 @@ export const useNexusStore = create<NexusState>((set, get) => ({
   setFiles: (files) => set({ files }),
   setActiveFile: (path) => set({ activeFile: path }),
   addLog: (log) => set((state) => ({ logs: [...state.logs, `[${new Date().toLocaleTimeString()}] ${log}`] })),
+  clearLogs: () => set({ logs: [] }),
   updateAgent: (id, updates) => set((state) => ({
     agents: state.agents.map((a) => (a.id === id ? { ...a, ...updates } : a)),
   })),
@@ -315,12 +316,6 @@ export const useNexusStore = create<NexusState>((set, get) => ({
       usageCount: newCount,
       showPaywall: shouldShowPaywall
     };
-  }),
-  setSubscription: (tier) => set({ 
-    isPro: tier === 'pro', 
-    isEnterprise: tier === 'enterprise',
-    usageLimit: tier === 'free' ? 3 : (tier === 'pro' ? 100 : 999999),
-    showPaywall: false 
   }),
   setDeployTarget: (target) => set({ deployTarget: target }),
   setShowPaywall: (val) => set({ showPaywall: val }),

@@ -12,7 +12,7 @@ export class AIService {
     this.ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
   }
 
-  async generate(prompt: string, isHighThinking: boolean = false, agentModels?: Record<string, string>): Promise<string> {
+  async generate(prompt: string, isHighThinking: boolean = false, agentModels?: Record<string, string>, onStream?: (snapshot: { characters: number; preview: string }) => void): Promise<string> {
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
       throw new Error("AI generation is unavailable: configure GEMINI_API_KEY on the server.");
@@ -64,17 +64,35 @@ export class AIService {
         config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
       }
 
-      const response = await this.ai.models.generateContent({
+      // Consume the provider's actual token stream instead of waiting for one
+      // large response and animating fake progress in the client.
+      const stream = await this.ai.models.generateContentStream({
         model,
         contents: prompt,
         config
       });
+      let text = "";
+      let lastReportedAt = Date.now();
 
-      if (!response.text) {
-        throw new Error("Empty response from Gemini Mesh");
+      for await (const chunk of stream) {
+        if (chunk.text) {
+          text += chunk.text;
+          const now = Date.now();
+          if (onStream && (now - lastReportedAt >= 1200 || text.length < 120)) {
+            onStream({
+              characters: text.length,
+              preview: text.slice(-180).replace(/\\s+/g, " ").trim()
+            });
+            lastReportedAt = now;
+          }
+        }
       }
 
-      return response.text;
+      if (!text.trim()) {
+        throw new Error("Empty response from Gemini Mesh");
+      }
+      onStream?.({ characters: text.length, preview: "Provider stream completed." });
+      return text;
     } catch (error) {
       console.error("AIService: Primary Gemini Mesh failed.", error);
       // Never report a fabricated README as a successful generated project.

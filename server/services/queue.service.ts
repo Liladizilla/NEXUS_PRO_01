@@ -11,11 +11,16 @@ export class QueueService {
   private db: any;
   private readonly MAX_CACHE_SIZE = 100;
   private firestoreFns: any = null;
+  private firestoreReady: Promise<void> = Promise.resolve();
 
   constructor(db: any) {
+    this.setDatabase(db);
+  }
+
+  setDatabase(db: any) {
     this.db = db;
-    if (this.db && process.env.NODE_ENV === 'production') {
-      import('firebase/firestore').then((m) => {
+    if (this.db && process.env.NODE_ENV === 'production' && !this.firestoreFns) {
+      this.firestoreReady = import('firebase/firestore').then((m) => {
         this.firestoreFns = {
           doc: m.doc,
           setDoc: m.setDoc,
@@ -39,6 +44,7 @@ export class QueueService {
   }
 
   async createTask() {
+    await this.firestoreReady;
     const id = uuidv4();
     const initialTask = { status: 'queued', progress: 0, createdAt: new Date().toISOString() };
     this.tasks.set(id, initialTask);
@@ -55,6 +61,7 @@ export class QueueService {
   }
 
   async updateTask(id: string, status: string, progress: number, result?: any, agents?: any[]) {
+    await this.firestoreReady;
     const task = this.tasks.get(id) || { status, progress };
     
     // Space Check: Firestore has a 1MB limit per document.
@@ -94,6 +101,7 @@ export class QueueService {
   }
 
   async getTask(id: string) {
+    await this.firestoreReady;
     if (this.tasks.has(id)) return this.tasks.get(id);
     
     if (this.db && this.firestoreFns) {
@@ -113,6 +121,7 @@ export class QueueService {
   }
 
   async getActiveTasksCount() {
+    await this.firestoreReady;
     if (this.db && this.firestoreFns) {
       try {
         const q = this.firestoreFns.query(this.firestoreFns.collection(this.db, 'tasks'), this.firestoreFns.where('status', 'in', ['processing', 'queued']));

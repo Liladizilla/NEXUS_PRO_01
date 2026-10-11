@@ -401,7 +401,7 @@ export default function App() {
     files, setFiles,
     activeFile, setActiveFile,
     agents, updateAgent, setAgents,
-    logs, addLog,
+    logs, addLog, clearLogs,
     isAuthenticated, login,
     showPaywall, setShowPaywall, incrementUsage, usageCount, usageLimit,
     showSettings, setShowSettings,
@@ -409,7 +409,6 @@ export default function App() {
     showTemplateSearch, setShowTemplateSearch,
     showTaskModal, setShowTaskModal,
     showHistory, setShowHistory,
-    setSubscription,
     deployTarget, setDeployTarget,
     previewMode, setPreviewMode,
     stagingUrl, setStagingUrl,
@@ -581,11 +580,10 @@ export default function App() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('success')) {
-      // In a real app, we'd verify the session on the backend
-      // For this demo, we'll just set the subscription
-      setSubscription('pro');
-      addLog("Subscription successful! Welcome to Odyseus Pro.");
-      window.history.replaceState({}, document.title, "/");
+      // A redirect is not proof of payment. Only a verified server-side
+      // provider callback may activate a paid plan.
+      addLog("[BILLING] Checkout returned to the app. Plan activation is pending verified payment confirmation.");
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
@@ -647,7 +645,8 @@ export default function App() {
       advice = "Lost connection to the Odyseus backend. Please verify your network stability and ensure the gateway is online (check the health indicator in the footer).";
     }
 
-    addLog(`[CRITICAL] ${detailedMessage}`);
+    addLog(`[CRITICAL] ${message}`);
+    if (detailedMessage !== `Error: ${message}`) addLog(`[DIAGNOSIS] ${detailedMessage}`);
     if (advice) {
       addLog(`[ADVICE] ${advice}`);
     }
@@ -685,15 +684,29 @@ export default function App() {
         return acc;
       }, {} as Record<string, string>);
 
-      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress) => {
+      let lastLoggedStatus = '';
+      let lastLoggedDetail = '';
+      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress, detail) => {
         const statusMap: Record<string, string> = {
-          'building': 'Synthesizing components...',
-          'testing': 'Running security & type checks...',
-          'deploying': 'Pushing to edge network...',
-          'completed': 'Stack ready'
+          'queued': 'Queued for generation',
+          'processing': 'Analyzing requirements',
+          'synthesizing': 'Generating application files',
+          'building': 'Validating generated files',
+          'testing': 'Checking project structure',
+          'deploying': 'Preparing preview',
+          'completed': 'Generation complete',
+          'failed': 'Build failed'
         };
         setBuildStatus(statusMap[status] || status);
         setBuildProgress(progress);
+        if (status !== lastLoggedStatus) {
+          addLog(`[BUILD] ${statusMap[status] || status} (${progress}%)`);
+          lastLoggedStatus = status;
+        }
+        if (detail && detail !== lastLoggedDetail) {
+          addLog(`[STREAM] ${detail}`);
+          lastLoggedDetail = detail;
+        }
         
         // Update task breakdown based on progress
         if (progress > 20) setTaskBreakdown(prev => [...prev, 'Generating UI components']);
@@ -1803,13 +1816,26 @@ export default function App() {
                       Terminal
                     </div>
                     {!isTerminalMinimized && (
-                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
-                        <Activity size={12} />
-                        Logs
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                          <Activity size={12} />
+                          Build Output
+                        </div>
+                        <span className={cn(
+                          "rounded px-2 py-0.5 text-[9px] font-bold tracking-widest",
+                          isGenerating ? "bg-emerald-500/15 text-emerald-400" :
+                          buildStatus === 'failed' ? "bg-rose-500/15 text-rose-400" :
+                          buildStatus === 'completed' ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-white/40"
+                        )}>{isGenerating ? "LIVE" : buildStatus === 'failed' ? "FAILED" : buildStatus === 'completed' ? "DONE" : "READY"}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
+                    <button
+                      className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/35 hover:text-white hover:bg-white/10 rounded"
+                      onClick={(e) => { e.stopPropagation(); clearLogs(); }}
+                      title="Clear build output"
+                    >Clear</button>
                     <button 
                       className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-white" 
                       onClick={(e) => { e.stopPropagation(); setTerminalMinimized(!isTerminalMinimized); }}
@@ -1834,22 +1860,27 @@ export default function App() {
                   </div>
                 </div>
                 {!isTerminalMinimized && (
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 font-mono text-[11px] space-y-1 text-white/60">
+                  <div ref={scrollRef} role="log" aria-live="polite" aria-label="Live build output" className="flex-1 overflow-y-auto p-4 font-mono text-[11px] leading-5 space-y-1 text-white/60 bg-[#07090d]">
                   {logs.map((log, i) => {
-                    const isCritical = log.startsWith('[CRITICAL]');
-                    const isAdvice = log.startsWith('[ADVICE]');
-                    const isUser = log.startsWith('User:');
-                    const isAI = log.startsWith('AI:');
+                    const isCritical = log.includes('[CRITICAL]');
+                    const isAdvice = log.includes('[ADVICE]');
+                    const isBuild = log.includes('[BUILD]') || log.includes('[STREAM]');
+                    const isUser = log.includes('User:');
+                    const isAI = log.includes('AI:');
+                    const isSuccess = log.includes('completed') || log.includes('Successfully generated');
 
                     return (
-                      <div key={i} className="flex gap-2">
+                      <div key={i} className="group flex gap-3 min-w-0">
+                        <span className="select-none shrink-0 w-5 text-right text-white/20 tabular-nums">{i + 1}</span>
                         <span className={cn(
-                          "shrink-0",
-                          isCritical ? "text-rose-500" : isAdvice ? "text-amber-400" : "text-nexus-accent/50"
-                        )}>âžœ</span>
+                          "shrink-0 select-none",
+                          isCritical ? "text-rose-500" : isAdvice ? "text-amber-400" : isBuild ? "text-sky-400" : "text-emerald-500/70"
+                        )}>{isCritical ? '×' : isSuccess ? '✓' : isBuild ? '↳' : '›'}</span>
                         <span className={cn(
-                          isCritical ? "text-rose-400 font-bold" : 
-                          isAdvice ? "text-amber-200/80 italic" : 
+                          "min-w-0 whitespace-pre-wrap break-words",
+                          isCritical ? "text-rose-300 font-semibold" :
+                          isAdvice ? "text-amber-200/80" :
+                          isBuild ? "text-sky-100/90" :
                           isUser ? "text-nexus-accent" :
                           isAI ? "text-purple-300" : ""
                         )}>
@@ -1862,7 +1893,7 @@ export default function App() {
                     <div className="mt-4 p-3 border border-rose-500/30 bg-rose-500/5 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2 text-rose-400">
                         <AlertCircle size={14} />
-                        <span>Build pipeline halted. Action required.</span>
+                        <span>Build failed. Review the error above before retrying.</span>
                       </div>
                       <button 
                         onClick={() => handleGenerate()}
@@ -1873,9 +1904,10 @@ export default function App() {
                     </div>
                   )}
                   {isGenerating && (
-                    <div className="flex gap-2 text-nexus-accent animate-pulse">
-                      <span className="shrink-0">âžœ</span>
-                      <span>Processing build stack...</span>
+                    <div className="flex gap-3 items-center text-emerald-400/80">
+                      <span className="w-5 text-right text-white/20">{logs.length + 1}</span>
+                      <span className="animate-pulse">▍</span>
+                      <span className="text-white/40">Stream open. Waiting for the next provider or pipeline event…</span>
                     </div>
                   )}
                 </div>

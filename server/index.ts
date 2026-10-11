@@ -16,6 +16,7 @@ import { QueueService } from './services/queue.service.js';
 
 // --- 0. FIREBASE INITIALIZATION ---
 let db: any = null;
+const queueService = new QueueService(null);
 try {
   // Prefer environment variables (set in the hosting provider dashboard for production).
   const firebaseConfig: any = {
@@ -46,6 +47,7 @@ try {
           const { getFirestore } = await import('firebase/firestore');
           const app = initializeApp(firebaseConfig);
           db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+          queueService.setDatabase(db);
           console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Firestore initialized: \x1b[32mSUCCESS\x1b[0m`);
         } catch (err) {
           console.warn("\x1b[33m[ODYSEUS BACKEND]\x1b[0m Firebase import failed. Task persistence disabled.", err);
@@ -64,7 +66,6 @@ const __dirname = path.dirname(__filename);
 
 // --- 1. CORE BACKEND ARCHITECTURE (Service Simulation) ---
 const aiService = new AIService();
-const queueService = new QueueService(db);
 
 // --- 2. AUTOSCALING LOGIC ---
 
@@ -340,6 +341,127 @@ app.post('/api/complex', async (req, res, next) => {
   }
 });
 
+// Streaming generation keeps the serverless request alive while the model works.
+app.post('/api/generate/stream', async (req, res, next) => {
+  let taskId: string | null = null;
+  let streamOpen = true;
+  const emit = (event: Record<string, unknown>) => {
+    if (!streamOpen || res.writableEnded) return;
+    res.write(`${JSON.stringify(event)}\n`);
+    // Flush compression middleware buffers when supported so progress is visible immediately.
+    (res as any).flush?.();
+  };
+
+  try {
+    const { prompt, agents, feedback, isHighThinking, agentModels } = req.body || {};
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      return res.status(400).json({ error: 'Describe the application you want to build first.' });
+    }
+    if (prompt.length > 50000) return res.status(413).json({ error: 'Prompt is too long.' });
+
+    res.status(200);
+    res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+    res.on('close', () => { streamOpen = false; });
+
+    const activeTasks = await queueService.getActiveTasksCount();
+    const plan = getAutoscalingPlan(prompt, activeTasks, Array.isArray(agents) ? agents : []);
+    taskId = await queueService.createTask();
+    await queueService.updateTask(taskId, 'processing', 10, undefined, plan.agents);
+    emit({ type: 'progress', taskId, status: 'processing', progress: 10, message: 'Request accepted; planning the application.' });
+
+    await queueService.updateTask(taskId, 'synthesizing', 20);
+    emit({ type: 'progress', taskId, status: 'synthesizing', progress: 20, message: 'Sending the prompt to the AI provider.' });
+
+    const finalPrompt = feedback
+      ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
+      : prompt;
+
+    // Progress is driven by actual provider chunks, not a cosmetic timer.
+    const raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels, ({ characters, preview }) => {
+      const progress = Math.min(40, 20 + Math.floor(characters / 1500));
+      emit({
+        type: 'progress',
+        taskId,
+        status: 'synthesizing',
+        progress,
+        message: `Gemini stream: ${characters.toLocaleString()} characters received. ${preview}`
+      });
+    });
+
+    let generated: any;
+    try {
+      generated = JSON.parse(raw);
+    } catch {
+      throw new Error('The AI provider returned invalid project JSON. Retry the build or simplify the prompt.');
+    }
+
+    emit({ type: 'progress', taskId, status: 'building', progress: 45, message: 'Validating generated files and paths.' });
+    await queueService.updateTask(taskId, 'building', 45, undefined, plan.agents);
+
+    if (!generated || typeof generated.projectName !== 'string' || !generated.projectName.trim() ||
+        !Array.isArray(generated.files) || generated.files.length === 0) {
+      throw new Error('The AI response did not contain a project name and at least one file.');
+    }
+    if (generated.files.length > 150) {
+      throw new Error('The generated project contains too many files (limit: 150). Narrow the request and retry.');
+    }
+
+    const seenPaths = new Set<string>();
+    for (const file of generated.files) {
+      if (!file || typeof file.path !== 'string' || typeof file.content !== 'string' || !file.path.trim()) {
+        throw new Error('A generated file is missing its path or text content.');
+      }
+      const normalizedPath = file.path.replace(/\\/g, '/').replace(/^\/+/, '');
+      if (normalizedPath.split('/').some((part: string) => part === '..') || /^[a-zA-Z]:/.test(normalizedPath)) {
+        throw new Error(`Unsafe file path returned by the model: ${file.path}`);
+      }
+      if (seenPaths.has(normalizedPath)) throw new Error(`The generated project contains a duplicate path: ${normalizedPath}`);
+      seenPaths.add(normalizedPath);
+      file.path = normalizedPath;
+      if (!file.language) {
+        const ext = normalizedPath.split('.').pop()?.toLowerCase();
+        file.language = ({ tsx: 'typescript', ts: 'typescript', jsx: 'javascript', js: 'javascript', css: 'css', html: 'html', json: 'json', md: 'markdown' } as Record<string, string>)[ext || ''] || 'text';
+      }
+    }
+
+    emit({ type: 'progress', taskId, status: 'testing', progress: 70, message: `Structure checks passed for ${generated.files.length} files.` });
+    await queueService.updateTask(taskId, 'testing', 70, undefined, plan.agents);
+
+    emit({ type: 'progress', taskId, status: 'deploying', progress: 90, message: 'Preparing the preview route.' });
+    await queueService.updateTask(taskId, 'deploying', 90, undefined, plan.agents);
+
+    const appBaseUrl = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const stagingUrl = `${appBaseUrl}/staging/${taskId}`;
+    const result = {
+      projectName: generated.projectName.trim(),
+      description: typeof generated.description === 'string' ? generated.description : '',
+      files: generated.files,
+      stagingUrl
+    };
+    await queueService.updateTask(taskId, 'completed', 100, result, plan.agents);
+    emit({ type: 'progress', taskId, status: 'completed', progress: 100, message: 'Generated project passed file-structure checks.' });
+    emit({ type: 'complete', taskId, plan, result });
+    streamOpen = false;
+    res.end();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Generation failed for an unknown reason.';
+    if (taskId) {
+      try { await queueService.updateTask(taskId, 'failed', 0, { error: message }); } catch {}
+    }
+    if (res.headersSent) {
+      emit({ type: 'error', taskId, message });
+      streamOpen = false;
+      res.end();
+    } else {
+      next(error);
+    }
+  }
+});
+
 app.post('/api/generate', async (req, res, next) => {
   try {
   const { prompt, agents, feedback, isHighThinking, agentModels } = req.body || {};
@@ -439,7 +561,7 @@ app.post('/api/format', async (req, res) => {
 });
 
 // --- 3.2 STAGING SERVER (THE SANDBOX) ---
-app.get('/staging/:taskId/*', async (req, res) => {
+app.get(['/staging/:taskId', '/staging/:taskId/*', '/api/staging/:taskId', '/api/staging/:taskId/*'], async (req, res) => {
   const { taskId } = req.params as { taskId: string };
   const params = req.params as Record<string, string | undefined>;
   const filePath = params['0'] || 'index.html';
@@ -477,6 +599,18 @@ app.get('/staging/:taskId/*', async (req, res) => {
 });
 
 // Health check reports configuration rather than claiming every subsystem is online.
+// Report billing readiness truthfully. Checkout must stay disabled until
+// a provider verification flow and server-owned entitlements are implemented.
+app.get('/api/billing/status', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    enabled: false,
+    checkoutConfigured: false,
+    verificationConfigured: false,
+    message: 'Billing setup incomplete: checkout and server-side purchase verification are not connected yet.'
+  });
+});
+
 app.get('/api/health', (req, res) => {
   const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
   const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
@@ -523,56 +657,62 @@ const bootstrap = async () => {
       });
     }
   } else {
-    // In production (including Vercel), serve static files
+    // Vercel serves the SPA from its static output. Only attach API routes here;
+    // don't rely on a dist directory or register a competing SPA fallback.
+    if (process.env.VERCEL) return;
+
     const distPath = process.env.ODYSEUS_ELECTRON === 'true'
       ? path.resolve(__dirname, '../dist')
       : path.join(process.cwd(), 'dist');
-    
-    // Performance: Cache static assets (1 year for hashed files)
+
     app.use(express.static(distPath, {
       maxAge: '1y',
       etag: true,
       lastModified: true,
-      setHeaders: (res, path) => {
-        if (path.endsWith('.html')) {
-          // Don't cache HTML files
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
           res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         }
       }
     }));
-    
-    // SPA Fallback: Serve index.html for any non-API routes
+
     app.get('*', (req, res, next) => {
       if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(distPath, 'index.html'));
     });
-    
-    // Only listen if not on Vercel
-    if (!process.env.VERCEL) {
-      const server = app.listen(PORT, '0.0.0.0', () => {
-        console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\x1b[36m[ODYSEUS BACKEND]\x1b[0m Gateway initialized on http://localhost:${PORT}`);
+    });
+
+    const shutdown = () => {
+      console.log(`\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...`);
+      server.close(() => {
+        console.log(`\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.`);
+        process.exit(0);
       });
+      setTimeout(() => {
+        console.error(`\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.`);
+        process.exit(1);
+      }, 10000);
+    };
 
-      // Graceful Shutdown
-      const shutdown = () => {
-        console.log('\x1b[33m[ODYSEUS BACKEND]\x1b[0m Shutting down gracefully...');
-        server.close(() => {
-          console.log('\x1b[32m[ODYSEUS BACKEND]\x1b[0m Server closed.');
-          process.exit(0);
-        });
-        // Force close after 10s
-        setTimeout(() => {
-          console.error('\x1b[31m[ODYSEUS BACKEND]\x1b[0m Forced shutdown.');
-          process.exit(1);
-        }, 10000);
-      };
-
-      process.on('SIGTERM', shutdown);
-      process.on('SIGINT', shutdown);
-    }
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   }
 };
 
-void bootstrap();
+// The Vercel function adapters await this before dispatching Express requests.
+// Keep initialization idempotent because a warm serverless instance can handle
+// multiple requests. Local development still starts itself automatically.
+let bootstrapPromise: Promise<void> | null = null;
+export function initializeServer(): Promise<void> {
+  if (!bootstrapPromise) bootstrapPromise = bootstrap();
+  return bootstrapPromise;
+}
+
+if (!process.env.VERCEL) {
+  void initializeServer();
+}
 
 export default app;
