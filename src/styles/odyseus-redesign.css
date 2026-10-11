@@ -1,5 +1,4 @@
 /* Odyseus UI/UX redesign spec: token-first, flat warm surfaces, accessible controls. */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 :root {
  --ody-bg:#111110; --ody-surface:#191918; --ody-raised:#222120; --ody-border:#2e2d2b;
  --ody-text:#eceae5; --ody-muted:#a09d95; --ody-accent:#f28c38; --ody-on-accent:#1a1208;
