@@ -2138,7 +2138,7 @@ export default function App() {
                       <span className="odyseus-step-marker" aria-hidden="true">{stepState === 'done' ? <CheckCircle2 size={16}/> : stepState === 'failed' ? <AlertCircle size={16}/> : stepState === 'running' ? <Loader2 size={16}/> : <CircleDot size={16}/>}</span>
                       <div className="odyseus-step-content">
                         <div className="odyseus-step-title"><span>{step}</span><span>{stepState === 'done' ? 'Complete' : stepState === 'running' ? 'In progress' : stepState === 'failed' ? 'Failed' : 'Waiting'}</span></div>
-                        {stepState === 'running' && stepLogs.length > 0 && <div className="odyseus-step-logs">{stepLogs.map((line, logIndex) => <p key={line + logIndex}>{line.replace(/^\\[[^\\]]+\\]\\s*/, '')}</p>)}</div>}
+                        {stepState === 'running' && stepLogs.length > 0 && <div className="odyseus-step-logs">{stepLogs.map((line, logIndex) => <p key={line + logIndex}>{line.replace(/^\[[^\]]+\]\s*/, '')}</p>)}</div>}
                         {stepState === 'failed' && <p className="odyseus-step-logs">Review the latest log entries before retrying.</p>}
                       </div>
                     </div>
