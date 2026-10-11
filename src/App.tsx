@@ -56,6 +56,7 @@ import {
   Wand,
   Maximize2,
   Columns,
+  Code2,
   Bug
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion, useAnimationControls } from 'motion/react';
