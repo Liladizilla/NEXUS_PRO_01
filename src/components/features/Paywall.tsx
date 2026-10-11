@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Zap, Rocket, Shield, X } from 'lucide-react';
 import { useNexusStore } from '../../core/store';
@@ -6,13 +6,35 @@ import { cn } from '../../lib/utils';
 
 export const Paywall: React.FC = () => {
   const { showPaywall, setShowPaywall, usageCount, usageLimit } = useNexusStore();
+  const [billingStatus, setBillingStatus] = useState<{ enabled: boolean; message: string }>({
+    enabled: false,
+    message: 'Checking verified checkout configuration…'
+  });
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/billing/status', { cache: 'no-store' })
+      .then(async response => {
+        const data = await response.json();
+        if (active) setBillingStatus({
+          enabled: response.ok && data.enabled === true,
+          message: typeof data.message === 'string' ? data.message : 'Billing is not configured.'
+        });
+      })
+      .catch(() => {
+        if (active) setBillingStatus({
+          enabled: false,
+          message: 'The billing verification service is unreachable. No payment should be attempted.'
+        });
+      });
+    return () => { active = false; };
+  }, []);
 
   if (!showPaywall) return null;
 
-  const checkoutUrls = {
-    pro: (import.meta as any).env?.VITE_GUMROAD_PRO_URL as string | undefined,
-    enterprise: (import.meta as any).env?.VITE_GUMROAD_ENTERPRISE_URL as string | undefined
-  };
+  // A redirect URL alone is not a payment integration. Keep checkout disabled
+  // until the server can verify purchases and activate entitlements securely.
+  const checkoutUrls = { pro: undefined as string | undefined, enterprise: undefined as string | undefined };
 
   const handleUpgrade = (tier: 'pro' | 'enterprise') => {
     const checkoutUrl = checkoutUrls[tier];
@@ -55,8 +77,8 @@ export const Paywall: React.FC = () => {
         'Priority AI Mesh access',
         'Custom domain support'
       ],
-      buttonText: checkoutUrls.pro ? 'Continue to checkout' : 'Checkout not configured',
-      disabled: !checkoutUrls.pro,
+      buttonText: billingStatus.enabled && checkoutUrls.pro ? 'Continue to checkout' : 'Billing setup incomplete',
+      disabled: !billingStatus.enabled || !checkoutUrls.pro,
       highlight: true,
       icon: Zap
     },
@@ -75,8 +97,8 @@ export const Paywall: React.FC = () => {
         '24/7 Concierge support',
         'SLA guarantees'
       ],
-      buttonText: checkoutUrls.enterprise ? 'Continue to checkout' : 'Checkout not configured',
-      disabled: !checkoutUrls.enterprise,
+      buttonText: billingStatus.enabled && checkoutUrls.enterprise ? 'Continue to checkout' : 'Billing setup incomplete',
+      disabled: !billingStatus.enabled || !checkoutUrls.enterprise,
       highlight: false,
       icon: Rocket
     }
@@ -174,9 +196,9 @@ export const Paywall: React.FC = () => {
           </div>
 
           <div className="text-center space-y-2">
-            <p className="text-[10px] text-amber-200/70">Paid tiers are not activated by clicking a button. Payment confirmation must be verified by the server.</p>
-            <p className="text-[10px] text-white/20 uppercase tracking-widest">
-              Checkout links and server-side payment verification must be configured before paid plans can activate.
+            <p className="text-xs text-amber-200/80">{billingStatus.message}</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-widest">
+              Paid features stay locked until purchase verification and account entitlements are connected.
             </p>
           </div>
         </div>
