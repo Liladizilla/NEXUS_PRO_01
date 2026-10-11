@@ -5,7 +5,7 @@
  * static HTML entry point. Importing the Express app preserves its existing
  * route handlers while allowing /api/* requests to execute server-side.
  */
-import app from "../server/index.js";
+import app from "../server/index.ts";
 
 export const config = { maxDuration: 60 };
 
