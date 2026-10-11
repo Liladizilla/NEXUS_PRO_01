@@ -6,6 +6,7 @@ import './styles/pro_ui_fonts.css';
 import './styles/index.css';
 import './styles/pro_ui_theme.css';
 import './styles/industrial-overrides.css';
+import './styles/studio-redesign.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
