@@ -2126,6 +2126,25 @@ export default function App() {
               </div>
 
               <CICDPipeline status={buildStatus} progress={buildProgress} />
+
+              <div className="odyseus-build-stepper text-left" aria-live="polite" aria-label="Build pipeline progress">
+                {['Plan', 'Design', 'Frontend', 'Backend', 'Fix issues', 'Deploy'].map((step, index) => {
+                  const thresholds = [15, 30, 50, 70, 85, 100];
+                  const runningIndex = thresholds.findIndex(threshold => buildProgress < threshold);
+                  const stepState = buildStatus === 'failed' && index === runningIndex ? 'failed' : buildProgress >= thresholds[index] ? 'done' : index === runningIndex ? 'running' : 'waiting';
+                  const stepLogs = logs.slice(-3).reverse();
+                  return (
+                    <div key={step} className={cn("odyseus-build-step", "is-" + stepState)}>
+                      <span className="odyseus-step-marker" aria-hidden="true">{stepState === 'done' ? <CheckCircle2 size={16}/> : stepState === 'failed' ? <AlertCircle size={16}/> : stepState === 'running' ? <Loader2 size={16}/> : <CircleDot size={16}/>}</span>
+                      <div className="odyseus-step-content">
+                        <div className="odyseus-step-title"><span>{step}</span><span>{stepState === 'done' ? 'Complete' : stepState === 'running' ? 'In progress' : stepState === 'failed' ? 'Failed' : 'Waiting'}</span></div>
+                        {stepState === 'running' && stepLogs.length > 0 && <div className="odyseus-step-logs">{stepLogs.map((line, logIndex) => <p key={line + logIndex}>{line.replace(/^\\[[^\\]]+\\]\\s*/, '')}</p>)}</div>}
+                        {stepState === 'failed' && <p className="odyseus-step-logs">Review the latest log entries before retrying.</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               
               <div className="space-y-4">
                 {agents.map((agent, i) => (
