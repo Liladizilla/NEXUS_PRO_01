@@ -113,4 +113,4 @@ See [Architecture](docs/ARCHITECTURE.md) and [API specification](docs/API_SPEC.m
 
 ## License
 
-See the repository's license file for the applicable terms.
+The package metadata currently declares `Apache-2.0`, but this repository does not yet include a `LICENSE` text file. Add the full license text before distributing copies of the project.
