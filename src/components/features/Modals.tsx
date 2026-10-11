@@ -105,7 +105,7 @@ export const TemplateSearch: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+      className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
     >
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
@@ -248,9 +248,9 @@ const Modal: React.FC<{ title: string; children: React.ReactNode; onClose: () =>
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0.9, opacity: 0 }}
-      className="relative w-full max-w-lg bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+      className="relative my-auto w-full max-w-lg max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-32px)] bg-nexus-bg border border-white/10 rounded-xl overflow-y-auto shadow-2xl"
     >
-      <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+      <div className="sticky top-0 z-10 p-4 sm:p-5 border-b border-white/5 flex items-center justify-between bg-nexus-bg/95">
         <h3 className="text-lg font-bold uppercase tracking-tight">{title}</h3>
         <button 
           onClick={onClose}
