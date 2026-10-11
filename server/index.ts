@@ -376,27 +376,21 @@ app.post('/api/generate/stream', async (req, res, next) => {
     await queueService.updateTask(taskId, 'synthesizing', 20);
     emit({ type: 'progress', taskId, status: 'synthesizing', progress: 20, message: 'Sending the prompt to the AI provider.' });
 
-    let elapsedSeconds = 0;
-    const heartbeat = setInterval(() => {
-      elapsedSeconds += 5;
+    const finalPrompt = feedback
+      ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
+      : prompt;
+
+    // Progress is driven by actual provider chunks, not a cosmetic timer.
+    const raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels, ({ characters, preview }) => {
+      const progress = Math.min(40, 20 + Math.floor(characters / 1500));
       emit({
         type: 'progress',
         taskId,
         status: 'synthesizing',
-        progress: 20,
-        message: `Waiting for the AI provider response (${elapsedSeconds}s elapsed).`
+        progress,
+        message: `Gemini stream: ${characters.toLocaleString()} characters received. ${preview}`
       });
-    }, 5000);
-
-    let raw: string;
-    try {
-      const finalPrompt = feedback
-        ? `Original request: ${prompt}\nUser feedback on previous iteration: ${feedback}\nPlease refine the application based on this feedback.`
-        : prompt;
-      raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels);
-    } finally {
-      clearInterval(heartbeat);
-    }
+    });
 
     let generated: any;
     try {
