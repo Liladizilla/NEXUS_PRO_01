@@ -6,7 +6,7 @@ type DashboardFile = { path: string; content: string };
 type DashboardProps = {
   projectName: string; prompt: string; setPrompt: (value: string) => void; onBuild: () => void;
   onOpenBuilder: () => void; onOpenCode: () => void; onOpenPreview: () => void; onOpenHistory: () => void;
-  onOpenAssets?: () => void; files: DashboardFile[]; agents: {id:string;name:string;role:string;status:string}[];
+  onOpenAssets?: () => void; onUpgrade?: () => void; files: DashboardFile[]; agents: {id:string;name:string;role:string;status:string}[];
   logs: string[]; usageCount: number; usageLimit: number; isGenerating: boolean;
 };
 
@@ -40,7 +40,7 @@ const PreviewThumbnail = ({kind}:{kind:string}) => (
 
 export const DashboardHome: React.FC<DashboardProps> = ({
   projectName, prompt, setPrompt, onBuild, onOpenBuilder, onOpenCode, onOpenPreview,
-  onOpenHistory, onOpenAssets, files, usageCount, usageLimit, isGenerating
+  onOpenHistory, onOpenAssets, onUpgrade, files, usageCount, usageLimit, isGenerating
 }) => {
   const reduceMotion = useReducedMotion();
   const composerRef = useRef<HTMLTextAreaElement>(null);
@@ -74,7 +74,7 @@ export const DashboardHome: React.FC<DashboardProps> = ({
           </div>
         </section>}
 
-        <section className="odyseus-composer-section" aria-labelledby="composer-title">
+        <section className="odyseus-composer-section" aria-label="Build prompt">
           <div className="odyseus-composer">
             <label className="sr-only" htmlFor="odyseus-build-prompt">Describe the app you want to build</label>
             <textarea ref={composerRef} id="odyseus-build-prompt" value={prompt} onChange={event => setPrompt(event.target.value)}
@@ -94,7 +94,7 @@ export const DashboardHome: React.FC<DashboardProps> = ({
           </div>
           <div className="odyseus-composer-meta">
             <span id="odyseus-composer-help">{prompt.trim().length < 10 ? 'Add at least 10 characters to start a build.' : 'Enter to build · Shift + Enter for a new line'}</span>
-            <span>{Math.max(0, usageLimit - usageCount)} builds left this month <button type="button" onClick={onOpenHistory}>Usage details</button></span>
+            <span>{Math.max(0, usageLimit - usageCount)} {Math.max(0, usageLimit - usageCount) === 1 ? 'build' : 'builds'} left this month <button type="button" onClick={onUpgrade}>Upgrade</button></span>
           </div>
         </section>
 
@@ -104,7 +104,7 @@ export const DashboardHome: React.FC<DashboardProps> = ({
         </section>}
 
         <section className="odyseus-templates" aria-labelledby="template-title">
-          <div className="odyseus-section-heading"><div><h2 id="template-title">Templates</h2><p>A starting point, not a locked-in design.</p></div><button type="button" onClick={onOpenBuilder}>Browse all <ArrowUpRight size={16}/></button></div>
+          <div className="odyseus-section-heading"><div><h2 id="template-title">Templates</h2><p>A starting point, not a locked-in design.</p></div></div>
           <div className="odyseus-template-row">{templates.map((template,index) => <motion.button key={template.id} type="button" className="odyseus-template-card" onClick={() => choosePrompt(template.prompt)}
             initial={reduceMotion ? false : {opacity:0,y:5}} animate={{opacity:1,y:0}} transition={reduceMotion ? {duration:0} : {duration:.15,delay:Math.min(index*.025,.1)}}>
             <PreviewThumbnail kind={template.kind}/><span className="odyseus-template-name">{template.name}</span><span className="odyseus-template-description">{template.description}</span>
