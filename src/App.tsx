@@ -456,6 +456,7 @@ export default function App() {
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [refinePrompt, setRefinePrompt] = useState('');
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
@@ -655,8 +656,9 @@ export default function App() {
     agents.forEach(a => updateAgent(a.id, { status: 'error' }));
   };
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  const handleGenerate = async (promptOverride?: string) => {
+    const requestPrompt = promptOverride ?? prompt;
+    if (requestPrompt.trim().length < 10) return;
     
     // Check usage limit
     if (usageCount >= usageLimit) {
@@ -675,7 +677,7 @@ export default function App() {
       'Mapping dependency graph',
       'Initializing CI/CD pipeline'
     ]);
-    addLog(`Starting generation for: ${prompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
+    addLog(`Starting generation for: ${requestPrompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
       // Derive agent models for orchestration
@@ -686,7 +688,7 @@ export default function App() {
 
       let lastLoggedStatus = '';
       let lastLoggedDetail = '';
-      const { result, plan } = await generateApp(prompt, agents, feedback, isHighThinking, (status, progress, detail) => {
+      const { result, plan } = await generateApp(requestPrompt, agents, feedback, isHighThinking, (status, progress, detail) => {
         const statusMap: Record<string, string> = {
           'queued': 'Queued for generation',
           'processing': 'Analyzing requirements',
@@ -942,7 +944,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* --- Mobile Header --- */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-b border-nexus-border z-[60] flex items-center justify-between px-4">
+      <div className="odyseus-mobile-topbar lg:hidden fixed top-0 left-0 right-0 h-12 bg-[var(--ody-bg)] border-b border-[var(--ody-border)] z-[60] flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-nexus-accent/20 flex items-center justify-center border border-nexus-accent/50">
             <Zap size={18} className="text-nexus-accent" />
@@ -1297,6 +1299,8 @@ export default function App() {
             onOpenCode={() => { setShowDashboardHome(false); setActiveTab('code'); }}
             onOpenPreview={() => { setShowDashboardHome(false); setActiveTab('preview'); }}
             onOpenHistory={() => setShowHistory(true)}
+            onOpenAssets={() => setShowAssetManager(true)}
+            onUpgrade={() => setShowPaywall(true)}
             files={files}
             agents={agents}
             logs={logs}
@@ -1378,7 +1382,7 @@ export default function App() {
                             
                             <PromptSubmitButton
                               disabled={isGenerating || !prompt.trim()}
-                              onClick={handleGenerate}
+                              onClick={() => handleGenerate()}
                             />
                           </div>
                         </div>
@@ -2084,6 +2088,22 @@ export default function App() {
         </AnimatePresence>
       </div>
 
+      {/* Mobile workspace navigation: the desktop rail remains available through the top-bar menu. */}
+      <nav className="odyseus-mobile-tabs" aria-label="Workspace tabs">
+        <button type="button" aria-current={activeTab === 'design' && showDashboardHome ? 'page' : undefined} className={activeTab === 'design' && showDashboardHome ? 'is-active' : ''} onClick={() => { setActiveTab('design'); setShowDashboardHome(true); }}><Wand2 size={20}/><span>Build</span></button>
+        <button type="button" aria-current={activeTab === 'code' ? 'page' : undefined} className={activeTab === 'code' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('code'); }}><Code2 size={20}/><span>Code</span></button>
+        <button type="button" aria-current={activeTab === 'preview' ? 'page' : undefined} className={activeTab === 'preview' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('preview'); }}><Eye size={20}/><span>Preview</span></button>
+        <button type="button" aria-current={activeTab === 'debug' ? 'page' : undefined} className={activeTab === 'debug' ? 'is-active' : ''} onClick={() => { setShowDashboardHome(false); setActiveTab('debug'); }}><Bug size={20}/><span>Debug</span></button>
+      </nav>
+
+      {activeTab === 'preview' && (
+        <form className="odyseus-preview-refine-dock" onSubmit={event => { event.preventDefault(); const request = refinePrompt.trim(); if (request.length >= 10 && !isGenerating) { setPrompt(request); setRefinePrompt(''); handleGenerate(request); } }}>
+          <label className="sr-only" htmlFor="odyseus-preview-refine">Ask Odyseus to refine the preview</label>
+          <input id="odyseus-preview-refine" value={refinePrompt} onChange={event => setRefinePrompt(event.target.value)} placeholder="Ask for a change" />
+          <button type="submit" disabled={refinePrompt.trim().length < 10 || isGenerating} aria-label="Apply change"><Send size={18}/><span>Apply</span></button>
+        </form>
+      )}
+
       {/* --- AI Assistant & Feedback Loop --- */}
       <AIChat />
       <AnimatePresence>
@@ -2107,6 +2127,25 @@ export default function App() {
               </div>
 
               <CICDPipeline status={buildStatus} progress={buildProgress} />
+
+              <div className="odyseus-build-stepper text-left" aria-live="polite" aria-label="Build pipeline progress">
+                {['Plan', 'Design', 'Frontend', 'Backend', 'Fix issues', 'Deploy'].map((step, index) => {
+                  const thresholds = [15, 30, 50, 70, 85, 100];
+                  const runningIndex = thresholds.findIndex(threshold => buildProgress < threshold);
+                  const stepState = buildStatus === 'failed' && index === runningIndex ? 'failed' : buildProgress >= thresholds[index] ? 'done' : index === runningIndex ? 'running' : 'waiting';
+                  const stepLogs = logs.slice(-3).reverse();
+                  return (
+                    <div key={step} className={cn("odyseus-build-step", "is-" + stepState)}>
+                      <span className="odyseus-step-marker" aria-hidden="true">{stepState === 'done' ? <CheckCircle2 size={16}/> : stepState === 'failed' ? <AlertCircle size={16}/> : stepState === 'running' ? <Loader2 size={16}/> : <CircleDot size={16}/>}</span>
+                      <div className="odyseus-step-content">
+                        <div className="odyseus-step-title"><span>{step}</span><span>{stepState === 'done' ? 'Complete' : stepState === 'running' ? 'In progress' : stepState === 'failed' ? 'Failed' : 'Waiting'}</span></div>
+                        {stepState === 'running' && stepLogs.length > 0 && <div className="odyseus-step-logs">{stepLogs.map((line, logIndex) => <p key={line + logIndex}>{line.replace(/^\[[^\]]+\]\s*/, '')}</p>)}</div>}
+                        {stepState === 'failed' && <p className="odyseus-step-logs">Review the latest log entries before retrying.</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               
               <div className="space-y-4">
                 {agents.map((agent, i) => (

@@ -1,167 +1,121 @@
-import React from 'react';
-import {
-  Activity, ArrowUpRight, Bot, Boxes, CheckCircle2, Clock3, Code2,
-  FileCode2, FolderKanban, LayoutDashboard, Plus, Rocket, Send, Sparkles,
-  TerminalSquare, WandSparkles, Zap
-} from 'lucide-react';
+import React, { useMemo, useRef } from 'react';
+import { ArrowUpRight, Code2, FileCode2, Layers3, Paperclip, Send, ChevronDown } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 
-type DashboardAgent = { id: string; name: string; role: string; status: string };
 type DashboardFile = { path: string; content: string };
 type DashboardProps = {
-  projectName: string;
-  prompt: string;
-  setPrompt: (value: string) => void;
-  onBuild: () => void;
-  onOpenBuilder: () => void;
-  onOpenCode: () => void;
-  onOpenPreview: () => void;
-  onOpenHistory: () => void;
-  files: DashboardFile[];
-  agents: DashboardAgent[];
-  logs: string[];
-  usageCount: number;
-  usageLimit: number;
-  isGenerating: boolean;
+  projectName: string; prompt: string; setPrompt: (value: string) => void; onBuild: () => void;
+  onOpenBuilder: () => void; onOpenCode: () => void; onOpenPreview: () => void; onOpenHistory: () => void;
+  onOpenAssets?: () => void; onUpgrade?: () => void; files: DashboardFile[]; agents: {id:string;name:string;role:string;status:string}[];
+  logs: string[]; usageCount: number; usageLimit: number; isGenerating: boolean;
 };
 
-const statusTone: Record<string, string> = {
-  working: 'text-[var(--state-warning)] bg-[rgba(var(--state-warning-rgb),.12)]',
-  thinking: 'text-[var(--accent-ai-primary)] bg-[rgba(var(--accent-ai-primary-rgb),.12)]',
-  completed: 'text-[var(--state-live)] bg-[rgba(var(--state-live-rgb),.12)]',
-  error: 'text-[var(--state-error)] bg-[rgba(var(--state-error-rgb),.12)]',
-  queued: 'text-[var(--text-muted)] bg-[var(--bg-raised)]',
-  idle: 'text-[var(--text-muted)] bg-[var(--bg-raised)]'
-};
+const starterPrompts = [
+  'Invoicing app for freelancers with PDF export and Stripe payments',
+  'Personal portfolio with a project gallery, blog and contact form',
+  'Team task board with drag and drop, comments and email notifications',
+  'Restaurant ordering page with menu, cart and order tracking',
+  'Analytics dashboard with login, charts and CSV upload'
+];
+const templates = [
+  { id:'saas', name:'SaaS dashboard', description:'Metrics, accounts and billing', prompt:'Build a SaaS dashboard with authentication, key metrics, account settings and billing.', kind:'dashboard' },
+  { id:'portfolio', name:'Portfolio', description:'Projects, writing and contact', prompt:'Build a personal portfolio with a project gallery, blog and contact form.', kind:'portfolio' },
+  { id:'commerce', name:'Online store', description:'Products, cart and checkout', prompt:'Build an online store with product listings, cart, checkout and order tracking.', kind:'store' },
+  { id:'tasks', name:'Team workspace', description:'Tasks, owners and activity', prompt:'Build a team task workspace with a kanban board, comments and notifications.', kind:'tasks' },
+  { id:'analytics', name:'Analytics', description:'Charts, filters and exports', prompt:'Build an analytics dashboard with login, interactive charts, filters and CSV export.', kind:'analytics' }
+];
+
+const PreviewThumbnail = ({kind}:{kind:string}) => (
+  <div className="template-preview" aria-hidden="true">
+    <div className="template-preview-sidebar"><i/><i/><i/><i/></div>
+    <div className="template-preview-main">
+      <div className="template-preview-top"><b/><span/><span/></div>
+      {kind === 'portfolio' ? <div className="template-preview-portfolio"><b/><span/><span/><div><i/><i/><i/></div></div>
+      : kind === 'store' ? <div className="template-preview-products"><i/><i/><i/></div>
+      : kind === 'tasks' ? <div className="template-preview-kanban"><i/><i/><i/></div>
+      : <><div className="template-preview-stats"><i/><i/><i/></div><div className={'template-preview-chart ' + (kind === 'analytics' ? 'is-analytics' : '')}><i/><i/><i/><i/><i/><i/></div></>}
+    </div>
+  </div>
+);
 
 export const DashboardHome: React.FC<DashboardProps> = ({
-  projectName, prompt, setPrompt, onBuild, onOpenBuilder, onOpenCode,
-  onOpenPreview, onOpenHistory, files, agents, logs, usageCount, usageLimit, isGenerating
+  projectName, prompt, setPrompt, onBuild, onOpenBuilder, onOpenCode, onOpenPreview,
+  onOpenHistory, onOpenAssets, onUpgrade, files, usageCount, usageLimit, isGenerating
 }) => {
-  const activeAgents = agents.filter(agent => ['working', 'thinking', 'queued'].includes(agent.status)).length;
-  const recentLogs = logs.slice(-4).reverse();
+  const reduceMotion = useReducedMotion();
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const hasProject = files.length > 0;
+  const recentFiles = useMemo(() => files.slice(0, 4), [files]);
+  const canBuild = prompt.trim().length >= 10 && !isGenerating;
+  const choosePrompt = (value:string) => { setPrompt(value); composerRef.current?.focus(); };
 
   return (
-    <main className="flex-1 min-h-0 overflow-y-auto bg-[var(--bg-void)]">
-      <div className="mx-auto max-w-[1440px] p-5 sm:p-7 xl:p-9 space-y-7">
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <main className="odyseus-home flex-1 min-h-0 overflow-y-auto" aria-label="Build workspace">
+      <div className="odyseus-home-inner">
+        <header className="odyseus-home-header">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-[var(--text-muted)]">
-              <LayoutDashboard size={14} className="text-[var(--nexus-accent)]" />
-              Workspace overview
-            </div>
-            <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-[var(--text-primary)]">Your command center</h1>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">Plan, build, inspect, and ship from one workspace.</p>
+            <p className="odyseus-context">{hasProject ? (projectName || 'Current project') : 'Odyseus'}</p>
+            <h1>{hasProject ? 'Continue building.' : 'What do you want to build?'}</h1>
+            <p className="odyseus-subtitle">{hasProject ? 'Pick up where you left off, or describe the next change.' : 'Describe it in plain language. Odyseus plans it, writes it and shows you a working preview.'}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={onOpenHistory} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-panel)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] hover:border-[var(--border-strong)]">
-              <Clock3 size={16} /> Recent activity
-            </button>
-            <button onClick={onOpenBuilder} className="inline-flex items-center gap-2 rounded-lg bg-[var(--nexus-accent)] px-4 py-2.5 text-sm font-bold text-[var(--nexus-accent-contrast)] hover:brightness-105">
-              <Plus size={16} /> New build
-            </button>
-          </div>
+          {hasProject && <button type="button" className="odyseus-secondary-action" onClick={onOpenHistory}>Recent activity <ArrowUpRight size={16}/></button>}
         </header>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" aria-label="Workspace metrics">
-          {[
-            { label: 'Current project', value: projectName || 'Untitled project', note: files.length ? `${files.length} generated files` : 'Ready for your first build', icon: Boxes },
-            { label: 'Generated files', value: String(files.length), note: files.length ? 'In the current workspace' : 'Files appear after a build', icon: FileCode2 },
-            { label: 'AI agents active', value: String(activeAgents), note: activeAgents ? 'Working on your request' : `${agents.length} agents standing by`, icon: Bot },
-            { label: 'Builds used', value: `${usageCount} / ${usageLimit}`, note: 'Current plan usage', icon: Activity }
-          ].map(({label, value, note, icon: Icon}) => (
-            <article key={label} className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-panel)] p-5 shadow-[0_2px_0_rgba(0,0,0,.14)]">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--text-muted)]">{label}</span>
-                <span className="grid h-9 w-9 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-raised)] text-[var(--nexus-accent)]"><Icon size={17}/></span>
+        {hasProject && <section className="odyseus-continue" aria-labelledby="continue-title">
+          <div className="odyseus-project-thumbnail"><PreviewThumbnail kind="dashboard"/></div>
+          <div className="odyseus-continue-copy">
+            <p className="odyseus-section-kicker">Continue where you left off</p>
+            <h2 id="continue-title">{projectName || 'Untitled project'}</h2>
+            <p>{files.length} {files.length === 1 ? 'file' : 'files'} in this workspace</p>
+            <div className="odyseus-inline-actions"><button type="button" className="odyseus-primary-action" onClick={onOpenBuilder}>Open project</button><button type="button" className="odyseus-secondary-action" onClick={onOpenPreview}>Preview</button></div>
+          </div>
+          <div className="odyseus-recent-files"><p className="odyseus-section-kicker">Recent files</p>
+            {recentFiles.map(file => <button type="button" key={file.path} onClick={onOpenCode}><FileCode2 size={15}/><span>{file.path}</span></button>)}
+          </div>
+        </section>}
+
+        <section className="odyseus-composer-section" aria-label="Build prompt">
+          <div className="odyseus-composer">
+            <label className="sr-only" htmlFor="odyseus-build-prompt">Describe the app you want to build</label>
+            <textarea ref={composerRef} id="odyseus-build-prompt" value={prompt} onChange={event => setPrompt(event.target.value)}
+              onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && canBuild) { event.preventDefault(); onBuild(); } }}
+              placeholder={hasProject ? 'Describe a new build or a change to this project…' : 'A booking app for a dental clinic with a calendar, email reminders and card payments'}
+              aria-describedby="odyseus-composer-help"/>
+            <div className="odyseus-composer-footer">
+              <div className="odyseus-composer-tools">
+                <button type="button" aria-label="Attach a file or image" title="Attach a file or image" onClick={onOpenAssets}><Paperclip size={18}/><span>Attach</span></button>
+                <label className="odyseus-stack-picker"><Layers3 size={16}/><span className="sr-only">Framework</span><select aria-label="Framework" defaultValue="React"><option>React</option><option>Next.js</option><option>Astro</option></select><ChevronDown size={14}/></label>
               </div>
-              <div className="mt-4 text-2xl font-semibold tracking-tight text-[var(--text-primary)] truncate" title={value}>{value}</div>
-              <p className="mt-1.5 text-xs text-[var(--text-muted)]">{note}</p>
-            </article>
-          ))}
+              <button type="button" className="odyseus-primary-action odyseus-build-action" disabled={!canBuild} onClick={onBuild}>
+                {isGenerating ? <span className="odyseus-spinner" aria-hidden="true"/> : <Send size={17}/>}
+                {isGenerating ? 'Building…' : 'Build'}
+              </button>
+            </div>
+          </div>
+          <div className="odyseus-composer-meta">
+            <span id="odyseus-composer-help">{prompt.trim().length < 10 ? 'Add at least 10 characters to start a build.' : 'Enter to build · Shift + Enter for a new line'}</span>
+            <span>{Math.max(0, usageLimit - usageCount)} {Math.max(0, usageLimit - usageCount) === 1 ? 'build' : 'builds'} left this month <button type="button" onClick={onUpgrade}>Upgrade</button></span>
+          </div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,.85fr)] gap-5">
-          <article className="overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--bg-panel)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--border-default)] px-5 py-4">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]"><WandSparkles size={17} className="text-[var(--nexus-accent)]"/> Start with an idea</div>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">Describe the product. Odyseus will plan and generate the app.</p>
-              </div>
-              <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--bg-raised)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]"><Sparkles size={12}/> AI builder</span>
-            </div>
-            <div className="p-5">
-              <textarea
-                value={prompt}
-                onChange={event => setPrompt(event.target.value)}
-                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); onBuild(); } }}
-                placeholder="Example: Build a project dashboard with authentication, billing, and a responsive analytics page…"
-                className="min-h-[132px] w-full resize-y rounded-lg border border-[var(--border-default)] bg-[var(--bg-void)] p-4 text-sm leading-6 text-[var(--text-primary)] outline-none transition focus:border-[var(--nexus-accent)] focus:ring-2 focus:ring-[rgba(var(--nexus-accent-rgb),.15)]"
-              />
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap gap-2">
-                  {['SaaS dashboard', 'Portfolio site', 'Mobile-first app'].map(suggestion => (
-                    <button key={suggestion} onClick={() => setPrompt(current => current ? `${current}\n${suggestion}` : `Build a ${suggestion.toLowerCase()}.`)} className="rounded-md border border-[var(--border-default)] bg-[var(--bg-raised)] px-2.5 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]">{suggestion}</button>
-                  ))}
-                </div>
-                <button disabled={isGenerating || !prompt.trim()} onClick={onBuild} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--nexus-accent)] px-4 py-2.5 text-sm font-bold text-[var(--nexus-accent-contrast)] disabled:cursor-not-allowed disabled:opacity-50">
-                  {isGenerating ? <Activity size={16} className="animate-pulse"/> : <Send size={16}/>}
-                  {isGenerating ? 'Building…' : 'Build application'}
-                </button>
-              </div>
-            </div>
-          </article>
+        {!hasProject && <section className="odyseus-starters" aria-labelledby="starter-title">
+          <div className="odyseus-section-heading"><h2 id="starter-title">Start with an idea</h2><p>Choose a prompt to make it yours.</p></div>
+          <div className="odyseus-starter-list">{starterPrompts.map((item,index) => <button type="button" className="odyseus-starter-row" key={item} onClick={() => choosePrompt(item)}><span className="odyseus-starter-index">{String(index+1).padStart(2,'0')}</span><span>{item}</span><ArrowUpRight size={17}/></button>)}</div>
+        </section>}
 
-          <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-panel)]">
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4">
-              <div><h2 className="text-sm font-semibold text-[var(--text-primary)]">Agent workspace</h2><p className="mt-1 text-xs text-[var(--text-muted)]">Orchestration status</p></div>
-              <span className={`inline-flex items-center gap-1.5 text-xs ${activeAgents ? 'text-[var(--state-live)]' : 'text-[var(--text-muted)]'}`}><span className={`h-1.5 w-1.5 rounded-full ${activeAgents ? 'bg-[var(--state-live)]' : 'bg-[var(--text-muted)]'}`}/>{activeAgents ? `${activeAgents} active` : 'Standing by'}</span>
-            </div>
-            <div className="divide-y divide-[var(--border-default)]">
-              {agents.length === 0 ? (
-                <div className="px-5 py-8 text-center">
-                  <Bot size={22} className="mx-auto text-[var(--text-muted)]" />
-                  <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">Agents are on standby</p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Start a build to see orchestration activity here.</p>
-                </div>
-              ) : agents.slice(0, 5).map(agent => (
-                <div key={agent.id} className="flex items-center gap-3 px-5 py-3">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-raised)] text-[var(--accent-ai-primary)]"><Bot size={17}/></div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-[var(--text-primary)]">{agent.name}</p><p className="truncate text-xs text-[var(--text-muted)]">{agent.role}</p></div>
-                  <span className={`rounded-md px-2 py-1 text-[10px] font-semibold capitalize ${statusTone[agent.status] || statusTone.idle}`}>{agent.status}</span>
-                </div>
-              ))}
-            </div>
-          </article>
+        <section className="odyseus-templates" aria-labelledby="template-title">
+          <div className="odyseus-section-heading"><div><h2 id="template-title">Templates</h2><p>A starting point, not a locked-in design.</p></div></div>
+          <div className="odyseus-template-row">{templates.map((template,index) => <motion.button key={template.id} type="button" className="odyseus-template-card" onClick={() => choosePrompt(template.prompt)}
+            initial={reduceMotion ? false : {opacity:0,y:5}} animate={{opacity:1,y:0}} transition={reduceMotion ? {duration:0} : {duration:.15,delay:Math.min(index*.025,.1)}}>
+            <PreviewThumbnail kind={template.kind}/><span className="odyseus-template-name">{template.name}</span><span className="odyseus-template-description">{template.description}</span>
+          </motion.button>)}</div>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,.8fr)] gap-5">
-          <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-panel)]">
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4">
-              <div><h2 className="text-sm font-semibold text-[var(--text-primary)]">Current project</h2><p className="mt-1 text-xs text-[var(--text-muted)]">Pick up where you left off</p></div>
-              <button onClick={onOpenCode} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--nexus-accent)] hover:underline">Open files <ArrowUpRight size={14}/></button>
-            </div>
-            {files.length ? (
-              <div className="divide-y divide-[var(--border-default)]">
-                {files.slice(0, 5).map(file => <button key={file.path} onClick={onOpenCode} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-[var(--bg-raised)]"><FileCode2 size={16} className="shrink-0 text-[var(--nexus-accent)]"/><span className="min-w-0 flex-1 truncate text-sm text-[var(--text-primary)]">{file.path}</span><span className="text-xs text-[var(--text-muted)]">{file.content.length.toLocaleString()} chars</span></button>)}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center px-6 py-9 text-center"><div className="grid h-11 w-11 place-items-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-raised)] text-[var(--text-muted)]"><FolderKanban size={20}/></div><p className="mt-3 text-sm font-medium text-[var(--text-primary)]">Your first project starts here</p><p className="mt-1 max-w-sm text-xs leading-5 text-[var(--text-muted)]">Create an app from a prompt. Generated files and project actions will appear in this panel.</p><button onClick={onOpenBuilder} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-raised)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)]"><Plus size={14}/> Start a project</button></div>
-            )}
-          </article>
-
-          <article className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-panel)]">
-            <div className="flex items-center justify-between border-b border-[var(--border-default)] px-5 py-4"><div><h2 className="text-sm font-semibold text-[var(--text-primary)]">Activity feed</h2><p className="mt-1 text-xs text-[var(--text-muted)]">Latest workspace events</p></div><TerminalSquare size={17} className="text-[var(--text-muted)]"/></div>
-            <div className="space-y-4 p-5">
-              {recentLogs.length ? recentLogs.map((entry, index) => <div key={`${entry}-${index}`} className="flex gap-3"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--nexus-accent)]"/><p className="min-w-0 break-words text-xs leading-5 text-[var(--text-muted)]">{entry.replace(/^\[[^\]]+\]\s*/, '')}</p></div>) : <p className="text-xs text-[var(--text-muted)]">No activity yet. Your build events will show here.</p>}
-              <button onClick={onOpenHistory} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--nexus-accent)] hover:underline">View all activity <ArrowUpRight size={14}/></button>
-            </div>
-          </article>
-        </section>
-
-        <footer className="flex flex-col gap-2 border-t border-[var(--border-default)] pt-4 text-xs text-[var(--text-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <span className="inline-flex items-center gap-2"><Zap size={13} className="text-[var(--nexus-accent)]"/> Odysseus Studio <span className="opacity-50">/</span> Build workspace</span>
-          <span>Build with intent. Review before you ship.</span>
-        </footer>
+        {hasProject && <section className="odyseus-recent-projects" aria-labelledby="recent-title">
+          <div className="odyseus-section-heading"><h2 id="recent-title">Recent files</h2><button type="button" onClick={onOpenCode}>Open code <Code2 size={15}/></button></div>
+          <div className="odyseus-recent-list">{recentFiles.map(file => <button key={file.path} type="button" onClick={onOpenCode}><FileCode2 size={16}/><span>{file.path}</span><span>{file.content.length.toLocaleString()} chars</span></button>)}</div>
+        </section>}
+        <footer className="odyseus-home-footer"><span>Odyseus workspace</span><span>Review generated code before shipping.</span></footer>
       </div>
     </main>
   );

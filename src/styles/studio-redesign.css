@@ -1,0 +1,189 @@
+/* Odyseus Nexus Pro · Industrial Studio refinement
+   Shared by the browser workspace and Electron desktop shell.
+   Keep the UI tactile and legible: graphite planes, firm edges, restrained depth. */
+
+:root {
+  --studio-shadow: 0 1px 0 rgba(0,0,0,.22), 0 8px 22px rgba(0,0,0,.10);
+  --studio-shadow-raised: 0 12px 30px rgba(0,0,0,.22);
+  --studio-control-height: 38px;
+  --studio-focus: 0 0 0 3px rgba(var(--accent-interactive-rgb), .22);
+  --studio-grid-line: rgba(164,166,156,.045);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html[data-theme="cyberpunk"] {
+  color-scheme: dark;
+  --state-live: #65e0bb;
+  --state-live-rgb: 101,224,187;
+  --state-error: #ff6d9a;
+  --state-error-rgb: 255,109,154;
+  --state-warning: #ffc66d;
+  --state-warning-rgb: 255,198,109;
+  --accent-ai-primary: #c1a0ff;
+  --accent-ai-primary-rgb: 193,160,255;
+  --accent-ai-secondary: #ff83d2;
+  --text-primary: #f4efff;
+  --text-muted: #b2a7c7;
+  --text-disabled: #766a8e;
+  --nexus-accent: var(--accent-interactive);
+  --nexus-accent-rgb: var(--accent-interactive-rgb);
+  --background: var(--bg-void);
+  --foreground: var(--text-primary);
+  --card: var(--bg-panel);
+  --card-foreground: var(--text-primary);
+  --popover: var(--bg-base);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-interactive);
+  --secondary: var(--bg-raised);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-raised);
+  --muted-foreground: var(--text-muted);
+  --border: var(--border-default);
+  --input: var(--bg-base);
+  --input-background: var(--bg-base);
+  --ring: var(--accent-interactive);
+}
+
+/* Accent presets update both the accent and the RGB token used by focus,
+   selection and scrollbars, rather than recolouring only one CSS property. */
+:root[data-accent-color="orange"] { --accent-interactive:#f0a05a; --accent-interactive-dim:#cb7937; --accent-interactive-rgb:240,160,90; --nexus-accent:#f0a05a; --nexus-accent-rgb:240,160,90; }
+:root[data-accent-color="cyan"] { --accent-interactive:#45c8d3; --accent-interactive-dim:#2696a0; --accent-interactive-rgb:69,200,211; --nexus-accent:#45c8d3; --nexus-accent-rgb:69,200,211; }
+:root[data-accent-color="purple"] { --accent-interactive:#b7a0e8; --accent-interactive-dim:#8d72c6; --accent-interactive-rgb:183,160,232; --nexus-accent:#b7a0e8; --nexus-accent-rgb:183,160,232; }
+:root[data-accent-color="pink"] { --accent-interactive:#e88bb8; --accent-interactive-dim:#bc5f8d; --accent-interactive-rgb:232,139,184; --nexus-accent:#e88bb8; --nexus-accent-rgb:232,139,184; }
+:root[data-accent-color="blue"] { --accent-interactive:#7ba9f4; --accent-interactive-dim:#527bc2; --accent-interactive-rgb:123,169,244; --nexus-accent:#7ba9f4; --nexus-accent-rgb:123,169,244; }
+:root[data-accent-color="green"] { --accent-interactive:#75c9a0; --accent-interactive-dim:#41976e; --accent-interactive-rgb:117,201,160; --nexus-accent:#75c9a0; --nexus-accent-rgb:117,201,160; }
+
+/* Desktop-like work surface without treating the web build as a phone app. */
+html, body, #root { min-height: 100%; }
+body { background: var(--bg-void); color: var(--text-primary); }
+#root { isolation: isolate; }
+::selection { background: rgba(var(--accent-interactive-rgb),.28); color: var(--text-primary); }
+:focus-visible { outline: 2px solid var(--accent-interactive) !important; outline-offset: 2px; box-shadow: var(--studio-focus); }
+:where(button, input, textarea, select, a) { -webkit-tap-highlight-color: transparent; }
+:where(input, textarea, select) { accent-color: var(--accent-interactive); }
+:where(input, textarea, select):focus { border-color: var(--accent-interactive) !important; outline: none; box-shadow: var(--studio-focus) !important; }
+:where(button, [role="button"]) { min-height: 30px; }
+button:disabled { filter: saturate(.45); }
+
+/* Clear panel hierarchy. Header strips read as controls, not decorative glass. */
+.glass, .surface-panel {
+  border-radius: var(--radius, 10px);
+  box-shadow: var(--studio-shadow);
+}
+.glass > :first-child:where(div) { border-color: var(--border-default); }
+.surface-shell { box-shadow: none; }
+.surface-floating { box-shadow: var(--studio-shadow-raised); }
+.glass-console, pre, code, .font-mono { font-family: var(--font-mono); }
+hr { border-color: var(--border-default); }
+
+/* Dashboard cards: stronger separation, compact typography, consistent geometry. */
+main.flex-1 article {
+  border-color: var(--border-default);
+  box-shadow: 0 2px 0 rgba(0,0,0,.13);
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+main.flex-1 article:hover {
+  border-color: var(--border-strong);
+}
+main.flex-1 article > div:first-child > span:has(svg) {
+  border-radius: 8px;
+}
+main.flex-1 h1 {
+  letter-spacing: -.035em;
+}
+main.flex-1 header {
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border-default);
+}
+main.flex-1 header h1 {
+  line-height: 1.08;
+}
+main.flex-1 section[aria-label="Workspace metrics"] article {
+  min-width: 0;
+}
+main.flex-1 section[aria-label="Workspace metrics"] article > div:nth-child(2) {
+  font-variant-numeric: tabular-nums;
+}
+main.flex-1 section[aria-label="Workspace metrics"] article p {
+  line-height: 1.45;
+}
+
+/* Primary actions are warm and unmistakable. Secondary actions stay quiet. */
+button.bg-nexus-accent, button.bg-\[var\(--nexus-accent\)\],
+button.bg-\[var\(--accent-interactive\)\] {
+  color: var(--nexus-accent-contrast, #21170f);
+  border-color: var(--accent-interactive-dim);
+}
+button[class*="bg-white/"], button[class*="bg-black/"] {
+  box-shadow: none;
+}
+button[class*="hover:bg-"]:not(:disabled):hover {
+  filter: brightness(1.06);
+}
+button:active:not(:disabled) { filter: brightness(.97); }
+
+/* Forms feel like proper software controls and keep labels readable. */
+input, textarea, select {
+  min-height: 36px;
+  border-radius: 7px;
+}
+textarea { line-height: 1.55; }
+input[type="checkbox"], input[type="radio"] { min-height: auto; }
+::placeholder { opacity: .82; }
+label { color: var(--text-muted); }
+
+/* AI surfaces get a purple identity; status colours retain their meanings. */
+[class*="text-accent-ai"], [class*="text-[var(--accent-ai-primary)]"] {
+  color: var(--accent-ai-primary);
+}
+[class*="border-accent-ai"] { border-color: rgba(var(--accent-ai-primary-rgb),.42); }
+[class*="bg-accent-ai"] { background-color: rgba(var(--accent-ai-primary-rgb),.12); }
+.status-live, [data-status="completed"], [data-status="connected"] { color: var(--state-live); }
+[data-status="working"], [data-status="pending"], [data-status="queued"] { color: var(--state-warning); }
+[data-status="error"], [data-status="failed"], [aria-invalid="true"] { color: var(--state-error); }
+
+/* Popovers and modals should stay inside the desktop viewport. */
+[role="dialog"], [aria-modal="true"] {
+  max-height: min(88dvh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.fixed.inset-0[class*="z-"] > [class*="max-w-"],
+.fixed.inset-0[class*="z-"] > [class*="w-"] {
+  max-height: min(88dvh, 900px);
+  overflow-y: auto;
+}
+[role="menu"], [role="listbox"] {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-raised);
+  box-shadow: var(--studio-shadow-raised);
+}
+
+/* Scrollbars remain visible and use the selected accent consistently. */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: rgba(var(--accent-interactive-rgb),.42); border: 2px solid var(--bg-base); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-interactive); }
+* { scrollbar-color: rgba(var(--accent-interactive-rgb),.55) var(--bg-base); scrollbar-width: thin; }
+
+/* Respect users who disable motion, without removing interaction feedback. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* Responsive browser layouts: compact the workspace, never convert it into
+   a separate native-mobile product. */
+@media (max-width: 900px) {
+  main.flex-1 > div { padding: 1.25rem; }
+  main.flex-1 header { align-items: flex-start; }
+}
+@media (max-width: 560px) {
+  main.flex-1 > div { padding: .9rem; gap: 1rem; }
+  main.flex-1 header h1 { font-size: 1.8rem; }
+  .fixed.bottom-6.right-6 { right: 12px; bottom: 12px; }
+}
