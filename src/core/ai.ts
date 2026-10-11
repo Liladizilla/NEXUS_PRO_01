@@ -103,7 +103,7 @@ export async function generateApp(
     while (true) {
       const { value, done } = await reader.read();
       buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-      const lines = buffer.split('\\n');
+      const lines = buffer.split('\n');
       buffer = lines.pop() || '';
       for (const line of lines) handleLine(line);
       if (done) break;
