@@ -73,6 +73,7 @@ import { Debugger } from './components/features/Debugger';
 import { DesktopApp } from './components/features/DesktopApp';
 import { DashboardHome } from './components/features/DashboardHome';
 import { SpatialWorkspace } from './components/features/SpatialWorkspace';
+import { FirstRunSetup, type WorkspaceMode } from './components/features/FirstRunSetup';
 import AgentCard from './components/features/AgentCard';
 import { useNexusStore } from './core/store';
 import { generateApp } from './core/ai';
@@ -455,7 +456,8 @@ export default function App() {
   const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDashboardHome, setShowDashboardHome] = useState(true);
-  const [showSpatialWorkspace, setShowSpatialWorkspace] = useState(false);
+  const [showSpatialWorkspace, setShowSpatialWorkspace] = useState(() => { try { return JSON.parse(localStorage.getItem('odyseus-preferences-v1') || '{}').mode === 'spatial'; } catch { return false; } });
+  const [showOnboarding, setShowOnboarding] = useState(() => { try { return !localStorage.getItem('odyseus-preferences-v1'); } catch { return false; } });
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -594,7 +596,7 @@ export default function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [chatInput, setChatInput] = useState('');
   const [envOpen, setEnvOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
   const [backendHealth, setBackendHealth] = useState<any>(null);
   const [taskBreakdown, setTaskBreakdown] = useState<string[]>([]);
@@ -911,6 +913,13 @@ export default function App() {
       <AnimatePresence>
         {showIntro && <Intro onComplete={() => setShowIntro(false)} />}
       </AnimatePresence>
+      {!showIntro && showOnboarding && <FirstRunSetup onComplete={(mode: WorkspaceMode) => {
+        setShowOnboarding(false);
+        setShowSpatialWorkspace(mode === 'spatial');
+        setShowDashboardHome(true);
+        if (mode === 'classic') setActiveTab('design');
+        addLog('Workspace preferences saved. Selected ' + (mode === 'spatial' ? '3D agent world' : 'classic 2D workspace') + '.');
+      }} />}
 
       {!showIntro && isAuthLoading && (
         <div className="fixed inset-0 z-[150] bg-nexus-bg flex flex-col items-center justify-center space-y-4">
