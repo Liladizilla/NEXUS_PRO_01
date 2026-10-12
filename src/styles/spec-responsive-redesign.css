@@ -1,0 +1,99 @@
+/* Spec-driven Odyseus UI: responsive workspace shell and warm neutral surfaces. */
+:root {
+  --nexus-bg: #111110;
+  --nexus-bg-secondary: #191918;
+  --nexus-panel: #191918;
+  --nexus-border: #2e2d2b;
+  --nexus-text: #eceae5;
+  --nexus-text-muted: #a09d95;
+  --nexus-accent: #f28c38;
+  --nexus-accent-contrast: #1a1208;
+  --nexus-accent-rgb: 242,140,56;
+  --bg-void: #111110;
+  --bg-base: #191918;
+  --bg-panel: #191918;
+  --bg-raised: #222120;
+  --border-default: #2e2d2b;
+  --border-strong: #494640;
+  --accent-interactive: #f28c38;
+  --accent-interactive-dim: #d97525;
+  --accent-interactive-rgb: 242,140,56;
+  --text-primary: #eceae5;
+  --text-muted: #a09d95;
+  --text-disabled: #79766f;
+  --state-live: #5bb974;
+  --state-warning: #e5b64a;
+  --state-error: #e5675b;
+  --radius: 8px;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+html[data-theme="light"] {
+  --nexus-bg:#f6f4ef; --nexus-bg-secondary:#eeece6; --nexus-panel:#fffefa;
+  --nexus-border:#d8d4ca; --nexus-text:#1c1b19; --nexus-text-muted:#625f58;
+  --bg-void:#f6f4ef; --bg-base:#f6f4ef; --bg-panel:#fffefa; --bg-raised:#eeece6;
+  --border-default:#d8d4ca; --border-strong:#bdb8ac; --text-primary:#1c1b19;
+  --text-muted:#625f58; --text-disabled:#79756c;
+}
+html, body, #root { min-height:100%; }
+body { background:var(--bg-void) !important; color:var(--text-primary) !important; font-family:var(--font-sans); }
+.glass, .surface-panel, .surface-floating {
+  background:var(--bg-panel) !important; border:1px solid var(--border-default) !important;
+  box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+.glass-console { background:var(--bg-base) !important; box-shadow:none !important; }
+.glow-accent, .glow-purple { box-shadow:none !important; }
+button { min-height:44px; border-radius:8px !important; transition:background-color 140ms ease,border-color 140ms ease,transform 100ms ease; }
+button:hover { box-shadow:none !important; }
+button:active:not(:disabled) { transform:translateY(1px); }
+input, textarea, select { font-size:16px !important; border-radius:8px !important; }
+textarea { line-height:1.5; }
+:focus-visible { outline:2px solid var(--accent-interactive) !important; outline-offset:2px; box-shadow:none !important; }
+::selection { background:rgba(242,140,56,.24); color:var(--text-primary); }
+[class*="text-[10px]"], [class*="text-[9px]"], [class*="text-[8px]"] { font-size:12px !important; line-height:1.4; }
+[class*="uppercase"] { letter-spacing:.035em !important; text-transform:none !important; }
+[class*="shadow-["], [class*="shadow-lg"], [class*="shadow-2xl"] { box-shadow:none !important; }
+[class*="bg-nexus-accent/"], [class*="text-nexus-accent/"] { color:var(--accent-interactive); }
+.odyseus-primary-action, .odyseus-build-action { background:var(--accent-interactive) !important; color:var(--nexus-accent-contrast) !important; border:1px solid var(--accent-interactive) !important; }
+.odyseus-build-action { min-height:44px; }
+.odyseus-composer { border:1px solid var(--border-default) !important; background:var(--bg-panel) !important; box-shadow:none !important; border-radius:8px !important; }
+.odyseus-composer textarea { min-height:160px; font-size:16px !important; }
+.odyseus-composer-footer { border-top:1px solid var(--border-default) !important; }
+.odyseus-composer-meta, .odyseus-home-footer, .odyseus-section-heading p { color:var(--text-muted) !important; font-size:12px !important; }
+.odyseus-starter-row, .odyseus-template-card { background:var(--bg-panel) !important; border:1px solid var(--border-default) !important; border-radius:8px !important; }
+.odyseus-starter-row:hover, .odyseus-template-card:hover { background:var(--bg-raised) !important; border-color:var(--border-strong) !important; }
+.odyseus-mobile-tabs { display:none; }
+.odyseus-mobile-topbar { display:none; }
+@media (max-width:1023px) {
+  .odyseus-mobile-topbar { display:flex; }
+  .odyseus-mobile-tabs {
+    display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr));
+    position:fixed !important; z-index:80; left:0; right:0; bottom:0;
+    min-height:calc(56px + env(safe-area-inset-bottom)); padding:4px 8px env(safe-area-inset-bottom);
+    background:var(--bg-base); border-top:1px solid var(--border-default);
+    gap:4px;
+  }
+  .odyseus-mobile-tabs button {
+    min-width:0; min-height:48px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; padding:3px; background:transparent !important; color:var(--text-muted) !important;
+    border:0 !important; border-radius:0 !important; font-size:12px !important; position:relative;
+  }
+  .odyseus-mobile-tabs button.is-active { color:var(--accent-interactive) !important; }
+  .odyseus-mobile-tabs button.is-active::before { content:""; position:absolute; top:-4px; left:22%; right:22%; height:2px; background:var(--accent-interactive); }
+  .odyseus-mobile-tabs button svg { width:20px; height:20px; }
+  .odyseus-composer textarea { min-height:150px; }
+  .odyseus-home-footer { padding-bottom:calc(72px + env(safe-area-inset-bottom)) !important; }
+  /* Floating chat is replaced by the existing refine composer inside Preview. */
+  .odyseus-floating-chat-toggle, .odyseus-floating-chat-panel { display:none !important; }
+  body { overflow:hidden; }
+}
+@media (max-width:639px) {
+  .odyseus-composer-section, .odyseus-starters, .odyseus-templates, .odyseus-recent-projects { margin-left:0 !important; margin-right:0 !important; }
+  .odyseus-composer-meta { align-items:flex-start !important; flex-direction:column !important; gap:8px !important; }
+  .odyseus-section-heading { align-items:flex-start !important; gap:8px !important; }
+  .odyseus-section-heading h2 { font-size:18px !important; }
+  .odyseus-template-row { overflow-x:auto; grid-template-columns:repeat(5,minmax(150px,1fr)) !important; padding-bottom:8px; }
+  .odyseus-starter-row { min-height:52px; }
+  .odyseus-home-footer { gap:8px; flex-wrap:wrap; }
+}
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
