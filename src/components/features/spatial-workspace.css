@@ -66,3 +66,11 @@
 @keyframes sp-wander-devops{0%,100%{left:62%;top:65%}50%{left:68%;top:72%}}
 @media(prefers-reduced-motion:reduce){.sp-agent,.sp-agent-person em,.sp-agent-person small,.sp-agent-person{animation:none!important}}
 @media(max-width:850px){.sp-body{grid-template-columns:minmax(0,1fr)}.sp-right-rail{display:none}.sp-topbar{height:48px;padding:0 12px}.sp-brand{min-width:0}.sp-top-status{display:none}.sp-toolbar{gap:8px;padding:0 8px}.sp-toolbar-label,.sp-drag-hint{display:none}.sp-world{width:112%;height:85%}.sp-agent-tag{padding:3px 5px}.sp-agent-tag b{font-size:11px}.sp-agent-tag small{font-size:10px}}
+
+.sp-prompt-dock{position:absolute;z-index:14;right:22px;bottom:46px;width:min(440px,calc(100% - 32px));padding:8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;background:rgba(20,20,18,.96);border:1px solid #49463b;border-radius:10px;box-shadow:0 12px 35px #0008;backdrop-filter:blur(12px)}
+.sp-prompt-dock input{grid-column:1;grid-row:1;min-width:0;width:100%;height:40px;min-height:40px;border:0!important;outline:none;background:transparent;color:#eceae5;padding:0 10px;font:14px "IBM Plex Sans",sans-serif;box-shadow:none!important}
+.sp-prompt-dock input::placeholder{color:#a09d95}
+.sp-prompt-dock button{grid-column:2;grid-row:1;display:flex;align-items:center;justify-content:center;gap:7px;min-width:82px;min-height:40px;border-radius:7px;background:#f28c38;color:#1a1208;font-weight:600;font-size:13px;padding:0 12px;border:1px solid #d87928}
+.sp-prompt-dock button:disabled{background:#39352f;border-color:#39352f;color:#827e74;filter:none;cursor:not-allowed}
+.sp-prompt-hint{grid-column:1 / -1;padding:0 10px 3px;color:#89867e;font-size:11px}
+@media(max-width:850px){.sp-prompt-dock{bottom:40px;right:12px;width:min(440px,calc(100% - 24px))}.sp-stage-caption{bottom:8px;left:12px}.sp-prompt-hint{font-size:12px}}
