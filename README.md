@@ -1,15 +1,21 @@
 # Odyseus Nexus Pro
 
-Odyseus Nexus Pro is an AI-assisted software-building workspace for turning project goals into code, then reviewing and refining the result. The repository contains a React/Vite web interface, an Express API, and an Electron desktop build.
+Odyseus Nexus Pro is a cross-platform AI-assisted software-building workspace. It is delivered in two forms: a browser-based web application and installable desktop software for Windows, macOS, and Linux. The web and desktop experiences share the same core product; this is not a native iOS/Android app project.
 
 > **Project status:** actively developed. Some workflows depend on external API keys or provider adapters that must be configured separately. A visible control is not proof that a remote integration is connected.
+
+## Product platforms
+
+- **Web app:** use the workspace in a supported desktop browser through the deployed web experience.
+- **Desktop software:** package the application with Electron for Windows, macOS, and Linux.
+- **Responsive web layout:** smaller browser windows should remain usable, but phone-specific native apps are not a product target.
 
 ## Workspace screenshot
 
 <!-- This image is captured from the built application by GitHub Actions. It is not a mockup. -->
 ![Odyseus Nexus Pro workspace, captured from the built application in CI](docs/screenshots/workspace.png)
 
-The screenshot is generated from the checked-in source using Chromium in GitHub Actions and refreshed after relevant pushes to `main`. It shows the default workspace, not a claim that every external service is configured.
+The screenshot is generated from the checked-in source using Chromium in GitHub Actions. It shows the default workspace, not a claim that every external service is configured.
 
 ## What is included
 
@@ -18,7 +24,7 @@ The screenshot is generated from the checked-in source using Chromium in GitHub 
 - **Developer tools:** task composition, activity logs, debugging and formatting endpoints, and a CI/CD status interface.
 - **Project utilities:** browser-local settings persistence, a JSON project archive export, and a local asset manager for image, SVG, and JSON files.
 - **Deployment configuration checks:** reports whether required provider environment variables exist. This check does **not** verify remote credentials or deploy an application.
-- **Desktop packaging:** Electron build targets for Windows, macOS, and Linux through GitHub Actions.
+- **Cross-platform desktop packaging:** Electron build targets for Windows, macOS, and Linux through GitHub Actions.
 
 ## Current integration boundaries
 
@@ -29,7 +35,6 @@ Please don't mistake a polished button for a magical backend. The following requ
 - **Deployment providers:** provider-specific adapters and server-side credentials are required. A configuration check alone does not deploy.
 - **Asset storage:** the Asset Manager currently previews files locally in the browser session; it does not upload them to cloud storage.
 - **Settings:** user preferences are stored in the current browser's local storage, not synced to an account.
-- **Mobile:** a native iOS/Android application is a roadmap item, not a released app.
 
 ## Tech stack
 
@@ -40,7 +45,7 @@ Please don't mistake a polished button for a magical backend. The following requ
 - **Backend:** Express and TypeScript
 - **AI SDK:** Google GenAI
 - **Authentication/data:** Firebase integration points
-- **Desktop:** Electron and electron-builder
+- **Desktop runtime and packaging:** Electron and electron-builder
 - **CI:** GitHub Actions builds on Ubuntu, Windows, and macOS
 
 ## Getting started
