@@ -1,226 +1,188 @@
-import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import prettier from "prettier";
 
+type ProviderConfig = { name: "groq" | "openrouter" | "gemini"; key: string; baseUrl?: string; model: string };
+
+const firstSecret = (...names: string[]): string | undefined => {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return undefined;
+};
+
 export class AIService {
-  private ai: GoogleGenAI;
-  
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) {
-      console.error("ODYSEUS MESH ERROR: Neither GEMINI_API_KEY nor API_KEY is defined in the environment.");
-    }
-    this.ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
-  }
+  // Accept historical spellings already saved in Vercel. Never log or return secret values.
+  private getProviders(): ProviderConfig[] {
+    const providers: ProviderConfig[] = [];
+    const groqKey = firstSecret(
+      "GROQ_API_KEY", "GROQ_APIKEY", "GROQ_KEY",
+      "GROK_API_KEY", "GROK_APIKEY", "GROK_KEY",
+      "GROQ_API_TOKEN", "GROK_API_TOKEN"
+    );
+    const openRouterKey = firstSecret(
+      "OPENROUTER_API_KEY", "OPEN_ROUTER_API_KEY",
+      "OPENROUTER_KEY", "OPEN_ROUTER_KEY",
+      "OPENROUTER_APIKEY", "OPEN_ROUTER_APIKEY"
+    );
+    const geminiKey = firstSecret("GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "API_KEY");
 
-  async generate(prompt: string, isHighThinking: boolean = false, agentModels?: Record<string, string>, onStream?: (snapshot: { characters: number; preview: string }) => void): Promise<string> {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) {
-      throw new Error("AI generation is unavailable: configure GEMINI_API_KEY on the server.");
-    }
-    try {
-      const model = isHighThinking ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
-      
-      let modelContext = "";
-      if (agentModels) {
-        modelContext = `\n\nAgent Orchestration Context:\n` + 
-          Object.entries(agentModels).map(([id, m]) => `- ${id}: ${m}`).join('\n');
-      }
-
-      const config: any = {
-        systemInstruction: `You are the Odyseus AI Orchestrator, a world-class software architect. 
-        Your goal is to synthesize high-quality, production-ready software architectures. 
-        
-        CRITICAL INSTRUCTIONS:
-        1. ALWAYS generate a complex, multi-tier architecture.
-        2. Include a modern frontend (React/Next.js), a robust backend (Node.js/Go/Rust), and infrastructure-as-code (Terraform/Docker/K8s).
-        3. Use multiple programming languages where appropriate (e.g., Rust for performance-critical parts, Go for microservices, TypeScript for frontend).
-        4. Ensure the file structure is professional (e.g., /src, /server, /infra, /core, /scripts).
-        5. Include detailed README.md and documentation.
-        6. Make the interface feel like a polished professional product, not a generic AI template.
-        7. Use consistent, purposeful icons from lucide-react when the generated stack supports it. Never invent fake brand logos, use emoji as primary navigation icons, or mix unrelated icon styles.
-        8. Use a restrained geometry system: 4-8px corners for controls, 8-12px for panels, square edges for dense data tables and tool surfaces. Avoid pill-shaped cards, excessive rounded corners, random gradients, and glowing blobs.
-        9. Give every visible button a real, implemented action. If an integration is unavailable, clearly label it as unavailable instead of pretending it worked.
-        10. Prioritize readable spacing, keyboard focus states, responsive overflow, and useful empty/error states.
-        ${modelContext}
-        
-        You must ALWAYS respond with a valid JSON object containing 'projectName' and 'files' (an array of {path, content} objects).`,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            projectName: { type: Type.STRING },
-            files: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  path: { type: Type.STRING },
-                  content: { type: Type.STRING }
-                },
-                required: ["path", "content"]
-              }
-            }
-          },
-          required: ["projectName", "files"]
-        }
-      };
-
-      if (isHighThinking) {
-        config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
-      }
-
-      // Consume the provider's actual token stream instead of waiting for one
-      // large response and animating fake progress in the client.
-      const stream = await this.ai.models.generateContentStream({
-        model,
-        contents: prompt,
-        config
-      });
-      let text = "";
-      let lastReportedAt = Date.now();
-
-      for await (const chunk of stream) {
-        if (chunk.text) {
-          text += chunk.text;
-          const now = Date.now();
-          if (onStream && (now - lastReportedAt >= 1200 || text.length < 120)) {
-            onStream({
-              characters: text.length,
-              preview: text.slice(-180).replace(/\\s+/g, " ").trim()
-            });
-            lastReportedAt = now;
-          }
-        }
-      }
-
-      if (!text.trim()) {
-        throw new Error("Empty response from Gemini Mesh");
-      }
-      onStream?.({ characters: text.length, preview: "Provider stream completed." });
-      return text;
-    } catch (error) {
-      console.error("AIService: Primary Gemini Mesh failed.", error);
-      // Never report a fabricated README as a successful generated project.
-      // Let the API layer return a real error so the UI can offer a retry.
-      const message = error instanceof Error ? error.message : "Unknown AI provider error";
-      throw new Error(`AI generation failed: ${message}`);
-    }
-  }
-
-  async chat(messages: { role: 'user' | 'model'; parts: { text: string }[] }[], systemInstruction?: string): Promise<string> {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) throw new Error("AI chat is unavailable: configure GEMINI_API_KEY on the server.");
-    const response = await this.ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: messages,
-      config: { systemInstruction, tools: [{ googleSearch: {} }] }
+    if (groqKey) providers.push({
+      name: "groq", key: groqKey, baseUrl: "https://api.groq.com/openai/v1",
+      model: firstSecret("GROQ_MODEL", "GROK_MODEL") || "llama-3.3-70b-versatile"
     });
-    if (!response.text) throw new Error("AI chat returned an empty response.");
-    return response.text;
+    if (openRouterKey) providers.push({
+      name: "openrouter", key: openRouterKey, baseUrl: "https://openrouter.ai/api/v1",
+      model: firstSecret("OPENROUTER_MODEL", "OPEN_ROUTER_MODEL") || "openai/gpt-4o-mini"
+    });
+    if (geminiKey) providers.push({ name: "gemini", key: geminiKey, model: "gemini-2.5-flash" });
+    return providers;
+  }
+
+  getProviderStatus() {
+    const providers = this.getProviders();
+    return {
+      available: providers.length > 0,
+      providers: providers.map(({ name, model }) => ({ name, model, configured: true })),
+      missing: ["Groq", "OpenRouter", "Gemini"].filter((name) =>
+        !providers.some((p) => p.name === name.toLowerCase())
+      )
+    };
+  }
+
+  private async requestText(
+    system: string,
+    prompt: string,
+    options: { json?: boolean; maxTokens?: number; temperature?: number } = {}
+  ): Promise<string> {
+    const providers = this.getProviders();
+    if (!providers.length) {
+      throw new Error("AI is not configured. Add a Groq, OpenRouter, or Gemini server environment variable. Common accepted names include GROK_API_KEY and OPEN_ROUTER_API_KEY.");
+    }
+    const errors: string[] = [];
+    for (const provider of providers) {
+      try {
+        let result = "";
+        if (provider.name === "gemini") {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${provider.model}:generateContent?key=${encodeURIComponent(provider.key)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: system }] },
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                  temperature: options.temperature ?? 0.2,
+                  maxOutputTokens: options.maxTokens ?? 8192,
+                  ...(options.json ? { responseMimeType: "application/json" } : {})
+                }
+              }),
+              signal: AbortSignal.timeout(90000)
+            }
+          );
+          const data: any = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data?.error?.message || `Gemini returned HTTP ${response.status}`);
+          result = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text || "").join("") || "";
+        } else {
+          const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${provider.key}`,
+              "Content-Type": "application/json",
+              ...(provider.name === "openrouter" ? { "HTTP-Referer": process.env.APP_URL || "https://nexus-pro-01.vercel.app", "X-Title": "Odyseus Nexus Pro" } : {})
+            },
+            body: JSON.stringify({
+              model: provider.model,
+              messages: [{ role: "system", content: system }, { role: "user", content: prompt }],
+              temperature: options.temperature ?? 0.2,
+              max_tokens: options.maxTokens ?? 8192,
+              ...(options.json ? { response_format: { type: "json_object" } } : {})
+            }),
+            signal: AbortSignal.timeout(90000)
+          });
+          const data: any = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data?.error?.message || `${provider.name} returned HTTP ${response.status}`);
+          result = data?.choices?.[0]?.message?.content || "";
+        }
+        if (result.trim()) return result.trim();
+        throw new Error("Provider returned an empty response.");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown provider error";
+        // Avoid accidentally including a secret in any surfaced provider error.
+        errors.push(`${provider.name}: ${message.replaceAll(provider.key, "[redacted]")}`);
+        console.warn(`[Odyseus AI] ${provider.name} request failed; trying the next configured provider.`);
+      }
+    }
+    throw new Error(`All configured AI providers failed. ${errors.join(" | ")}`);
+  }
+
+  async generate(
+    prompt: string,
+    isHighThinking = false,
+    agentModels?: Record<string, string>,
+    onStream?: (snapshot: { characters: number; preview: string }) => void
+  ): Promise<string> {
+    const modelContext = agentModels
+      ? "\n\nAgent orchestration preferences:\n" + Object.entries(agentModels).map(([id, model]) => `- ${id}: ${model}`).join("\n")
+      : "";
+    const system = `You are the Odyseus AI Orchestrator, a senior software architect. Generate a complete, useful project, not a mock description. Return only valid JSON with projectName, description, and files (array of {path, content, language}). Include appropriate frontend and backend files, setup instructions, safe defaults, and a README. Never claim an integration is configured unless it is. Avoid unnecessary infrastructure boilerplate. ${isHighThinking ? "Think carefully about architecture, correctness and security before answering." : ""}${modelContext}`;
+    onStream?.({ characters: 0, preview: "Contacting configured AI provider…" });
+    const text = await this.requestText(system, prompt, { json: true, maxTokens: 12000, temperature: 0.2 });
+    onStream?.({ characters: text.length, preview: "AI response received; validating project output." });
+    return text;
+  }
+
+  async chat(messages: { role: "user" | "model"; parts: { text: string }[] }[], systemInstruction?: string): Promise<string> {
+    const prompt = messages.map((message) =>
+      `${message.role === "model" ? "Assistant" : "User"}: ${message.parts.map((part) => part.text).join("\n")}`
+    ).join("\n\n");
+    return this.requestText(systemInstruction || "You are Odyseus, a helpful software-building assistant. Be accurate and concise.", prompt, { maxTokens: 4096, temperature: 0.4 });
   }
 
   async complex(prompt: string): Promise<string> {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!apiKey) throw new Error("Complex AI requests are unavailable: configure GEMINI_API_KEY on the server.");
-    const response = await this.ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
-      contents: prompt,
-      config: { thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH } }
-    });
-    if (!response.text) throw new Error("Complex AI request returned an empty response.");
-    return response.text;
+    return this.requestText("You are a careful senior engineer. Think deeply and provide a rigorous, practical answer.", prompt, { maxTokens: 8192, temperature: 0.2 });
   }
 
   async debug(code: string, error: string | null): Promise<any> {
     try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Analyze the following code for potential bugs or errors. ${error ? `Reported error: ${error}` : ''}\n\nCode:\n${code}`,
-        config: {
-          systemInstruction: "You are a world-class debugger. Analyze the code and provide a list of potential issues, their severity, and suggested fixes in JSON format.",
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              issues: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    line: { type: Type.NUMBER },
-                    message: { type: Type.STRING },
-                    severity: { type: Type.STRING, enum: ["error", "warning"] },
-                    fix: { type: Type.STRING }
-                  },
-                  required: ["line", "message", "severity", "fix"]
-                }
-              }
-            },
-            required: ["issues"]
-          }
-        }
-      });
-      return JSON.parse(response.text || '{"issues": []}');
+      const text = await this.requestText(
+        "You are a code debugger. Return JSON with an issues array; each issue has line (number), message, severity (error or warning), and fix.",
+        `Reported error: ${error || "none"}\n\nCode:\n${code}`,
+        { json: true, maxTokens: 4096 }
+      );
+      const parsed = JSON.parse(text);
+      return { issues: Array.isArray(parsed.issues) ? parsed.issues : [] };
     } catch (err) {
-      console.error("AIService Debug Error:", err);
-      return { issues: [] };
+      console.error("[Odyseus AI] Debug request failed:", err instanceof Error ? err.message : "Unknown error");
+      throw err;
     }
   }
 
   async lint(code: string, language: string): Promise<any> {
     try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Lint the following ${language} code for style and best practices.\n\nCode:\n${code}`,
-        config: {
-          systemInstruction: "You are a strict code linter. Analyze the code and provide a list of style violations or best practice improvements in JSON format.",
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              results: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    line: { type: Type.NUMBER },
-                    message: { type: Type.STRING },
-                    severity: { type: Type.STRING, enum: ["error", "warning"] }
-                  },
-                  required: ["line", "message", "severity"]
-                }
-              }
-            },
-            required: ["results"]
-          }
-        }
-      });
-      return JSON.parse(response.text || '{"results": []}');
+      const text = await this.requestText(
+        "You are a strict code linter. Return JSON with a results array; each item has line (number), message, severity (error or warning).",
+        `Lint this ${language} code for actionable style and best-practice issues:\n\n${code}`,
+        { json: true, maxTokens: 4096 }
+      );
+      const parsed = JSON.parse(text);
+      return { results: Array.isArray(parsed.results) ? parsed.results : [] };
     } catch (err) {
-      console.error("AIService Lint Error:", err);
-      return { results: [] };
+      console.error("[Odyseus AI] Lint request failed:", err instanceof Error ? err.message : "Unknown error");
+      throw err;
     }
   }
 
   async format(code: string, language: string): Promise<string> {
     try {
-      const parser = language === 'typescript' || language === 'tsx' ? 'typescript' : 
-                     language === 'javascript' || language === 'jsx' ? 'babel' :
-                     language === 'css' ? 'css' :
-                     language === 'html' ? 'html' :
-                     language === 'json' ? 'json' : 'babel';
-      
-      const formatted = await prettier.format(code, {
-        parser,
-        semi: true,
-        singleQuote: true,
-        trailingComma: 'es5',
-        printWidth: 100,
-      });
-      return formatted;
+      const parser = language === "typescript" || language === "tsx" ? "typescript"
+        : language === "javascript" || language === "jsx" ? "babel"
+        : language === "css" ? "css" : language === "html" ? "html"
+        : language === "json" ? "json" : "babel";
+      return await prettier.format(code, { parser, semi: true, singleQuote: true, trailingComma: "es5", printWidth: 100 });
     } catch (err) {
-      console.error("AIService Format Error:", err);
-      return code; // Return original code if formatting fails
+      console.error("[Odyseus AI] Format failed:", err instanceof Error ? err.message : "Unknown error");
+      return code;
     }
   }
 }
