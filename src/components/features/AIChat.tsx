@@ -79,7 +79,7 @@ export const AIChat = () => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-nexus-accent text-white shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center z-50 group"
+          aria-label="Open Odyseus assistant" title="Open Odyseus assistant" className="fixed bottom-6 right-6 w-14 h-14 rounded-xl bg-nexus-accent text-nexus-accent-contrast border border-nexus-border flex items-center justify-center z-50 group"
         >
           <MessageSquare size={24} className="group-hover:rotate-12 transition-transform" />
           {(feedback || messages.length > 1) && (
@@ -97,10 +97,13 @@ export const AIChat = () => {
               y: 0, 
               scale: 1,
               height: isMinimized ? '64px' : '500px',
-              width: isMinimized ? '200px' : '380px'
+              width: isMinimized ? '200px' : '380px',
+              maxWidth: 'calc(100vw - 24px)',
+              bottom: 'max(12px, env(safe-area-inset-bottom))',
+              right: '12px'
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 glass"
+            className="fixed bg-[#191918] border border-nexus-border rounded-xl flex flex-col overflow-hidden z-50 glass"
           >
             {/* Header */}
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
@@ -131,6 +134,7 @@ export const AIChat = () => {
                 <button 
                   onClick={() => setIsMinimized(!isMinimized)}
                   title={isMinimized ? 'Maximize' : 'Minimize'}
+                  aria-label={isMinimized ? 'Maximize assistant' : 'Minimize assistant'}
                   className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
                 >
                   {isMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
@@ -138,6 +142,7 @@ export const AIChat = () => {
                 <button 
                   onClick={() => setIsOpen(false)}
                   title="Close chat"
+                  aria-label="Close assistant"
                   className="p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
                 >
                   <X size={14} />
@@ -263,14 +268,14 @@ export const AIChat = () => {
                 
                 {/* Footer Info */}
                 <div className="p-3 bg-white/[0.02] border-t border-white/5 flex items-center justify-center gap-4">
-                  <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/20">
-                    <Sparkles size={10} className="text-nexus-accent" />
-                    Gemini 3.1 Pro
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <Sparkles size={12} />
+                    Configured AI provider
                   </div>
                   <div className="w-1 h-1 rounded-full bg-white/10" />
-                  <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-white/20">
-                    <Bot size={10} className="text-nexus-accent" />
-                    Neural Mesh
+                  <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                    <Bot size={12} />
+                    Odyseus assistant
                   </div>
                 </div>
               </>
