@@ -1177,7 +1177,7 @@ export default function App() {
 
       {/* --- Main Content --- */}
       <div className="flex-1 flex flex-col min-w-0 relative pt-14 lg:pt-0">
-        {showSpatialWorkspace && <div className="absolute inset-0 z-[55]"><SpatialWorkspace /><button type="button" aria-label="Exit spatial workspace" onClick={() => setShowSpatialWorkspace(false)} className="absolute right-4 top-[62px] z-[80] flex h-9 items-center gap-2 rounded-md border border-[#34332f] bg-[#191918] px-3 text-xs text-[#eceae5] hover:bg-[#222120]"><X size={14}/> Exit spatial</button></div>}
+        {showSpatialWorkspace && <div className="absolute inset-0 z-[55]"><SpatialWorkspace prompt={prompt} setPrompt={setPrompt} onBuild={handleGenerate} /><button type="button" aria-label="Exit spatial workspace" onClick={() => setShowSpatialWorkspace(false)} className="absolute right-4 top-[62px] z-[80] flex h-9 items-center gap-2 rounded-md border border-[#34332f] bg-[#191918] px-3 text-xs text-[#eceae5] hover:bg-[#222120]"><X size={14}/> Exit spatial</button></div>}
         {/* Header / Tabs — Zone A Command Bar (Spec 4.1 / 5.1) */}
         <div className="h-14 surface-shell flex items-center justify-between px-4 lg:px-6 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-6">
