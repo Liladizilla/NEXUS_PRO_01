@@ -31,6 +31,7 @@ export function SpatialWorkspace() {
   const [rotation, setRotation] = useState({ x: 54, y: -26 });
   const [zoom, setZoom] = useState(0.9);
   const [showConsole, setShowConsole] = useState(false);
+  const [showMobileAgents, setShowMobileAgents] = useState(false);
   const [lowMotion, setLowMotion] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const selectedAgent = agents.find(agent => agent.id === selectedId);
   const activeAgents = agents.filter(agent => ['queued', 'thinking', 'working'].includes(agent.status));
@@ -56,7 +57,7 @@ export function SpatialWorkspace() {
     <header className="sp-topbar">
       <div className="sp-brand"><span className="sp-brand-mark"><Compass size={19}/></span><div><strong>Odyseus spatial</strong><small>{projectName}</small></div></div>
       <div className="sp-top-status"><span className={`sp-status-dot ${isGenerating ? 'is-live' : ''}`} />{isGenerating ? 'Build in progress' : 'Workspace ready'}<span className="sp-divider"/> <span>{agents.length} agents</span></div>
-      <button className="sp-quiet-btn" onClick={() => setShowConsole(v => !v)} aria-expanded={showConsole}><Terminal size={16}/> Console</button>
+      <button className="sp-quiet-btn sp-agents-toggle" onClick={() => setShowMobileAgents(v => !v)} aria-expanded={showMobileAgents} aria-controls="sp-agent-rail"><Bot size={16}/> Agents</button><button className="sp-quiet-btn" onClick={() => setShowConsole(v => !v)} aria-expanded={showConsole}><Terminal size={16}/> Console</button>
     </header>
     <div className="sp-toolbar" aria-label="Camera controls">
       <div className="sp-tool-group"><span className="sp-toolbar-label">Camera</span><button onClick={() => setCamera(rotation.x - 8, rotation.y)} aria-label="Tilt camera up"><ChevronUp size={16}/></button><button onClick={() => setCamera(rotation.x + 8, rotation.y)} aria-label="Tilt camera down"><ChevronDown size={16}/></button><button onClick={() => setCamera(rotation.x, rotation.y - 12)} aria-label="Rotate camera left"><ArrowDownRight size={16}/></button><button onClick={() => setCamera(rotation.x, rotation.y + 12)} aria-label="Rotate camera right"><ArrowUpRight size={16}/></button><button onClick={resetCamera} aria-label="Reset camera"><RotateCcw size={15}/></button></div>
@@ -79,7 +80,7 @@ export function SpatialWorkspace() {
         <div className="sp-stage-caption"><span><Activity size={14}/>{activeAgents.length ? `${activeAgents.length} agents active` : 'No active build steps'}</span><span>Obsidian city · Adaptive detail</span></div>
         {selectedAgent && <aside className="sp-inspector" aria-live="polite"><button className="sp-inspector-close" onClick={() => setSelectedId(null)} aria-label="Close agent details"><X size={15}/></button><span className="sp-inspector-kicker">Selected agent</span><h3>{selectedAgent.name}</h3><p>{selectedAgent.role}</p><div className="sp-inspector-status"><span style={{ background: statusColor[selectedAgent.status] }}/>{statusLabel[selectedAgent.status]}</div><dl><div><dt>Model</dt><dd>{selectedAgent.model || 'Not configured'}</dd></div><div><dt>Last action</dt><dd>{selectedAgent.lastAction || 'No task reported'}</dd></div></dl><button className="sp-inspector-action" onClick={() => { setActiveTab('debug'); addLog(`Opened debug view for ${selectedAgent.name}.`); }}>Open debug logs <ArrowUpRight size={14}/></button></aside>}
       </div>
-      <aside className="sp-right-rail">
+      <aside id="sp-agent-rail" className={`sp-right-rail ${showMobileAgents ? 'is-mobile-open' : ''}`} aria-label="Agent controls">
         <div className="sp-rail-head"><span>Agent network</span><span>{agents.length.toString().padStart(2, '0')}</span></div>
         {agents.map(agent => <button className={`sp-agent-row ${selectedId === agent.id ? 'is-selected' : ''}`} key={agent.id} onClick={() => setSelectedId(agent.id)}><span className="sp-agent-symbol" style={{ color: statusColor[agent.status] }}><Bot size={17}/></span><span className="sp-agent-row-copy"><b>{agent.name}</b><small>{agent.role}</small></span><span className="sp-agent-row-status"><i style={{ background: statusColor[agent.status] }}/>{statusLabel[agent.status]}</span></button>)}
         <div className="sp-rail-divider"/>
