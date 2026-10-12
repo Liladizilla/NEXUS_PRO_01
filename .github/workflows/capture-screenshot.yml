@@ -50,8 +50,7 @@ jobs:
           exit 1
 
       - name: Install Chromium for screenshot capture
-        run: |
-          npx --yes playwright@1.55.0 install --with-deps chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
 
       - name: Capture the built application (not a mockup)
         run: |
@@ -59,7 +58,7 @@ jobs:
           npx --yes playwright@1.55.0 screenshot \
             --browser chromium \
             --viewport-size "1440,1000" \
-            --wait-for-selector "#root > *" \\
+            --wait-for-selector "#root > *" \
             --wait-for-timeout 3000 \
             --full-page \
             http://127.0.0.1:4173/ \
