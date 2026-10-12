@@ -17,3 +17,52 @@
 @media(max-width:900px){.sp-body{grid-template-columns:minmax(0,1fr)}.sp-right-rail{display:none}.sp-world{width:90%;height:72%;top:46%}.sp-drag-hint{display:none}.sp-top-status{margin-left:auto}.sp-top-status .sp-divider,.sp-top-status span:last-child{display:none}}
 @media(max-width:560px){.sp-topbar{height:50px;padding:0 12px;gap:8px}.sp-brand{min-width:0}.sp-brand-mark{width:30px;height:30px}.sp-top-status{font-size:11px}.sp-quiet-btn{font-size:0;padding:7px;min-width:36px;justify-content:center}.sp-toolbar{height:44px;padding:0 10px;gap:8px}.sp-toolbar-label{display:none}.sp-tool-group{gap:3px}.sp-tool-group button{width:28px;height:28px}.sp-world{width:108%;height:58%;top:44%}.sp-building-name{font-size:9px}.sp-agent-tag{padding:3px 5px}.sp-agent-tag b{font-size:10px}.sp-agent-tag small{font-size:9px}.sp-avatar{width:32px;height:32px}.sp-stage-caption{font-size:10px;bottom:9px;left:9px;right:9px}.sp-inspector{top:8px;right:8px;width:calc(100% - 16px);padding:14px}.sp-city-grid{background-size:30px 30px}}
 @media(prefers-reduced-motion:reduce){.sp-agent.status-working .sp-avatar,.sp-agent.status-thinking .sp-avatar{animation:none!important}.sp-world{transition:none!important}*{scroll-behavior:auto!important}}
+
+/* Agent World pass: the scene is the workspace, not a 2D dashboard pasted on a grid. */
+.sp-workspace{background:#11110f}
+.sp-topbar{background:rgba(17,17,16,.94);backdrop-filter:blur(10px)}
+.sp-body{grid-template-columns:minmax(0,1fr) 264px}
+.sp-city-stage{background:radial-gradient(ellipse at 50% 42%,#292820 0%,#181815 43%,#10100f 100%)}
+.sp-city-grid{opacity:.24;background-size:56px 56px}
+.sp-world{width:min(1060px,94%);height:min(760px,94%);perspective:1200px}
+.sp-city-ground{inset:5% 1%;background:linear-gradient(145deg,#22221d,#141411 65%);border-color:#464438;box-shadow:inset 0 0 0 12px #1c1c17,inset 0 0 0 14px #343328,0 35px 50px #0007}
+.sp-road{background:#2c2b24;border-color:#3a392e;box-shadow:0 2px 0 #11110e}
+.sp-road-h{height:15px}.sp-road-v{width:15px}
+.sp-building{filter:drop-shadow(7px 11px 0 rgba(0,0,0,.35));transition:filter .2s}
+.sp-building-front{height:78%;background:linear-gradient(90deg,#464438,#2a2a23);border-color:#625d4d;box-shadow:inset 0 0 0 5px #38372c}
+.sp-building-side{right:-24px;width:24px;height:78%;background:linear-gradient(90deg,#25251f,#151512);border-color:#3b3a30}
+.sp-building-roof{top:-19px;height:31px;background:linear-gradient(135deg,#555344,#37372d);border-color:#77715c;box-shadow:inset 0 0 0 4px #484638}
+.sp-building-name{font-size:11px;letter-spacing:.01em;background:#11110fee;border-color:#4a493d;padding:4px 8px}
+.sp-building:hover,.sp-building.is-selected{filter:drop-shadow(8px 13px 0 rgba(0,0,0,.45)) drop-shadow(0 0 8px #f28c3830)}
+.sp-agent{z-index:6;gap:9px;will-change:left,top}
+.sp-avatar{width:42px;height:48px;border:0;background:transparent;box-shadow:none;border-radius:0;position:relative;overflow:visible}
+.sp-agent-person{position:absolute;inset:0;display:block;width:24px;height:42px;margin:auto;filter:drop-shadow(2px 4px 1px #0009)}
+.sp-agent-person i{position:absolute;left:8px;top:1px;width:10px;height:10px;border-radius:50%;background:#e2d4bd;border:1px solid var(--agent-color)}
+.sp-agent-person b{position:absolute;left:5px;top:12px;width:16px;height:17px;border-radius:5px 5px 3px 3px;background:var(--agent-color);border:1px solid #f5d3a8}
+.sp-agent-person em,.sp-agent-person small{position:absolute;top:27px;width:6px;height:13px;border-radius:0 0 3px 3px;background:#b9b2a1;transform-origin:top center}
+.sp-agent-person em{left:6px}.sp-agent-person small{left:14px}
+.sp-agent.status-working .sp-agent-person em{animation:sp-leg-walk .38s ease-in-out infinite alternate}
+.sp-agent.status-working .sp-agent-person small{animation:sp-leg-walk .38s ease-in-out infinite alternate-reverse}
+.sp-agent.status-thinking .sp-agent-person{animation:sp-agent-think 1.8s ease-in-out infinite}
+.sp-agent-tag{background:#11110feF;border-color:#454438;box-shadow:0 4px 8px #0005}
+.sp-agent-tag b{font-size:12px}.sp-agent-tag small{font-size:11px}
+.sp-agent.status-working .sp-agent-tag{border-color:var(--agent-color)}
+.sp-agent.agent-architect{animation:sp-wander-architect 22s ease-in-out infinite alternate}
+.sp-agent.agent-frontend{animation:sp-wander-frontend 19s ease-in-out infinite alternate}
+.sp-agent.agent-backend{animation:sp-wander-backend 24s ease-in-out infinite alternate}
+.sp-agent.agent-debug{animation:sp-wander-debug 17s ease-in-out infinite alternate}
+.sp-agent.agent-devops{animation:sp-wander-devops 21s ease-in-out infinite alternate}
+.sp-agent.is-selected{z-index:12}
+.sp-agent.is-selected .sp-avatar{background:transparent;box-shadow:none}
+.sp-agent.is-selected .sp-agent-person{filter:drop-shadow(0 0 7px var(--agent-color)) drop-shadow(2px 4px 1px #0009)}
+.sp-stage-caption{font-size:12px;color:#a09d95}
+.sp-right-rail{background:rgba(21,21,20,.96)}
+@keyframes sp-leg-walk{from{transform:rotate(-20deg)}to{transform:rotate(20deg)}}
+@keyframes sp-agent-think{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes sp-wander-architect{0%,100%{left:28%;top:24%}50%{left:34%;top:34%}}
+@keyframes sp-wander-frontend{0%,100%{left:58%;top:20%}50%{left:51%;top:31%}}
+@keyframes sp-wander-backend{0%,100%{left:76%;top:41%}50%{left:69%;top:50%}}
+@keyframes sp-wander-debug{0%,100%{left:40%;top:55%}50%{left:47%;top:64%}}
+@keyframes sp-wander-devops{0%,100%{left:62%;top:65%}50%{left:68%;top:72%}}
+@media(prefers-reduced-motion:reduce){.sp-agent,.sp-agent-person em,.sp-agent-person small,.sp-agent-person{animation:none!important}}
+@media(max-width:850px){.sp-body{grid-template-columns:minmax(0,1fr)}.sp-right-rail{display:none}.sp-topbar{height:48px;padding:0 12px}.sp-brand{min-width:0}.sp-top-status{display:none}.sp-toolbar{gap:8px;padding:0 8px}.sp-toolbar-label,.sp-drag-hint{display:none}.sp-world{width:112%;height:85%}.sp-agent-tag{padding:3px 5px}.sp-agent-tag b{font-size:11px}.sp-agent-tag small{font-size:10px}}
