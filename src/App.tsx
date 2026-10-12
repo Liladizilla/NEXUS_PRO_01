@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Activity,
+  Compass,
   Box,
   RefreshCw,
   Globe,
