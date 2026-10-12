@@ -455,7 +455,7 @@ export default function App() {
   const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDashboardHome, setShowDashboardHome] = useState(true);
-  const [showSpatialWorkspace, setShowSpatialWorkspace] = useState(false);
+  const [showSpatialWorkspace, setShowSpatialWorkspace] = useState(true);
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
