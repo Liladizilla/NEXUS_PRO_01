@@ -7,6 +7,7 @@ import './styles/index.css';
 import './styles/pro_ui_theme.css';
 import './styles/industrial-overrides.css';
 import './styles/odyseus-redesign.css';
+import './styles/spec-redesign.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

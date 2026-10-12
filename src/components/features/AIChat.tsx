@@ -79,7 +79,7 @@ export const AIChat = () => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-nexus-accent text-white shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center z-50 group"
+          aria-label="Open Odyseus AI chat" className="odyseus-ai-chat-toggle fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-nexus-accent text-white flex items-center justify-center z-50 group"
         >
           <MessageSquare size={24} className="group-hover:rotate-12 transition-transform" />
           {(feedback || messages.length > 1) && (
@@ -100,7 +100,7 @@ export const AIChat = () => {
               width: isMinimized ? '200px' : '380px'
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden z-50 glass"
+            className="odyseus-ai-chat-window fixed bottom-6 right-6 bg-[#0a0a0a] border border-white/10 rounded-2xl flex flex-col overflow-hidden z-50 glass"
           >
             {/* Header */}
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
