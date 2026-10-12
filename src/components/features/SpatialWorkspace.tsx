@@ -20,8 +20,8 @@ const sites = [
 
 function AgentAvatar({ agent, selected, onSelect }: { agent: Agent; selected: boolean; onSelect: () => void }) {
   const color = statusColor[agent.status];
-  return <button type="button" className={`sp-agent ${selected ? 'is-selected' : ''} status-${agent.status}`} style={{ left: `${sites.find(s => s.id === agent.id)?.x ?? 50}%`, top: `${(sites.find(s => s.id === agent.id)?.y ?? 50) - 7}%`, '--agent-color': color } as React.CSSProperties} onClick={onSelect} aria-label={`${agent.name}, ${statusLabel[agent.status]}. Select agent`}>
-    <span className="sp-avatar"><Bot size={21} /></span><span className="sp-agent-tag"><b>{agent.name}</b><small>{statusLabel[agent.status]}</small></span>
+  return <button type="button" className={`sp-agent agent-${agent.id} ${selected ? 'is-selected' : ''} status-${agent.status}`} style={{ left: `${sites.find(s => s.id === agent.id)?.x ?? 50}%`, top: `${(sites.find(s => s.id === agent.id)?.y ?? 50) - 7}%`, '--agent-color': color } as React.CSSProperties} onClick={onSelect} aria-label={`${agent.name}, ${statusLabel[agent.status]}. Select agent`}>
+    <span className="sp-avatar"><span className="sp-agent-person" aria-hidden="true"><i/><b/><em/><small/></span></span><span className="sp-agent-tag"><b>{agent.name}</b><small>{statusLabel[agent.status]}</small></span>
   </button>;
 }
 
