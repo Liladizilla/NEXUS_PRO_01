@@ -1132,14 +1132,16 @@ export default function App() {
                   </div>
                 </section>
 
-                <section>
-                  <span className="text-[10px] uppercase tracking-widest text-text-muted font-bold block mb-2">Agents</span>
-                  <div className="space-y-2">
-                    {agents.map(agent => (
-                      <AgentCard key={agent.id} agent={agent} />
-                    ))}
-                  </div>
-                </section>
+                {isGenerating && (
+                  <section aria-label="Active build agents" aria-live="polite">
+                    <span className="text-sm font-semibold text-text-muted block mb-2">Build agents</span>
+                    <div className="space-y-2">
+                      {agents.map(agent => (
+                        <AgentCard key={agent.id} agent={agent} />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             </>
           ) : (
