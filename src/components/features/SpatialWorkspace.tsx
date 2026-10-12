@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Activity, ArrowDownRight, ArrowUpRight, Bot, Building2, Camera, CheckCircle2, ChevronDown, ChevronUp, Circle, Code2, Compass, Maximize2, Minus, Plus, RotateCcw, Terminal, X } from 'lucide-react';
+import { Activity, ArrowDownRight, ArrowUpRight, Bot, Building2, Camera, CheckCircle2, ChevronDown, ChevronUp, Circle, Code2, Compass, Maximize2, Minus, Plus, RotateCcw, Terminal, X, Send } from 'lucide-react';
 import { useNexusStore, type Agent } from '../../core/store';
 import './spatial-workspace.css';
 
@@ -20,12 +20,14 @@ const sites = [
 
 function AgentAvatar({ agent, selected, onSelect }: { agent: Agent; selected: boolean; onSelect: () => void }) {
   const color = statusColor[agent.status];
-  return <button type="button" className={`sp-agent ${selected ? 'is-selected' : ''} status-${agent.status}`} style={{ left: `${sites.find(s => s.id === agent.id)?.x ?? 50}%`, top: `${(sites.find(s => s.id === agent.id)?.y ?? 50) - 7}%`, '--agent-color': color } as React.CSSProperties} onClick={onSelect} aria-label={`${agent.name}, ${statusLabel[agent.status]}. Select agent`}>
-    <span className="sp-avatar"><Bot size={21} /></span><span className="sp-agent-tag"><b>{agent.name}</b><small>{statusLabel[agent.status]}</small></span>
+  return <button type="button" className={`sp-agent agent-${agent.id} ${selected ? 'is-selected' : ''} status-${agent.status}`} style={{ left: `${sites.find(s => s.id === agent.id)?.x ?? 50}%`, top: `${(sites.find(s => s.id === agent.id)?.y ?? 50) - 7}%`, '--agent-color': color } as React.CSSProperties} onClick={onSelect} aria-label={`${agent.name}, ${statusLabel[agent.status]}. Select agent`}>
+    <span className="sp-avatar"><span className="sp-agent-person" aria-hidden="true"><i/><b/><em/><small/></span></span><span className="sp-agent-tag"><b>{agent.name}</b><small>{statusLabel[agent.status]}</small></span>
   </button>;
 }
 
-export function SpatialWorkspace() {
+type SpatialWorkspaceProps = { prompt: string; setPrompt: (value: string) => void; onBuild: (promptOverride?: string) => void | Promise<void> };
+
+export function SpatialWorkspace({ prompt, setPrompt, onBuild }: SpatialWorkspaceProps) {
   const { agents, logs, files, projectName, isGenerating, setActiveTab, addLog } = useNexusStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rotation, setRotation] = useState({ x: 54, y: -26 });
@@ -76,6 +78,12 @@ export function SpatialWorkspace() {
           {agents.map(agent => <AgentAvatar key={agent.id} agent={agent} selected={selectedId === agent.id} onSelect={() => setSelectedId(agent.id)}/>)}
           {activeAgents.length > 1 && <svg className="sp-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{activeAgents.slice(1).map((agent, i) => { const a = sites.find(s => s.id === activeAgents[0].id); const b = sites.find(s => s.id === agent.id); return a && b ? <line key={agent.id} x1={a.x} y1={a.y} x2={b.x} y2={b.y} /> : null; })}</svg>}
         </div>
+        <form className="sp-prompt-dock" onSubmit={event => { event.preventDefault(); if (prompt.trim().length >= 10 && !isGenerating) void onBuild(prompt); }} aria-label="Build prompt">
+          <label className="sr-only" htmlFor="sp-build-prompt">Describe what you want to build</label>
+          <input id="sp-build-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Describe what you want to build…" minLength={10} aria-describedby="sp-prompt-hint" />
+          <span id="sp-prompt-hint" className="sp-prompt-hint">{isGenerating ? 'Agents are building' : 'Enter a prompt · 10 characters minimum'}</span>
+          <button type="submit" disabled={isGenerating || prompt.trim().length < 10} aria-label="Start build"><Send size={16}/><span>{isGenerating ? 'Building' : 'Build'}</span></button>
+        </form>
         <div className="sp-stage-caption"><span><Activity size={14}/>{activeAgents.length ? `${activeAgents.length} agents active` : 'No active build steps'}</span><span>Obsidian city · Adaptive detail</span></div>
         {selectedAgent && <aside className="sp-inspector" aria-live="polite"><button className="sp-inspector-close" onClick={() => setSelectedId(null)} aria-label="Close agent details"><X size={15}/></button><span className="sp-inspector-kicker">Selected agent</span><h3>{selectedAgent.name}</h3><p>{selectedAgent.role}</p><div className="sp-inspector-status"><span style={{ background: statusColor[selectedAgent.status] }}/>{statusLabel[selectedAgent.status]}</div><dl><div><dt>Model</dt><dd>{selectedAgent.model || 'Not configured'}</dd></div><div><dt>Last action</dt><dd>{selectedAgent.lastAction || 'No task reported'}</dd></div></dl><button className="sp-inspector-action" onClick={() => { setActiveTab('debug'); addLog(`Opened debug view for ${selectedAgent.name}.`); }}>Open debug logs <ArrowUpRight size={14}/></button></aside>}
       </div>
