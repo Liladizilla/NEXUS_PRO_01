@@ -1,10 +1,10 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Code2, FileCode2, Layers3, Paperclip, Send, ChevronDown } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 
 type DashboardFile = { path: string; content: string };
 type DashboardProps = {
-  projectName: string; prompt: string; setPrompt: (value: string) => void; onBuild: () => void;
+  projectName: string; prompt: string; setPrompt: (value: string) => void; onBuild: (promptOverride?: string) => void;
   onOpenBuilder: () => void; onOpenCode: () => void; onOpenPreview: () => void; onOpenHistory: () => void;
   onOpenAssets?: () => void; onUpgrade?: () => void; files: DashboardFile[]; agents: {id:string;name:string;role:string;status:string}[];
   logs: string[]; usageCount: number; usageLimit: number; isGenerating: boolean;
@@ -44,6 +44,7 @@ export const DashboardHome: React.FC<DashboardProps> = ({
 }) => {
   const reduceMotion = useReducedMotion();
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const [framework, setFramework] = useState('React');
   const hasProject = files.length > 0;
   const recentFiles = useMemo(() => files.slice(0, 4), [files]);
   const canBuild = prompt.trim().length >= 10 && !isGenerating;
@@ -84,9 +85,9 @@ export const DashboardHome: React.FC<DashboardProps> = ({
             <div className="odyseus-composer-footer">
               <div className="odyseus-composer-tools">
                 <button type="button" aria-label="Attach a file or image" title="Attach a file or image" onClick={onOpenAssets}><Paperclip size={18}/><span>Attach</span></button>
-                <label className="odyseus-stack-picker"><Layers3 size={16}/><span className="sr-only">Framework</span><select aria-label="Framework" defaultValue="React"><option>React</option><option>Next.js</option><option>Astro</option></select><ChevronDown size={14}/></label>
+                <label className="odyseus-stack-picker"><Layers3 size={16}/><span className="sr-only">Framework</span><select aria-label="Framework" value={framework} onChange={event => setFramework(event.target.value)}><option>React</option><option>Next.js</option><option>Astro</option></select><ChevronDown size={14}/></label>
               </div>
-              <button type="button" className="odyseus-primary-action odyseus-build-action" disabled={!canBuild} onClick={onBuild}>
+              <button type="button" className="odyseus-primary-action odyseus-build-action" disabled={!canBuild} onClick={() => onBuild(framework === 'React' ? undefined : `${prompt.trim()}\n\nPreferred framework: ${framework}. Use this framework for the generated project.`)}>
                 {isGenerating ? <span className="odyseus-spinner" aria-hidden="true"/> : <Send size={17}/>}
                 {isGenerating ? 'Building…' : 'Build'}
               </button>
