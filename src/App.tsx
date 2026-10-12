@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Activity,
+  Compass,
   Box,
   RefreshCw,
   Globe,
@@ -71,6 +72,7 @@ import { AssetManager, TemplateSearch, TaskModal, HistoryModal } from './compone
 import { Debugger } from './components/features/Debugger';
 import { DesktopApp } from './components/features/DesktopApp';
 import { DashboardHome } from './components/features/DashboardHome';
+import { SpatialWorkspace } from './components/features/SpatialWorkspace';
 import AgentCard from './components/features/AgentCard';
 import { useNexusStore } from './core/store';
 import { generateApp } from './core/ai';
@@ -453,6 +455,7 @@ export default function App() {
   const currentFile = files.find(f => f.path === activeFile);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDashboardHome, setShowDashboardHome] = useState(true);
+  const [showSpatialWorkspace, setShowSpatialWorkspace] = useState(false);
   const [buildStatus, setBuildStatus] = useState<string>('idle');
   const [buildProgress, setBuildProgress] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -1007,6 +1010,13 @@ export default function App() {
                       <span>Builder</span>
                     </button>
                     <button
+                      onClick={() => setShowSpatialWorkspace(true)}
+                      className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", showSpatialWorkspace ? "border-accent-interactive/40 bg-accent-interactive/10 text-text-primary" : "border-transparent text-text-muted hover:border-default hover:bg-raised hover:text-text-primary")}
+                    >
+                      <Compass size={17} className="shrink-0" />
+                      <span>Spatial city</span>
+                    </button>
+                    <button
                       onClick={() => { setShowDashboardHome(false); setActiveTab('code'); }}
                       className={cn("flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors", activeTab === 'code' ? "border-accent-interactive/40 bg-accent-interactive/10 text-text-primary" : "border-transparent text-text-muted hover:border-default hover:bg-raised hover:text-text-primary")}
                     >
@@ -1158,6 +1168,7 @@ export default function App() {
 
       {/* --- Main Content --- */}
       <div className="flex-1 flex flex-col min-w-0 relative pt-14 lg:pt-0">
+        {showSpatialWorkspace && <div className="absolute inset-0 z-[55]"><SpatialWorkspace /><button type="button" aria-label="Exit spatial workspace" onClick={() => setShowSpatialWorkspace(false)} className="absolute right-4 top-[62px] z-[80] flex h-9 items-center gap-2 rounded-md border border-[#34332f] bg-[#191918] px-3 text-xs text-[#eceae5] hover:bg-[#222120]"><X size={14}/> Exit spatial</button></div>}
         {/* Header / Tabs — Zone A Command Bar (Spec 4.1 / 5.1) */}
         <div className="h-14 surface-shell flex items-center justify-between px-4 lg:px-6 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-6">
