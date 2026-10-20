@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle2, Circle, Loader2, Rocket, ShieldCheck, Terminal } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2, ShieldCheck, Terminal } from 'lucide-react';
 
 interface CICDPipelineProps {
   status: string;
