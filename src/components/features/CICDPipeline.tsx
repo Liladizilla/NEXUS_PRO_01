@@ -10,14 +10,13 @@ interface CICDPipelineProps {
 const steps = [
   { id: 'processing', label: 'Request & planning', icon: Terminal },
   { id: 'synthesizing', label: 'AI file generation', icon: Loader2 },
-  { id: 'building', label: 'Validate generated files', icon: ShieldCheck },
-  { id: 'testing', label: 'Project structure checks', icon: CheckCircle2 },
-  { id: 'deploying', label: 'Prepare preview route', icon: Rocket },
+  { id: 'building', label: 'Structural validation', icon: ShieldCheck },
+  { id: 'completed', label: 'Return generated project', icon: CheckCircle2 },
 ];
 
 export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) => {
   const getStepStatus = (stepId: string) => {
-    const statusOrder = ['queued', 'processing', 'synthesizing', 'building', 'testing', 'deploying', 'completed'];
+    const statusOrder = ['queued', 'processing', 'synthesizing', 'building', 'completed'];
     const currentIdx = statusOrder.indexOf(status);
     const stepIdx = statusOrder.indexOf(stepId);
 
@@ -27,10 +26,10 @@ export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) 
   };
 
   return (
-    <div className="space-y-6 p-6 bg-black/40 border border-white/10 rounded-2xl backdrop-blur-xl">
+    <div className="space-y-5 p-5 bg-[#020305] border border-white/10 rounded-lg">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-white/70 uppercase tracking-widest">CI/CD Pipeline</h3>
-        <span className="text-xs font-mono text-emerald-400">{progress}%</span>
+        <h3 className="text-sm font-medium text-white/70 uppercase tracking-widest">Build progress</h3>
+        <span className="text-xs font-mono text-[#36C1DE]">{progress}%</span>
       </div>
 
       <div className="relative space-y-4">
@@ -51,7 +50,7 @@ export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) 
             >
               <div className={`absolute left-0 w-8 h-8 rounded-full border flex items-center justify-center transition-colors duration-500 ${
                 stepStatus === 'completed' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-500' :
-                stepStatus === 'active' ? 'bg-indigo-500/20 border-indigo-500 text-indigo-500 animate-pulse' :
+                stepStatus === 'active' ? 'bg-[#0B2E54] border-[#36C1DE] text-[#36C1DE]' :
                 'bg-white/5 border-white/10 text-white/30'
               }`}>
                 {stepStatus === 'completed' ? (
@@ -66,7 +65,7 @@ export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) 
               <div className="flex-1">
                 <div className={`text-sm font-medium ${
                   stepStatus === 'completed' ? 'text-white' :
-                  stepStatus === 'active' ? 'text-indigo-400' :
+                  stepStatus === 'active' ? 'text-[#36C1DE]' :
                   'text-white/30'
                 }`}>
                   {step.label}
@@ -75,12 +74,12 @@ export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) 
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: '100%' }}
-                    className="h-0.5 bg-indigo-500/30 mt-1 rounded-full overflow-hidden"
+                    className="h-0.5 bg-[#0B2E54] mt-1 overflow-hidden"
                   >
                     <motion.div
                       animate={{ x: ['-100%', '100%'] }}
                       transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                      className="h-full w-1/3 bg-indigo-500"
+                      className="h-full w-1/3 bg-[#36C1DE]"
                     />
                   </motion.div>
                 )}
@@ -94,14 +93,14 @@ export const CICDPipeline: React.FC<CICDPipelineProps> = ({ status, progress }) 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3"
+          className="mt-5 p-4 bg-[#0B2E54]/40 border border-[#36C1DE]/30 rounded-lg flex items-center gap-3"
         >
-          <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center">
-            <Rocket className="w-4 h-4 text-black" />
+          <div className="w-8 h-8 rounded-md bg-[#36C1DE] flex items-center justify-center">
+            <CheckCircle2 className="w-4 h-4 text-[#020305]" />
           </div>
           <div>
-            <div className="text-sm font-bold text-emerald-400">Generation Complete</div>
-            <div className="text-xs text-emerald-400/60">Generated files passed basic structure checks. This is not a production deployment.</div>
+            <div className="text-sm font-bold text-[#EAF5F8]">Generation complete</div>
+            <div className="text-xs text-[#A5B6C0]">Generated files passed structural checks. No compilation, automated tests, or production deployment ran.</div>
           </div>
         </motion.div>
       )}
