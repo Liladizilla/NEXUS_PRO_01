@@ -17,7 +17,8 @@ This list reflects the current repository state as of 2026-10-20. It is a workin
 - [ ] Verify the end-to-end generation path: prompt submission, task persistence, progress updates, generated file rendering, and an actually runnable preview.
 - [ ] Audit user-facing buttons and integrations so unavailable actions are disabled or clearly report their implementation/configuration status.
 - [ ] Audit release assets and documentation against the actual GitHub Releases page; avoid hard-coded versioned filenames unless verified.
-- [ ] Review tracked build output and backup files (including `package.json.backup`) and remove only files confirmed to be accidental or obsolete.
+- [x] Remove the obsolete `package.json.backup` manifest so it cannot be mistaken for the active package configuration.
+- [ ] Review tracked build output and other generated files; remove only files confirmed to be accidental or obsolete.
 
 ## Validation rule
 Do not mark an item complete until the corresponding command, automated check, or end-to-end test has actually passed.
