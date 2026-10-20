@@ -1,250 +1,118 @@
-# Odyseus Nexus Pro - Desktop Application
+# Odyseus Nexus Pro Desktop
 
-## Overview
-Odyseus Nexus Pro is now available as a native desktop application built with Electron! This brings the power of AI-driven software development to your desktop with enhanced performance and native system integration.
+Odyseus Nexus Pro is an Electron desktop wrapper around the React/Vite workspace and Express API. The application is under active development; availability of a UI control does not mean its remote provider or backend integration is configured.
 
-## Features
+## Download
 
-### Desktop-Specific Features
-- **Native Window Controls**: Minimize, maximize, and close buttons integrated into the app
-- **System Integration**: Access to system information and native APIs
-- **Persistent Settings**: Electron Store for local configuration
-- **Built-in Server**: Embedded Express server for local development
-- **Cross-Platform**: Available for Windows, macOS, and Linux
+Open [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases) and use the assets attached to the latest release for your operating system. Asset names and availability can change between releases, so this document intentionally does not list unverified version-specific filenames.
 
-### Core Features (Same as Web Version)
-- AI-powered application generation
-- Multi-agent orchestration
-- Real-time code editing and debugging
-- Project management and deployment
-- Firebase integration for authentication and storage
+If a release does not include an installer for your platform, build from source using the instructions below.
 
-## Installation
+## Current capabilities and boundaries
 
-### Pre-built Binaries
-Download the latest release for your platform from [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases)
+- React/Vite workspace with project prompts, generated-file views, logs, and preview status.
+- Express API for generation and project tasks.
+- Electron packaging configuration for Windows (NSIS), macOS (DMG), and Linux (AppImage), built on native GitHub Actions runners.
+- Local workspace preferences and session-based asset handling in the UI.
+- Optional Firebase/Firestore-backed task persistence when correctly configured.
 
-- **Windows**: `NexusPro-Setup-1.0.0.exe` (NSIS installer)
-- **macOS**: `NexusPro-1.0.0.dmg` (Disk image)
-- **Linux**: `NexusPro-1.0.0.AppImage` (AppImage)
+Important limitations:
+- AI generation requires a valid server-side `GEMINI_API_KEY`; a key must have suitable access and quota.
+- Persistent task storage requires valid Firebase configuration and Firestore permissions. Without a configured database, task state is ephemeral.
+- A returned preview route is not proof that generated code compiled, ran, or was deployed to production.
+- Billing, purchase verification, and deployment-provider integrations should not be treated as production-ready solely because their UI is present. Check the main [README](README.md) for current integration boundaries.
 
-### Building from Source
+## Build from source
+
+Requirements: a supported Node.js version (the desktop workflow currently uses Node.js 20), npm, and Git.
 
 ```bash
-# Install dependencies
-npm install
-
-# Build the web application
+git clone https://github.com/Liladizilla/NEXUS_PRO_01.git
+cd NEXUS_PRO_01
+npm ci
 npm run build
-
-# Build desktop application for your platform
-npm run electron:build
-
-# Build for specific platforms
-npm run electron:build:win   # Windows
-npm run electron:build:mac   # macOS
-npm run electron:build:linux # Linux
+npm run build:server
 ```
+
+Build a desktop package for the current operating system:
+
+```bash
+npm run electron:build
+```
+
+Platform-specific commands:
+
+```bash
+npm run electron:build:win
+npm run electron:build:mac
+npm run electron:build:linux
+```
+
+Packaging a platform-specific installer is most reliable on that platform. CI builds Windows, macOS, and Linux on separate native runners. Output is written to `release/`.
 
 ## Development
 
-### Running in Development Mode
+The scripts in `package.json` are the source of truth for available commands. The desktop development command is currently:
 
 ```bash
-# Start the web dev server and Electron together
 npm run electron:dev
 ```
 
-This will:
-1. Start the Express backend server
-2. Launch the Electron application
-3. Enable hot-reload for development
+Note that this script uses shell syntax and may behave differently across operating systems. If it fails on your platform, start the API and frontend using the repository's supported development setup rather than assuming the desktop shell is broken.
 
-### Project Structure
+Useful checks:
 
-```
-.
-├── electron/
-│   ├── main.js          # Electron main process
-│   └── preload.js       # Preload script for security
-├── src/
-│   ├── components/
-│   │   └── features/
-│   │       └── DesktopApp.tsx  # Desktop-specific UI
-│   └── ...
-├── server/              # Express backend
-├── dist/               # Built web application
-└── release/            # Desktop build output
+```bash
+npm run build
+npm run lint
+npm run build:server
 ```
 
-## Architecture
-
-### Main Process (electron/main.js)
-- Manages application lifecycle
-- Creates and manages BrowserWindows
-- Starts/stops the Express server
-- Handles system integration
-- Manages IPC communication
-
-### Renderer Process (React App)
-- Same as web version
-- Enhanced with Electron APIs via preload script
-- Access to window controls and system info
-
-### Preload Script (electron/preload.js)
-- Safely exposes Electron APIs to renderer
-- Implements context isolation for security
-- Handles IPC communication
-
-### Security Features
-- Context isolation enabled
-- Node integration disabled in renderer
-- Sandbox enabled
-- CSP headers via Helmet
-- Rate limiting on API endpoints
-
-## API Integration
-
-The desktop app includes all web APIs plus additional Electron-specific features:
-
-### Electron API (via window.electronAPI)
-
-```javascript
-// Get application settings
-const settings = await window.electronAPI.getAppSettings();
-
-// Set application settings
-await window.electronAPI.setAppSettings(settings);
-
-// Get system information
-const sysInfo = await window.electronAPI.getSystemInfo();
-
-// Window controls
-await window.electronAPI.minimizeWindow();
-await window.electronAPI.maximizeWindow();
-await window.electronAPI.closeWindow();
-```
+- `npm run build` builds the Vite frontend.
+- `npm run lint` runs TypeScript checking via `tsc --noEmit`.
+- `npm run build:server` compiles the server TypeScript project.
 
 ## Configuration
 
-### electron-builder.json
-The build configuration is defined in `package.json` under the `build` key:
+Configure secrets in the server/deployment environment, not in committed source files.
 
-- **appId**: com.odyseus.nexuspro
-- **productName**: Odyseus Nexus Pro
-- **targets**: NSIS (Windows), DMG (macOS), AppImage (Linux)
+- `GEMINI_API_KEY`: required for Gemini-backed generation.
+- Firebase configuration: required for persistent Firestore-backed tasks.
+- `PORT`: optional server port where supported by the running environment.
+- `NODE_ENV`: controls environment-specific server behavior.
 
-### Environment Variables
-
-```bash
-# Required for AI features
-GEMINI_API_KEY=your_api_key_here
-
-# Optional: Firebase configuration
-FIREBASE_API_KEY=your_firebase_key
-
-# Server configuration
-PORT=3000
-NODE_ENV=production
-```
-
-## Platform-Specific Notes
-
-### Windows
-- Uses NSIS installer
-- Creates desktop and start menu shortcuts
-- Supports custom installation directory
-- Single EXE installer (~150MB)
-
-### macOS
-- DMG disk image distribution
-- Code signing required for notarization
-- Supports both x64 and ARM64 (Apple Silicon)
-- Gatekeeper compatible
-
-### Linux
-- AppImage for universal compatibility
-- No installation required
-- Self-contained executable
-- Works across distributions
+Do not commit API keys, service-account credentials, or production secrets.
 
 ## Troubleshooting
 
-### Common Issues
+**AI generation fails**
+- Confirm `GEMINI_API_KEY` is set in the environment used by the server.
+- Verify the key is valid for the configured model/API and has quota.
+- Check server logs for the actual provider error.
 
-**App won't start**
-- Check if port 3000 is available
-- Verify all dependencies are installed
-- Check console logs for errors
+**Tasks disappear or cannot be retrieved**
+- Check whether Firebase is configured and Firestore permissions allow the required reads and writes.
+- Without a database, task state is process-local and is not durable across serverless invocations or restarts.
+- Inspect the API response and server logs rather than assuming a returned task ID proves durable persistence.
 
-**AI features not working**
-- Ensure GEMINI_API_KEY is set
-- Check internet connection
-- Verify API key has sufficient quota
+**Preview is blank or assets fail**
+- Check the task status and whether generated files include the requested entry point and its assets.
+- A preview URL alone does not prove the generated project successfully runs. Treat missing scripts, assets, or build output as a generation/preview issue and inspect the logs.
 
-**Server not responding**
-- Check if server process is running
-- Verify firewall settings
-- Check server logs in console
+**Window or layout content is clipped**
+- Update to the latest code and test the onboarding and modal flows at the actual window size. Responsive changes are covered by PR #86, but manual cross-size browser verification remains a separate validation task.
 
-**Window controls not working**
-- Ensure Electron API is available
-- Check preload script is loaded
-- Verify context isolation settings
+## Security
 
-## Performance
+Keep API keys server-side. Review the Electron main/preload implementation and server security configuration before distributing production builds. Do not assume that a development build, a passing packaging workflow, or a configured environment variable is a full security audit.
 
-### System Requirements
+## Project links
 
-**Minimum**
-- 4GB RAM
-- 2GB disk space
-- Dual-core processor
-- 1280x720 display
-
-**Recommended**
-- 8GB RAM
-- 4GB disk space
-- Quad-core processor
-- 1920x1080 display
-
-### Optimizations
-- Lazy loading of components
-- Code splitting
-- Image optimization
-- Server-side caching
-- WebSocket for real-time updates
-
-## Future Enhancements
-
-### Planned Features
-- Auto-update mechanism
-- Plugin system
-- Multi-window support
-- Offline mode
-- Cloud sync
-- Native notifications
-- System tray integration
-- Global keyboard shortcuts
-
-### Mobile Roadmap
-- React Native for iOS/Android
-- Shared business logic
-- Native UI components
-- Push notifications
-- Biometric authentication
-- App Store distribution
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing to the desktop application.
+- [Source repository](https://github.com/Liladizilla/NEXUS_PRO_01)
+- [Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases)
+- [Issues](https://github.com/Liladizilla/NEXUS_PRO_01/issues)
+- [Main README](README.md)
 
 ## License
 
-Apache 2.0 - See [LICENSE](LICENSE) for details
-
-## Support
-
-- [Documentation](https://github.com/Liladizilla/NEXUS_PRO_01/wiki)
-- [Issue Tracker](https://github.com/Liladizilla/NEXUS_PRO_01/issues)
-- [Discussions](https://github.com/Liladizilla/NEXUS_PRO_01/discussions)
+The repository declares Apache-2.0 in `package.json`. Refer to the checked-in [LICENSE](LICENSE) file for the license terms.
