@@ -724,9 +724,15 @@ export default function App() {
       setFiles(result.files);
       if (result.files.length > 0) setActiveFile(result.files[0].path);
       
-      const finalStagingUrl = result.stagingUrl || `${window.location.origin}/staging/${result.projectName.toLowerCase().replace(/\s+/g, '-')}`;
+      const finalStagingUrl = typeof result.stagingUrl === 'string' && result.stagingUrl.trim()
+        ? result.stagingUrl
+        : '';
       setStagingUrl(finalStagingUrl);
-      addLog(`Preview route prepared: ${finalStagingUrl}. Generated files were not compiled, tested, or deployed to production.`);
+      if (finalStagingUrl) {
+        addLog(`Preview route returned by the server: ${finalStagingUrl}. Generated files were not compiled, tested, or deployed to production.`);
+      } else {
+        addLog('No preview route was returned by the server. Generated files are available in Code, but no runnable preview is available yet.');
+      }
       
       plan.agents.forEach((agent: any) => updateAgent(agent.id, { status: 'completed' }));
       updateAgent('devops', { status: 'completed' });
@@ -1734,8 +1740,8 @@ export default function App() {
                                     <Globe size={20} className="text-nexus-accent" />
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-bold">Staging Environment Ready</h4>
-                                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">CI/CD Pipeline: Deployment Successful</p>
+                                    <h4 className="text-sm font-bold">Preview Route Available</h4>
+                                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Generated files are not compiled or deployed</p>
                                   </div>
                                 </div>
                                 <a 
