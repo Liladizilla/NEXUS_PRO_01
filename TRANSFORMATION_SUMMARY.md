@@ -20,7 +20,7 @@ Odyseus Nexus Pro is a React/Vite workspace with an Express API and Electron pac
 - Billing and provider deployment integrations require their own implementation and verification.
 - Native mobile applications remain a roadmap item.
 - As of 2026-10-20, no published GitHub Releases were returned by the repository's Releases API. Check the Releases and Actions pages separately; CI artifacts are not published releases.
-- The repository declares Apache-2.0 in package metadata but does not currently contain a `LICENSE` file.
+- The repository declares Apache-2.0 in package metadata and now includes the license text in `LICENSE`.
 
 ## Validation still required
 
