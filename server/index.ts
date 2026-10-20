@@ -382,13 +382,17 @@ app.post('/api/generate/stream', async (req, res, next) => {
 
     // Progress is driven by actual provider chunks, not a cosmetic timer.
     const raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels, ({ characters, preview }) => {
-      const progress = Math.min(40, 20 + Math.floor(characters / 1500));
+      // AIService currently buffers the provider response; these callbacks mark
+      // request/response boundaries, not live token streaming.
+      const responseReceived = characters > 0;
       emit({
         type: 'progress',
         taskId,
         status: 'synthesizing',
-        progress,
-        message: `Gemini stream: ${characters.toLocaleString()} characters received. ${preview}`
+        progress: responseReceived ? 40 : 20,
+        message: responseReceived
+          ? `AI response received (${characters.toLocaleString()} characters). ${preview}`
+          : `Contacting the configured AI provider. The response is buffered until complete. ${preview}`
       });
     });
 
@@ -428,11 +432,8 @@ app.post('/api/generate/stream', async (req, res, next) => {
       }
     }
 
-    emit({ type: 'progress', taskId, status: 'testing', progress: 70, message: `Structure checks passed for ${generated.files.length} files.` });
-    await queueService.updateTask(taskId, 'testing', 70, undefined, plan.agents);
-
-    emit({ type: 'progress', taskId, status: 'deploying', progress: 90, message: 'Preparing the preview route.' });
-    await queueService.updateTask(taskId, 'deploying', 90, undefined, plan.agents);
+    emit({ type: 'progress', taskId, status: 'building', progress: 70, message: `Structural validation passed for ${generated.files.length} files. No compiler or automated test suite was run.` });
+    await queueService.updateTask(taskId, 'building', 70, undefined, plan.agents);
 
     const appBaseUrl = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const stagingUrl = `${appBaseUrl}/staging/${taskId}`;
@@ -443,7 +444,7 @@ app.post('/api/generate/stream', async (req, res, next) => {
       stagingUrl
     };
     await queueService.updateTask(taskId, 'completed', 100, result, plan.agents);
-    emit({ type: 'progress', taskId, status: 'completed', progress: 100, message: 'Generated project passed file-structure checks.' });
+    emit({ type: 'progress', taskId, status: 'completed', progress: 100, message: 'Generated files passed structural validation. No compilation, automated tests, or production deployment was run.' });
     emit({ type: 'complete', taskId, plan, result });
     streamOpen = false;
     res.end();
@@ -611,8 +612,18 @@ app.get('/api/billing/status', (_req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
-  const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
+app.get('/api/health', (_req, res) => {
+  // Match the provider keys accepted by AIService. This reports configuration only,
+  // not provider reachability or remaining quota.
+  const aiConfigured = [
+    "GROQ_API_KEY", "GROQ_APIKEY", "GROQ_KEY",
+    "GROK_API_KEY", "GROK_APIKEY", "GROK_KEY",
+    "GROQ_API_TOKEN", "GROK_API_TOKEN",
+    "OPENROUTER_API_KEY", "OPEN_ROUTER_API_KEY",
+    "OPENROUTER_KEY", "OPEN_ROUTER_KEY",
+    "OPENROUTER_APIKEY", "OPEN_ROUTER_APIKEY",
+    "GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "API_KEY"
+  ].some((name) => Boolean(process.env[name]?.trim()));
   const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
   const services = {
     ai: aiConfigured ? "configured" : "missing-credentials",
@@ -620,6 +631,7 @@ app.get('/api/health', (req, res) => {
     auth: githubConfigured ? "configured" : "not-configured",
     storage: db ? "configured" : "ephemeral"
   };
+  res.setHeader('Cache-Control', 'no-store');
   res.status(aiConfigured ? 200 : 503).json({
     status: aiConfigured ? "ok" : "degraded",
     services,
