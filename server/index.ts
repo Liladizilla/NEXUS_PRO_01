@@ -608,8 +608,18 @@ app.get('/api/billing/status', (_req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
-  const aiConfigured = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
+app.get('/api/health', (_req, res) => {
+  // Match the provider keys accepted by AIService. This reports configuration only,
+  // not provider reachability or remaining quota.
+  const aiConfigured = Boolean(
+    process.env.GROQ_API_KEY || process.env.GROQ_APIKEY || process.env.GROQ_KEY ||
+    process.env.GROK_API_KEY || process.env.GROK_APIKEY || process.env.GROK_KEY ||
+    process.env.GROQ_API_TOKEN || process.env.GROK_API_TOKEN ||
+    process.env.OPENROUTER_API_KEY || process.env.OPEN_ROUTER_API_KEY ||
+    process.env.OPENROUTER_KEY || process.env.OPEN_ROUTER_KEY ||
+    process.env.OPENROUTER_APIKEY || process.env.OPEN_ROUTER_APIKEY ||
+    process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.API_KEY
+  );
   const githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
   const services = {
     ai: aiConfigured ? "configured" : "missing-credentials",
@@ -617,6 +627,7 @@ app.get('/api/health', (req, res) => {
     auth: githubConfigured ? "configured" : "not-configured",
     storage: db ? "configured" : "ephemeral"
   };
+  res.setHeader('Cache-Control', 'no-store');
   res.status(aiConfigured ? 200 : 503).json({
     status: aiConfigured ? "ok" : "degraded",
     services,
