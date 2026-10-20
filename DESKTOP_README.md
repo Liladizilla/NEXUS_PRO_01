@@ -1,12 +1,10 @@
 # Odyseus Nexus Pro Desktop
 
-Odyseus Nexus Pro is an Electron desktop wrapper around the React/Vite workspace and Express API. The application is under active development; availability of a UI control does not mean its remote provider or backend integration is configured.
+Odyseus Nexus Pro is an Electron desktop wrapper around the React/Vite workspace and Express API. The application is under active development; a visible UI control does not mean its remote provider or backend integration is configured.
 
 ## Download
 
-Open [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases) and use the assets attached to the latest release for your operating system. Asset names and availability can change between releases, so this document intentionally does not list unverified version-specific filenames.
-
-If a release does not include an installer for your platform, build from source using the instructions below.
+As of 2026-10-20, the GitHub Releases API reports no published releases for this repository. Check [GitHub Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases) for future published installers. Successful GitHub Actions runs may expose build artifacts on the [Actions page](https://github.com/Liladizilla/NEXUS_PRO_01/actions). Workflow artifacts are temporary CI outputs, not published releases.
 
 ## Current capabilities and boundaries
 
@@ -17,14 +15,14 @@ If a release does not include an installer for your platform, build from source 
 - Optional Firebase/Firestore-backed task persistence when correctly configured.
 
 Important limitations:
-- AI generation requires a valid server-side `GEMINI_API_KEY`; a key must have suitable access and quota.
+- AI generation requires a valid server-side `GEMINI_API_KEY`; the key must have suitable access and quota.
 - Persistent task storage requires valid Firebase configuration and Firestore permissions. Without a configured database, task state is ephemeral.
 - A returned preview route is not proof that generated code compiled, ran, or was deployed to production.
 - Billing, purchase verification, and deployment-provider integrations should not be treated as production-ready solely because their UI is present. Check the main [README](README.md) for current integration boundaries.
 
 ## Build from source
 
-Requirements: a supported Node.js version (the desktop workflow currently uses Node.js 20), npm, and Git.
+Requirements: Node.js 20 or newer, npm, and Git.
 
 ```bash
 git clone https://github.com/Liladizilla/NEXUS_PRO_01.git
@@ -48,7 +46,7 @@ npm run electron:build:mac
 npm run electron:build:linux
 ```
 
-Packaging a platform-specific installer is most reliable on that platform. CI builds Windows, macOS, and Linux on separate native runners. Output is written to `release/`.
+Packaging is most reliable on the target platform. CI builds Windows, macOS, and Linux on separate native runners. Output is written to `release/`.
 
 ## Development
 
@@ -58,7 +56,7 @@ The scripts in `package.json` are the source of truth for available commands. Th
 npm run electron:dev
 ```
 
-Note that this script uses shell syntax and may behave differently across operating systems. If it fails on your platform, start the API and frontend using the repository's supported development setup rather than assuming the desktop shell is broken.
+This script uses shell syntax and may behave differently across operating systems. If it fails on your platform, start the API and frontend using the repository's supported development setup rather than assuming the desktop shell is broken.
 
 Useful checks:
 
@@ -93,26 +91,27 @@ Do not commit API keys, service-account credentials, or production secrets.
 **Tasks disappear or cannot be retrieved**
 - Check whether Firebase is configured and Firestore permissions allow the required reads and writes.
 - Without a database, task state is process-local and is not durable across serverless invocations or restarts.
-- Inspect the API response and server logs rather than assuming a returned task ID proves durable persistence.
+- Inspect API responses and server logs rather than assuming a returned task ID proves durable persistence.
 
 **Preview is blank or assets fail**
-- Check the task status and whether generated files include the requested entry point and its assets.
-- A preview URL alone does not prove the generated project successfully runs. Treat missing scripts, assets, or build output as a generation/preview issue and inspect the logs.
+- Check the task status and whether generated files include the requested entry point and assets.
+- A preview URL alone does not prove the generated project successfully runs. Inspect the logs and generated files.
 
 **Window or layout content is clipped**
-- Update to the latest code and test the onboarding and modal flows at the actual window size. Responsive changes are covered by PR #86, but manual cross-size browser verification remains a separate validation task.
+- Test onboarding and modal flows at the actual window size. Responsive changes are merged in PR #86, but manual cross-size browser verification remains a separate task.
 
 ## Security
 
-Keep API keys server-side. Review the Electron main/preload implementation and server security configuration before distributing production builds. Do not assume that a development build, a passing packaging workflow, or a configured environment variable is a full security audit.
+Keep API keys server-side. Review the Electron main/preload implementation and server security configuration before distributing production builds. A passing packaging workflow is not a full security audit.
 
 ## Project links
 
 - [Source repository](https://github.com/Liladizilla/NEXUS_PRO_01)
 - [Releases](https://github.com/Liladizilla/NEXUS_PRO_01/releases)
+- [Actions and build artifacts](https://github.com/Liladizilla/NEXUS_PRO_01/actions)
 - [Issues](https://github.com/Liladizilla/NEXUS_PRO_01/issues)
 - [Main README](README.md)
 
 ## License
 
-The repository declares Apache-2.0 in `package.json`. Refer to the checked-in [LICENSE](LICENSE) file for the license terms.
+`package.json` declares `Apache-2.0`, but the repository currently has no checked-in `LICENSE` file. Add the complete license text and verify the intended licensing before redistributing the project.
