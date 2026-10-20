@@ -3,9 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 // @ts-ignore - Server-side Firebase SDK (type-only import)
 import type { Firestore } from 'firebase/firestore';
 
-// Firestore helper functions will be dynamically imported when a DB is available in production.
-let firestoreHelpers: any = null;
-
+// Firestore helpers are loaded lazily when a database is configured.
 export class QueueService {
   private tasks: Map<string, { status: string, result?: any, progress: number, agents?: any[] }> = new Map();
   private db: any;
@@ -31,110 +29,114 @@ export class QueueService {
           getDocs: m.getDocs,
         };
       }).catch((err) => {
-        console.warn('[ODYSEUS QUEUE] Failed to load firestore helpers:', err);
+        console.error('[ODYSEUS QUEUE] Firestore helpers failed to load:', err);
+        throw new Error('Persistent task storage is configured but Firestore could not be initialized.');
       });
     }
   }
 
+  private requireStorageReady() {
+    if (this.db && !this.firestoreFns) {
+      throw new Error('Persistent task storage is configured but unavailable.');
+    }
+  }
+
   private evictCache() {
-    if (this.tasks.size > this.MAX_CACHE_SIZE) {
+    while (this.tasks.size > this.MAX_CACHE_SIZE) {
       const firstKey = this.tasks.keys().next().value;
-      if (firstKey) this.tasks.delete(firstKey);
+      if (!firstKey) break;
+      this.tasks.delete(firstKey);
     }
   }
 
   async createTask() {
     await this.firestoreReady;
+    this.requireStorageReady();
     const id = uuidv4();
     const initialTask = { status: 'queued', progress: 0, createdAt: new Date().toISOString() };
+
+    // Persist first. Do not return an ID that other serverless instances cannot resolve.
+    if (this.db && this.firestoreFns) {
+      await this.firestoreFns.setDoc(this.firestoreFns.doc(this.db, 'tasks', id), initialTask);
+    }
+
     this.tasks.set(id, initialTask);
     this.evictCache();
-    
-    if (this.db && this.firestoreFns) {
-      try {
-        await this.firestoreFns.setDoc(this.firestoreFns.doc(this.db, 'tasks', id), initialTask);
-      } catch (e) {
-        console.error("Firestore Error (createTask):", e);
-      }
-    }
     return id;
   }
 
   async updateTask(id: string, status: string, progress: number, result?: any, agents?: any[]) {
     await this.firestoreReady;
-    const task = this.tasks.get(id) || { status, progress };
-    
-    // Space Check: Firestore has a 1MB limit per document.
-    if (result) {
+    this.requireStorageReady();
+
+    const cached = this.tasks.get(id);
+    let task = cached;
+    if (!task && this.db && this.firestoreFns) {
+      const snapshot = await this.firestoreFns.getDoc(this.firestoreFns.doc(this.db, 'tasks', id));
+      if (snapshot.exists()) task = snapshot.data();
+    }
+    task = task || { status, progress };
+
+    const updatedTask: any = {
+      ...task,
+      status,
+      progress,
+      agents: agents || task.agents || [],
+      updatedAt: new Date().toISOString()
+    };
+    if (result !== undefined) {
       const size = new TextEncoder().encode(JSON.stringify(result)).length;
-      if (size > 800000) { // ~800KB warning
-        console.warn(`\x1b[33m[ODYSEUS QUEUE]\x1b[0m Task ${id} result size (${(size / 1024).toFixed(2)} KB) is approaching Firestore 1MB limit.`);
-        if (size > 1000000) {
-          console.error(`\x1b[31m[ODYSEUS QUEUE]\x1b[0m Task ${id} result size exceeds 1MB. Storage will fail.`);
-          // In a real app, we would offload to Firebase Storage here.
-        }
+      if (size > 1000000) {
+        throw new Error(`Task result is too large for persistent storage (${Math.ceil(size / 1024)} KB; limit is approximately 1 MB).`);
       }
+      updatedTask.result = result;
     }
 
-    const updatedTask: any = { 
-      ...task, 
-      status, 
-      progress, 
-      agents: agents || task.agents || [], 
-      updatedAt: new Date().toISOString() 
-    };
-    
-    if (result !== undefined) {
-      updatedTask.result = result;
+    // Only update the local cache after the durable write succeeds.
+    if (this.db && this.firestoreFns) {
+      await this.firestoreFns.setDoc(this.firestoreFns.doc(this.db, 'tasks', id), updatedTask, { merge: true });
     }
 
     this.tasks.set(id, updatedTask);
     this.evictCache();
-    
-    if (this.db && this.firestoreFns) {
-      try {
-        await this.firestoreFns.setDoc(this.firestoreFns.doc(this.db, 'tasks', id), updatedTask, { merge: true });
-      } catch (e) {
-        console.error("Firestore Error (updateTask):", e);
-      }
-    }
   }
 
   async getTask(id: string) {
     await this.firestoreReady;
-    if (this.tasks.has(id)) return this.tasks.get(id);
-    
+    this.requireStorageReady();
+
+    // Firestore is authoritative in serverless deployments; cache-first reads can
+    // otherwise return stale status/results from a previous request instance.
     if (this.db && this.firestoreFns) {
-      try {
-        const docRef = this.firestoreFns.doc(this.db, 'tasks', id);
-        const docSnap = await this.firestoreFns.getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          this.tasks.set(id, data as any);
-          return data;
-        }
-      } catch (e) {
-        console.error("Firestore Error (getTask):", e);
+      const snapshot = await this.firestoreFns.getDoc(this.firestoreFns.doc(this.db, 'tasks', id));
+      if (!snapshot.exists()) {
+        this.tasks.delete(id);
+        return null;
       }
+      const data = snapshot.data();
+      this.tasks.set(id, data as any);
+      this.evictCache();
+      return data;
     }
-    return null;
+
+    return this.tasks.get(id) || null;
   }
 
   async getActiveTasksCount() {
     await this.firestoreReady;
+    this.requireStorageReady();
     if (this.db && this.firestoreFns) {
-      try {
-        const q = this.firestoreFns.query(this.firestoreFns.collection(this.db, 'tasks'), this.firestoreFns.where('status', 'in', ['processing', 'queued']));
-        const querySnapshot = await this.firestoreFns.getDocs(q);
-        return querySnapshot.size;
-      } catch (e) {
-        console.error("Firestore Error (getActiveTasksCount):", e);
-      }
+      const q = this.firestoreFns.query(
+        this.firestoreFns.collection(this.db, 'tasks'),
+        this.firestoreFns.where('status', 'in', ['processing', 'queued'])
+      );
+      const querySnapshot = await this.firestoreFns.getDocs(q);
+      return querySnapshot.size;
     }
-    
+
     let count = 0;
-    this.tasks.forEach(t => {
-      if (t.status === 'processing' || t.status === 'queued') count++;
+    this.tasks.forEach((task) => {
+      if (task.status === 'processing' || task.status === 'queued') count++;
     });
     return count;
   }
