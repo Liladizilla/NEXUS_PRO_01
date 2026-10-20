@@ -676,12 +676,7 @@ export default function App() {
     agents.forEach(a => updateAgent(a.id, { status: 'queued' }));
     setBuildStatus('Analyzing requirements...');
     setBuildProgress(5);
-    setTaskBreakdown([
-      'Analyzing architectural constraints',
-      'Provisioning specialized AI agents',
-      'Mapping dependency graph',
-      'Initializing CI/CD pipeline'
-    ]);
+    setTaskBreakdown(['Planning the request']);
     addLog(`Starting generation for: ${requestPrompt}${feedback ? ` (with feedback: ${feedback})` : ''}`);
     
     try {
@@ -709,7 +704,7 @@ export default function App() {
           lastLoggedStatus = status;
         }
         if (detail && detail !== lastLoggedDetail) {
-          addLog(`[STREAM] ${detail}`);
+          addLog(`[AI] ${detail}`);
           lastLoggedDetail = detail;
         }
         
@@ -1889,7 +1884,7 @@ export default function App() {
                   {logs.map((log, i) => {
                     const isCritical = log.includes('[CRITICAL]');
                     const isAdvice = log.includes('[ADVICE]');
-                    const isBuild = log.includes('[BUILD]') || log.includes('[STREAM]');
+                    const isBuild = log.includes('[BUILD]') || log.includes('[AI]');
                     const isUser = log.includes('User:');
                     const isAI = log.includes('AI:');
                     const isSuccess = log.includes('completed') || log.includes('Successfully generated');
