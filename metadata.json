@@ -1,5 +1,5 @@
 {
-  "name": "Odyseus AI – Autonomous Software Builder OS",
-  "description": "An advanced AI-powered software builder platform that generates full applications, deploys instantly, and debugs itself using multi-agent collaboration.",
+  "name": "Odyseus Nexus Pro",
+  "description": "An AI-assisted software-building workspace with a React interface, Express API, and Electron desktop packaging. AI generation, persistent task storage, preview execution, billing, and deployment depend on their respective integrations and configuration.",
   "requestFramePermissions": []
 }
