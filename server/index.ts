@@ -382,13 +382,17 @@ app.post('/api/generate/stream', async (req, res, next) => {
 
     // Progress is driven by actual provider chunks, not a cosmetic timer.
     const raw = await aiService.generate(finalPrompt, Boolean(isHighThinking), agentModels, ({ characters, preview }) => {
-      const progress = Math.min(40, 20 + Math.floor(characters / 1500));
+      // AIService currently buffers the provider response; these callbacks mark
+      // request/response boundaries, not live token streaming.
+      const responseReceived = characters > 0;
       emit({
         type: 'progress',
         taskId,
         status: 'synthesizing',
-        progress,
-        message: `Gemini stream: ${characters.toLocaleString()} characters received. ${preview}`
+        progress: responseReceived ? 40 : 20,
+        message: responseReceived
+          ? `AI response received (${characters.toLocaleString()} characters). ${preview}`
+          : `Contacting the configured AI provider. The response is buffered until complete. ${preview}`
       });
     });
 
