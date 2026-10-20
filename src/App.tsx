@@ -122,10 +122,10 @@ const Intro = ({ onComplete }: { onComplete: () => void }) => {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="flex flex-col items-center"
       >
-        <div className="text-7xl font-black tracking-tighter text-white mb-1">
+        <div className="w-full px-4 text-center text-[clamp(2rem,10vw,4.5rem)] leading-none font-black tracking-tight text-white mb-1 break-words">
           ODYSEUS
         </div>
-        <div className="text-[10px] uppercase tracking-[0.8em] text-white/20 font-black">
+        <div className="max-w-full px-4 text-center text-[clamp(8px,2.2vw,10px)] uppercase tracking-[clamp(0.12em,1.4vw,0.8em)] text-white/40 font-black break-words">
           Architected by Odyseus AI
         </div>
       </motion.div>
@@ -340,8 +340,8 @@ const HeroHeadline = () => {
 
   return (
     <h1
-      className="max-w-3xl mx-auto text-center font-display"
-      style={{ fontSize: '56px', lineHeight: '62px', fontWeight: 600, letterSpacing: '-0.02em' }}
+      className="w-full max-w-3xl mx-auto px-3 text-center font-display break-words"
+      style={{ fontSize: 'clamp(30px, 5.2vw, 56px)', lineHeight: 1.12, fontWeight: 600, letterSpacing: '-0.02em' }}
     >
       {words.map((word, wi) => {
         const isGradient = word.startsWith('Project');
