@@ -428,11 +428,8 @@ app.post('/api/generate/stream', async (req, res, next) => {
       }
     }
 
-    emit({ type: 'progress', taskId, status: 'testing', progress: 70, message: `Structure checks passed for ${generated.files.length} files.` });
-    await queueService.updateTask(taskId, 'testing', 70, undefined, plan.agents);
-
-    emit({ type: 'progress', taskId, status: 'deploying', progress: 90, message: 'Preparing the preview route.' });
-    await queueService.updateTask(taskId, 'deploying', 90, undefined, plan.agents);
+    emit({ type: 'progress', taskId, status: 'building', progress: 70, message: `Structural validation passed for ${generated.files.length} files. No compiler or automated test suite was run.` });
+    await queueService.updateTask(taskId, 'building', 70, undefined, plan.agents);
 
     const appBaseUrl = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const stagingUrl = `${appBaseUrl}/staging/${taskId}`;
@@ -443,7 +440,7 @@ app.post('/api/generate/stream', async (req, res, next) => {
       stagingUrl
     };
     await queueService.updateTask(taskId, 'completed', 100, result, plan.agents);
-    emit({ type: 'progress', taskId, status: 'completed', progress: 100, message: 'Generated project passed file-structure checks.' });
+    emit({ type: 'progress', taskId, status: 'completed', progress: 100, message: 'Generated files passed structural validation. No compilation, automated tests, or production deployment was run.' });
     emit({ type: 'complete', taskId, plan, result });
     streamOpen = false;
     res.end();
