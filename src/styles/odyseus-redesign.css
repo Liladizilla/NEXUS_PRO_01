@@ -82,7 +82,7 @@
 :root[data-accent-color="blue"] { --ody-accent:#76a9fa; --ody-on-accent:#101b2e; --accent-interactive-rgb:118,169,250; }
 :root[data-accent-color="green"] { --ody-accent:#75c99b; --ody-on-accent:#102117; --accent-interactive-rgb:117,201,155; }
 :root[data-accent-color] {
- --nexus-accent:var(--ody-accent); --nexus-accent-contrast:var(--ody-on-accent);
+ --nexus-accent:var(--ody-accent); --nexus-accent-rgb:var(--accent-interactive-rgb); --nexus-accent-contrast:var(--ody-on-accent);
  --primary:var(--ody-accent); --primary-foreground:var(--ody-on-accent);
  --ring:var(--ody-accent); --sidebar-primary:var(--ody-accent); --sidebar-ring:var(--ody-accent);
 }
