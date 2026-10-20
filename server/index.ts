@@ -562,41 +562,87 @@ app.post('/api/format', async (req, res) => {
 });
 
 // --- 3.2 STAGING SERVER (THE SANDBOX) ---
-app.get(['/staging/:taskId', '/staging/:taskId/*', '/api/staging/:taskId', '/api/staging/:taskId/*'], async (req, res) => {
-  const { taskId } = req.params as { taskId: string };
-  const params = req.params as Record<string, string | undefined>;
-  const filePath = params['0'] || 'index.html';
-  
-  const task = await queueService.getTask(taskId);
-  if (!task || task.status !== 'completed' || !task.result) {
-    return res.status(404).send('Staging environment not ready or task not found.');
-  }
+app.get(['/staging/:taskId', '/staging/:taskId/*', '/api/staging/:taskId', '/api/staging/:taskId/*'], async (req, res, next) => {
+  try {
+    const { taskId } = req.params as { taskId: string };
+    const params = req.params as Record<string, string | undefined>;
+    const rawFilePath = params['0'] || 'index.html';
 
-  const files = task.result.files || [];
-  const file = files.find((f: any) => f.path === filePath || f.path === `/${filePath}` || f.path.endsWith(filePath));
-
-  if (!file) {
-    // If it's a directory request, try index.html
-    const indexFile = files.find((f: any) => f.path.endsWith('index.html'));
-    if (indexFile) {
-      return res.type('html').send(indexFile.content);
+    // Generated paths are untrusted input. Reject traversal before normalization,
+    // then compare normalized paths exactly rather than using endsWith().
+    const slashPath = rawFilePath.replace(/\\/g, '/');
+    if (slashPath.includes('\0') || slashPath.split('/').some((segment) => segment === '..')) {
+      return res.status(400).send('Invalid staging file path.');
     }
-    return res.status(404).send('File not found in staging environment.');
+    const requestedPath = path.posix.normalize('/' + slashPath).replace(/^\/+/, '');
+    if (!requestedPath || requestedPath === '.') {
+      return res.status(400).send('Invalid staging file path.');
+    }
+
+    const task = await queueService.getTask(taskId);
+    if (!task || task.status !== 'completed' || !task.result) {
+      return res.status(404).send('Staging environment not ready or task not found.');
+    }
+
+    const files = Array.isArray(task.result.files) ? task.result.files : [];
+    const normalizedFiles = files
+      .filter((file: any) => file && typeof file.path === 'string' && typeof file.content === 'string')
+      .map((file: any) => {
+        const candidate = file.path.replace(/\\/g, '/');
+        if (candidate.includes('\0') || candidate.split('/').some((segment: string) => segment === '..')) return null;
+        return { file, normalizedPath: path.posix.normalize('/' + candidate).replace(/^\/+/, '') };
+      })
+      .filter((entry: any) => entry && entry.normalizedPath && entry.normalizedPath !== '.');
+
+    const isDirectoryRequest = slashPath.endsWith('/');
+    const candidatePaths = isDirectoryRequest
+      ? [requestedPath, path.posix.join(requestedPath, 'index.html')]
+      : [requestedPath];
+    let matched: any = null;
+    for (const candidatePath of candidatePaths) {
+      matched = normalizedFiles.find((entry: any) => entry.normalizedPath === candidatePath);
+      if (matched) break;
+    }
+
+    // Only root/directory navigation may resolve to an index document. Missing
+    // JavaScript, CSS, and image requests must remain 404s instead of receiving HTML.
+    if (!matched && (requestedPath === 'index.html' || isDirectoryRequest)) {
+      const indexPath = isDirectoryRequest ? path.posix.join(requestedPath, 'index.html') : 'index.html';
+      matched = normalizedFiles.find((entry: any) => entry.normalizedPath === indexPath);
+    }
+    if (!matched) {
+      return res.status(404).send('File not found in staging environment.');
+    }
+
+    const ext = path.posix.extname(matched.normalizedPath).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.html': 'text/html; charset=utf-8',
+      '.js': 'application/javascript; charset=utf-8',
+      '.mjs': 'application/javascript; charset=utf-8',
+      '.css': 'text/css; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
+      '.map': 'application/json; charset=utf-8',
+      '.txt': 'text/plain; charset=utf-8',
+      '.xml': 'application/xml; charset=utf-8',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.ico': 'image/x-icon',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+      '.wasm': 'application/wasm'
+    };
+
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.type(mimeTypes[ext] || 'application/octet-stream').send(matched.file.content);
+  } catch (error) {
+    return next(error);
   }
-
-  // Set content type based on extension
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    '.html': 'text/html',
-    '.js': 'application/javascript',
-    '.css': 'text/css',
-    '.json': 'application/json',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.svg': 'image/svg+xml',
-  };
-
-  res.type(mimeTypes[ext] || 'text/plain').send(file.content);
 });
 
 // Health check reports configuration rather than claiming every subsystem is online.
