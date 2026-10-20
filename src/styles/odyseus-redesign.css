@@ -1,18 +1,91 @@
-/* Odyseus UI/UX redesign spec: token-first, flat warm surfaces, accessible controls. */
+/* Odyseus Industrial Studio design tokens.
+   One authoritative warm-neutral palette; no legacy cyan/glass defaults. */
 :root {
- --ody-bg:#111110; --ody-surface:#191918; --ody-raised:#222120; --ody-border:#2e2d2b;
+ --ody-bg:#111110; --ody-surface:#191918; --ody-raised:#222120; --ody-border:#34332f;
  --ody-text:#eceae5; --ody-muted:#a09d95; --ody-accent:#f28c38; --ody-on-accent:#1a1208;
  --ody-success:#5bb974; --ody-warning:#e5b64a; --ody-danger:#e5675b;
- --bg-void:var(--ody-bg); --bg-base:var(--ody-bg); --bg-panel:var(--ody-surface); --bg-raised:var(--ody-raised);
- --border-default:var(--ody-border); --border-strong:#4b4945; --text-primary:var(--ody-text); --text-muted:var(--ody-muted); --text-disabled:#716e68;
+ --ody-ai:#b7a0e8; --ody-ai-secondary:#d7a4bc;
+
+ --bg-void:var(--ody-bg); --bg-base:#151514; --bg-panel:var(--ody-surface); --bg-raised:var(--ody-raised);
+ --border-default:var(--ody-border); --border-strong:#4b4945;
+ --text-primary:var(--ody-text); --text-muted:var(--ody-muted); --text-disabled:#716e68;
+ --nexus-bg:var(--ody-bg); --nexus-bg-secondary:var(--bg-base); --nexus-panel:var(--ody-surface);
+ --nexus-border:var(--ody-border); --nexus-text:var(--ody-text); --nexus-text-muted:var(--ody-muted);
  --nexus-accent:var(--ody-accent); --nexus-accent-rgb:242,140,56; --nexus-accent-contrast:var(--ody-on-accent);
  --accent-interactive:var(--ody-accent); --accent-interactive-dim:#d87524; --accent-interactive-rgb:242,140,56;
- --state-live:var(--ody-success); --state-live-rgb:91,185,116; --state-warning:var(--ody-warning); --state-warning-rgb:229,182,74;
- --state-error:var(--ody-danger); --state-error-rgb:229,103,91; --accent-ai-primary:var(--ody-muted); --accent-ai-primary-rgb:160,157,149;
+ --state-live:var(--ody-success); --state-live-rgb:91,185,116;
+ --state-warning:var(--ody-warning); --state-warning-rgb:229,182,74;
+ --state-error:var(--ody-danger); --state-error-rgb:229,103,91;
+ --accent-ai-primary:var(--ody-ai); --accent-ai-primary-rgb:183,160,232;
+ --accent-ai-secondary:var(--ody-ai-secondary); --accent-ai-secondary-rgb:215,164,188;
+ --primary:var(--ody-accent); --primary-foreground:var(--ody-on-accent);
+ --background:var(--ody-bg); --foreground:var(--ody-text); --card:var(--ody-surface);
+ --card-foreground:var(--ody-text); --popover:var(--bg-base); --popover-foreground:var(--ody-text);
+ --secondary:var(--ody-raised); --secondary-foreground:var(--ody-text);
+ --muted:var(--ody-raised); --muted-foreground:var(--ody-muted);
+ --accent:var(--ody-ai); --accent-foreground:#21170f; --border:var(--ody-border);
+ --input:var(--bg-base); --input-background:var(--bg-base); --ring:var(--ody-accent);
+ --sidebar:var(--bg-base); --sidebar-foreground:var(--ody-text);
+ --sidebar-primary:var(--ody-accent); --sidebar-primary-foreground:var(--ody-on-accent);
+ --sidebar-accent:var(--ody-raised); --sidebar-accent-foreground:var(--ody-text);
+ --sidebar-border:var(--ody-border); --sidebar-ring:var(--ody-accent);
+ --font-sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+ --font-mono:"IBM Plex Mono",ui-monospace,monospace;
+ --radius:0.55rem;
 }
-:root[data-theme="light"] { --ody-bg:#f6f4ef; --ody-surface:#fffefa; --ody-raised:#eeeae2; --ody-border:#d8d4cb; --ody-text:#1c1b19; --ody-muted:#5f5b54; --border-strong:#aaa49a; --text-disabled:#817c73; }
-:root[data-theme="cyberpunk"] { --ody-bg:#111110; --ody-surface:#191918; --ody-raised:#222120; --ody-border:#2e2d2b; --ody-text:#eceae5; --ody-muted:#a09d95; --ody-accent:#f28c38; --accent-ai-primary:var(--ody-muted); --accent-ai-primary-rgb:160,157,149; }
-:root[data-accent-color="orange"],:root[data-accent-color="cyan"],:root[data-accent-color="purple"],:root[data-accent-color="pink"],:root[data-accent-color="blue"],:root[data-accent-color="green"] { --nexus-accent:var(--ody-accent); --nexus-accent-rgb:242,140,56; --nexus-accent-contrast:var(--ody-on-accent); --accent-interactive:var(--ody-accent); --accent-interactive-rgb:242,140,56; }
+:root[data-theme="light"] {
+ color-scheme:light;
+ --ody-bg:#f3f1eb; --ody-surface:#fffefa; --ody-raised:#e9e5dc; --ody-border:#d4cfc4;
+ --ody-text:#24231f; --ody-muted:#625f57; --ody-on-accent:#20140a;
+ --ody-success:#277b59; --ody-warning:#946314; --ody-danger:#b33c39;
+ --ody-ai:#6f4ca6; --ody-ai-secondary:#9c4e79;
+ --bg-base:#e9e6de; --border-strong:#aaa49a; --text-disabled:#817c73;
+ --nexus-accent-contrast:#fffaf4; --primary-foreground:#fffaf4;
+ --background:var(--ody-bg); --foreground:var(--ody-text); --card:var(--ody-surface);
+ --card-foreground:var(--ody-text); --popover:var(--bg-base); --popover-foreground:var(--ody-text);
+ --secondary:var(--ody-raised); --secondary-foreground:var(--ody-text);
+ --muted:var(--ody-raised); --muted-foreground:var(--ody-muted); --accent:var(--ody-ai);
+ --accent-foreground:#fffaf4; --border:var(--ody-border); --input:var(--ody-surface);
+ --input-background:var(--ody-surface); --ring:var(--ody-accent);
+ --sidebar:var(--bg-base); --sidebar-foreground:var(--ody-text); --sidebar-primary:var(--ody-accent);
+ --sidebar-primary-foreground:#fffaf4; --sidebar-accent:var(--ody-raised);
+ --sidebar-accent-foreground:var(--ody-text); --sidebar-border:var(--ody-border); --sidebar-ring:var(--ody-accent);
+}
+:root[data-theme="cyberpunk"] {
+ color-scheme:dark;
+ --ody-bg:#100d16; --ody-surface:#191522; --ody-raised:#252033; --ody-border:#40344f;
+ --ody-text:#f0eaf8; --ody-muted:#b1a5bf; --ody-accent:#c1a0ff; --ody-on-accent:#1a1027;
+ --ody-success:#67d6a1; --ody-warning:#f2c66d; --ody-danger:#ff7b86;
+ --ody-ai:#e0a8ff; --ody-ai-secondary:#f0a5d4;
+ --bg-base:#15111d; --border-strong:#665579; --text-disabled:#796b88;
+ --accent-interactive:var(--ody-accent); --accent-interactive-dim:#9673dc; --accent-interactive-rgb:193,160,255;
+ --nexus-accent:var(--ody-accent); --nexus-accent-rgb:193,160,255; --nexus-accent-contrast:var(--ody-on-accent);
+ --state-live:var(--ody-success); --state-warning:var(--ody-warning); --state-error:var(--ody-danger);
+ --accent-ai-primary:var(--ody-ai); --accent-ai-primary-rgb:224,168,255;
+ --accent-ai-secondary:var(--ody-ai-secondary); --accent-ai-secondary-rgb:240,165,212;
+ --primary:var(--ody-accent); --primary-foreground:var(--ody-on-accent);
+ --background:var(--ody-bg); --foreground:var(--ody-text); --card:var(--ody-surface);
+ --card-foreground:var(--ody-text); --popover:var(--bg-base); --popover-foreground:var(--ody-text);
+ --secondary:var(--ody-raised); --secondary-foreground:var(--ody-text);
+ --muted:var(--ody-raised); --muted-foreground:var(--ody-muted); --accent:var(--ody-ai);
+ --accent-foreground:var(--ody-on-accent); --border:var(--ody-border); --input:var(--bg-base);
+ --input-background:var(--bg-base); --ring:var(--ody-accent);
+ --sidebar:var(--bg-base); --sidebar-foreground:var(--ody-text); --sidebar-primary:var(--ody-accent);
+ --sidebar-primary-foreground:var(--ody-on-accent); --sidebar-accent:var(--ody-raised);
+ --sidebar-accent-foreground:var(--ody-text); --sidebar-border:var(--ody-border); --sidebar-ring:var(--ody-accent);
+}
+/* Accent variants retain the industrial surfaces while changing only interaction color. */
+:root[data-accent-color="orange"] { --ody-accent:#f28c38; --ody-on-accent:#1a1208; --accent-interactive-rgb:242,140,56; }
+:root[data-accent-color="cyan"] { --ody-accent:#42c5d7; --ody-on-accent:#07171a; --accent-interactive-rgb:66,197,215; }
+:root[data-accent-color="purple"] { --ody-accent:#a78bfa; --ody-on-accent:#181027; --accent-interactive-rgb:167,139,250; }
+:root[data-accent-color="pink"] { --ody-accent:#e78ab8; --ody-on-accent:#24111b; --accent-interactive-rgb:231,138,184; }
+:root[data-accent-color="blue"] { --ody-accent:#76a9fa; --ody-on-accent:#101b2e; --accent-interactive-rgb:118,169,250; }
+:root[data-accent-color="green"] { --ody-accent:#75c99b; --ody-on-accent:#102117; --accent-interactive-rgb:117,201,155; }
+:root[data-accent-color] {
+ --nexus-accent:var(--ody-accent); --nexus-accent-contrast:var(--ody-on-accent);
+ --primary:var(--ody-accent); --primary-foreground:var(--ody-on-accent);
+ --ring:var(--ody-accent); --sidebar-primary:var(--ody-accent); --sidebar-ring:var(--ody-accent);
+}
 html,body,#root { min-height:100%; }
 body { font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif; background:var(--ody-bg); color:var(--ody-text); }
 code,pre,.font-mono { font-family:"IBM Plex Mono",ui-monospace,monospace; }
