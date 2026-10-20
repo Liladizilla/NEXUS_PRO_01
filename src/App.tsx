@@ -699,8 +699,6 @@ export default function App() {
           'processing': 'Analyzing requirements',
           'synthesizing': 'Generating application files',
           'building': 'Validating generated files',
-          'testing': 'Checking project structure',
-          'deploying': 'Preparing preview',
           'completed': 'Generation complete',
           'failed': 'Build failed'
         };
@@ -715,22 +713,11 @@ export default function App() {
           lastLoggedDetail = detail;
         }
         
-        // Update task breakdown based on progress
-        if (progress > 20) setTaskBreakdown(prev => [...prev, 'Generating UI components']);
-        if (progress > 50) setTaskBreakdown(prev => [...prev, 'Configuring API routes']);
-        if (progress > 80) setTaskBreakdown(prev => [...prev, 'Finalizing deployment']);
-
-        // Update agent statuses based on CI/CD status
-        if (status === 'building') {
-          updateAgent('architect', { status: 'completed' });
-          updateAgent('devops', { status: 'working', lastAction: 'Building artifacts...' });
-        } else if (status === 'testing') {
-          updateAgent('devops', { status: 'working', lastAction: 'Running security scans...' });
-          updateAgent('debug', { status: 'working', lastAction: 'Testing build...' });
-        } else if (status === 'deploying') {
-          updateAgent('debug', { status: 'completed' });
-          updateAgent('devops', { status: 'working', lastAction: 'Deploying to staging...' });
-        }
+        // Keep the task list tied to events the server actually reports.
+        if (status === 'processing') setTaskBreakdown(['Planning the request']);
+        else if (status === 'synthesizing') setTaskBreakdown(['Planning the request', 'Generating application files']);
+        else if (status === 'building') setTaskBreakdown(['Planning the request', 'Generating application files', 'Validating file paths and structure']);
+        else if (status === 'completed') setTaskBreakdown(['Planning the request', 'Generating application files', 'Validating file paths and structure', 'Returning generated files to the workspace']);
       }, agentModels);
       
       // Update UI with provisioned agents from backend
@@ -744,7 +731,7 @@ export default function App() {
       
       const finalStagingUrl = result.stagingUrl || `${window.location.origin}/staging/${result.projectName.toLowerCase().replace(/\s+/g, '-')}`;
       setStagingUrl(finalStagingUrl);
-      addLog(`CD: Successfully deployed to staging: ${finalStagingUrl}`);
+      addLog(`Preview route prepared: ${finalStagingUrl}. Generated files were not compiled, tested, or deployed to production.`);
       
       plan.agents.forEach((agent: any) => updateAgent(agent.id, { status: 'completed' }));
       updateAgent('devops', { status: 'completed' });
