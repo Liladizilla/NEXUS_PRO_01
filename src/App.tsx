@@ -1325,211 +1325,134 @@ export default function App() {
           <div className="flex-1 flex flex-col min-w-0">
             <AnimatePresence mode="wait">
               {activeTab === 'design' && !showDashboardHome && (
-                <motion.div 
+                <motion.div
                   key="design"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex-1 p-8 overflow-auto flex flex-col items-center justify-start text-center space-y-12 pt-24"
+                  exit={{ opacity: 0, y: -4 }}
+                  className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8"
                 >
-                  <div className="max-w-4xl w-full space-y-12">
-                    <div className="space-y-4">
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-panel border border-accent-ai/30 text-[10px] font-bold uppercase tracking-widest text-accent-ai mb-4">
-                        <Sparkles size={12} />
-                        Next-Gen Project Builder
+                  <div className="mx-auto w-full max-w-[1440px] space-y-6">
+                    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-default pb-5">
+                      <div>
+                        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+                          <span className="h-2 w-2 rounded-sm bg-accent-interactive" />
+                          Project workspace
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-text-primary">Builder</h1>
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
+                          Describe the outcome you need. Review the generated files and build activity before shipping.
+                        </p>
                       </div>
-                      <HeroHeadline />
-                      <p className="text-text-muted text-xl max-w-xl mx-auto font-medium">
-                        Pick your components. We'll architect, build, and deploy your end-to-end type-safe application instantly.
-                      </p>
-                    </div>
+                      <div className="flex items-center gap-2 text-xs text-text-muted">
+                        <span className={cn("h-2 w-2 rounded-full", isGenerating ? "bg-state-warning" : "bg-state-live")} />
+                        {isGenerating ? "Build in progress" : "Ready for a prompt"}
+                      </div>
+                    </header>
 
-                    <div className="relative group max-w-2xl mx-auto w-full">
-                      <div className="prompt-dock surface-floating rounded-[16px] relative w-full transition-shadow focus-within:border-accent-interactive focus-within:shadow-[0_0_0_1px_var(--accent-interactive),0_0_32px_rgba(var(--accent-interactive-rgb),0.2)]">
-                        <div className="p-6 flex flex-col gap-4">
-                          <textarea 
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleGenerate();
-                              }
-                            }}
-                            placeholder="Describe your project vision..."
-                            className="w-full min-h-[96px] bg-transparent border-none focus:ring-0 text-[15px] leading-[22px] font-mono resize-none placeholder:text-text-muted/50 text-text-primary"
-                          />
-                          
-                          <div className="flex items-center justify-between pt-4 border-t border-default/70">
-                            <div className="flex gap-3">
-                              <button 
-                                onClick={() => setShowAssetManager(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all text-[10px] font-bold uppercase tracking-widest"
-                              >
-                                <Plus size={14} />
-                                Assets
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  if (!isPro && !isEnterprise) {
-                                    setShowPaywall(true);
-                                    addLog("High Thinking mode is exclusive to Pro and Enterprise tiers.");
-                                    return;
-                                  }
-                                  setIsHighThinking(!isHighThinking);
-                                }}
-                                className={cn(
-                                  "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-[10px] font-bold uppercase tracking-widest",
-                                  isHighThinking 
-                                    ? "bg-purple-500/10 border-purple-500/50 text-purple-400" 
-                                    : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10"
-                                )}
-                              >
-                                <Cpu size={14} />
-                                High Thinking
-                              </button>
-                            </div>
-                            
-                            <PromptSubmitButton
-                              disabled={isGenerating || !prompt.trim()}
-                              onClick={() => handleGenerate()}
-                            />
+                    <section className="surface-panel rounded-xl border border-default" aria-label="Project prompt">
+                      <div className="border-b border-default px-4 py-3 sm:px-5">
+                        <h2 className="text-sm font-semibold text-text-primary">Build instructions</h2>
+                        <p className="mt-1 text-xs text-text-muted">Be specific about behavior, pages, data, and constraints.</p>
+                      </div>
+                      <div className="p-4 sm:p-5">
+                        <label className="sr-only" htmlFor="builder-project-prompt">Describe the project to build</label>
+                        <textarea
+                          id="builder-project-prompt"
+                          value={prompt}
+                          onChange={(e) => setPrompt(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey && prompt.trim() && !isGenerating) {
+                              e.preventDefault();
+                              handleGenerate();
+                            }
+                          }}
+                          placeholder="Describe the application, its key workflows, pages, data model, and visual direction…"
+                          className="min-h-[140px] w-full resize-y rounded-md border border-default bg-base p-3 text-sm leading-6 text-text-primary placeholder:text-text-muted/70 focus:border-accent-interactive focus:outline-none"
+                        />
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-default pt-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={() => setShowAssetManager(true)} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-default bg-raised px-3 text-sm text-text-primary hover:border-strong">
+                              <Plus size={15} /> Attach assets
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isPro && !isEnterprise) {
+                                  setShowPaywall(true);
+                                  addLog("High Thinking mode is exclusive to Pro and Enterprise tiers.");
+                                  return;
+                                }
+                                setIsHighThinking(!isHighThinking);
+                              }}
+                              className={cn("inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-sm", isHighThinking ? "border-accent-ai/60 bg-accent-ai/10 text-accent-ai" : "border-default bg-raised text-text-muted hover:text-text-primary")}
+                            >
+                              <Cpu size={15} /> High thinking {isHighThinking ? "on" : "off"}
+                            </button>
                           </div>
+                          <PromptSubmitButton disabled={isGenerating || !prompt.trim()} onClick={() => handleGenerate()} />
                         </div>
                       </div>
-                    </div>
+                    </section>
 
                     {isGenerating && (
-                      <div className="max-w-xl mx-auto pt-12 text-left w-full">
-                        <TaskBreakdown tasks={taskBreakdown} />
-                        
-                        <div className="mt-12 p-6 glass rounded-2xl border-white/5 flex items-center gap-6">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-white/40">Build Progress</span>
-                              <span className="text-xs font-black text-nexus-accent">{buildProgress}%</span>
-                            </div>
-                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${buildProgress}%` }}
-                                className="h-full bg-nexus-accent shadow-[0_0_10px_rgba(255,100,0,0.5)]"
-                              />
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-1">Status</div>
-                            <div className="text-xs font-bold text-white whitespace-nowrap">{buildStatus}</div>
-                          </div>
+                      <section className="surface-panel rounded-xl border border-default p-4 sm:p-5" aria-live="polite">
+                        <div className="mb-4 flex items-center justify-between gap-4">
+                          <h2 className="text-sm font-semibold text-text-primary">Build activity</h2>
+                          <span className="font-mono text-sm text-accent-interactive">{buildProgress}%</span>
                         </div>
-                      </div>
+                        <div className="mb-4 h-1.5 overflow-hidden rounded-sm bg-raised">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${buildProgress}%` }} className="h-full bg-accent-interactive" />
+                        </div>
+                        <TaskBreakdown tasks={taskBreakdown} />
+                        <p className="mt-3 text-xs text-text-muted">Progress labels reflect the current task state; they do not independently verify a production deployment.</p>
+                      </section>
                     )}
 
-                    {!isGenerating && (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full pt-12">
-                      <div className="space-y-6 text-left">
-                        <div className="flex items-center gap-2 px-2">
-                          <div className="w-1 h-4 bg-nexus-accent rounded-full" />
-                          <h3 className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Frontend Frameworks</h3>
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                      <section className="surface-panel rounded-xl border border-default p-4">
+                        <div className="mb-3 flex items-center justify-between border-b border-default pb-3">
+                          <h2 className="text-sm font-semibold text-text-primary">Frontend</h2>
+                          <span className="text-xs text-text-muted">Add to prompt</span>
                         </div>
-                          <div className="grid grid-cols-1 gap-3">
-                            {['React (TanStack)', 'Next.js', 'Astro'].map(tech => (
-                                  <div 
-                                    key={tech}
-                                    onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + `Use ${tech}`)}
-                                    className="glass p-4 rounded-2xl border-white/5 hover:border-nexus-accent/30 transition-all cursor-pointer group"
-                                  >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold group-hover:text-nexus-accent transition-colors">{tech}</span>
-                                <Plus size={14} className="text-white/20 group-hover:text-nexus-accent" />
-                              </div>
-                            </div>
+                        <div className="space-y-1">
+                          {['React + TypeScript', 'Next.js', 'Astro'].map(tech => (
+                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\n' : ''}Frontend preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
+                              <span>{tech}</span><Plus size={14} />
+                            </button>
                           ))}
                         </div>
-                      </div>
-
-                      <div className="space-y-6 text-left">
-                        <div className="flex items-center gap-2 px-2">
-                          <div className="w-1 h-4 bg-purple-500 rounded-full" />
-                          <h3 className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Backend & API</h3>
+                      </section>
+                      <section className="surface-panel rounded-xl border border-default p-4">
+                        <div className="mb-3 flex items-center justify-between border-b border-default pb-3">
+                          <h2 className="text-sm font-semibold text-text-primary">Backend & API</h2>
+                          <span className="text-xs text-text-muted">Add to prompt</span>
                         </div>
-                          <div className="grid grid-cols-1 gap-3">
-                            {['Hono', 'tRPC', 'Convex'].map(tech => (
-                                  <div 
-                                    key={tech}
-                                    onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + `Use ${tech}`)}
-                                    className="glass p-4 rounded-2xl border-white/5 hover:border-purple-500/30 transition-all cursor-pointer group"
-                                  >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold group-hover:text-purple-400 transition-colors">{tech}</span>
-                                <Plus size={14} className="text-white/20 group-hover:text-purple-400" />
-                              </div>
-                            </div>
+                        <div className="space-y-1">
+                          {['REST API', 'tRPC', 'Convex'].map(tech => (
+                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\n' : ''}Backend preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
+                              <span>{tech}</span><Plus size={14} />
+                            </button>
                           ))}
                         </div>
-                      </div>
-
-                      <div className="space-y-6 text-left">
-                        <div className="flex items-center gap-2 px-2">
-                          <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                          <h3 className="text-[10px] uppercase font-black tracking-[0.2em] text-white/40">Database & Auth</h3>
+                      </section>
+                      <section className="surface-panel rounded-xl border border-default p-4">
+                        <div className="mb-3 flex items-center justify-between border-b border-default pb-3">
+                          <h2 className="text-sm font-semibold text-text-primary">Data & authentication</h2>
+                          <span className="text-xs text-text-muted">Add to prompt</span>
                         </div>
-                          <div className="grid grid-cols-1 gap-3">
-                            {['Drizzle (Turso)', 'Better Auth', 'Clerk'].map(tech => (
-                                  <div 
-                                    key={tech}
-                                    onClick={() => setPrompt(prev => prev + (prev ? ' ' : '') + `Use ${tech}`)}
-                                    className="glass p-4 rounded-2xl border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer group"
-                                  >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold group-hover:text-emerald-400 transition-colors">{tech}</span>
-                                <Plus size={14} className="text-white/20 group-hover:text-emerald-400" />
-                              </div>
-                            </div>
+                        <div className="space-y-1">
+                          {['PostgreSQL', 'Better Auth', 'Firebase'].map(tech => (
+                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\n' : ''}Data/auth preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
+                              <span>{tech}</span><Plus size={14} />
+                            </button>
                           ))}
                         </div>
-                      </div>
+                      </section>
                     </div>
-
-                    <div className="pt-24 pb-12">
-                      <div className="max-w-xl mx-auto p-8 glass rounded-[32px] border-white/5 space-y-6 text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-nexus-accent/10 flex items-center justify-center mx-auto">
-                          <Sparkles size={24} className="text-nexus-accent" />
-                        </div>
-                        <h2 className="text-3xl font-black tracking-tight">Stop guessing. Start building.</h2>
-                        <p className="text-white/60 text-base leading-relaxed">
-                          Odyseus doesn't just "generate code." It architecturally maps your idea, provisions specialized AI agents, and builds production-ready stacks in seconds.
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                            <div className="text-nexus-accent font-black text-xl mb-1">01</div>
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40">Architect</div>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                            <div className="text-purple-400 font-black text-xl mb-1">02</div>
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40">Provision</div>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                            <div className="text-emerald-400 font-black text-xl mb-1">03</div>
-                            <div className="text-[10px] uppercase tracking-widest font-bold text-white/40">Deploy</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-center gap-4 pt-8">
-                          <div className="flex -space-x-2">
-                            {[1,2,3,4].map(i => (
-                              <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-white/10" />
-                            ))}
-                          </div>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-white/20">Trusted by developers at top startups</span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          )}
+                  </div>
+                </motion.div>
+              )}
 
               {activeTab === 'code' && (
                 <motion.div 
@@ -2122,13 +2045,13 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center pointer-events-none"
+            className="fixed inset-0 z-[100] bg-void/95 flex items-center justify-center pointer-events-none"
           >
             <CommunicationMesh activeAgents={agents.filter(a => a.status === 'working').map(a => a.id)} />
             
-            <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 text-center border-nexus-accent/30 shadow-[0_0_50px_rgba(0,242,255,0.1)] relative z-10">
+            <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 text-center border-default relative z-10">
               <div className="relative">
-                <div className="absolute inset-0 bg-nexus-accent/20 blur-3xl rounded-full"></div>
+                
                 <Zap size={48} className="text-nexus-accent mx-auto relative animate-bounce" />
               </div>
               <div className="space-y-2">
