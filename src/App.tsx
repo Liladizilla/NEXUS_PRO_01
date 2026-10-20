@@ -1417,7 +1417,7 @@ export default function App() {
                         </div>
                         <div className="space-y-1">
                           {['React + TypeScript', 'Next.js', 'Astro'].map(tech => (
-                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\\n' : ''}Frontend preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
+                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\n' : ''}Frontend preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
                               <span>{tech}</span><Plus size={14} />
                             </button>
                           ))}
@@ -1430,7 +1430,7 @@ export default function App() {
                         </div>
                         <div className="space-y-1">
                           {['REST API', 'tRPC', 'Convex'].map(tech => (
-                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\\n' : ''}Backend preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
+                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\n' : ''}Backend preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
                               <span>{tech}</span><Plus size={14} />
                             </button>
                           ))}
@@ -1443,7 +1443,7 @@ export default function App() {
                         </div>
                         <div className="space-y-1">
                           {['PostgreSQL', 'Better Auth', 'Firebase'].map(tech => (
-                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\\n' : ''}Data/auth preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
+                            <button key={tech} type="button" onClick={() => setPrompt(prev => `${prev}${prev ? '\n' : ''}Data/auth preference: ${tech}.`)} className="flex min-h-10 w-full items-center justify-between rounded-md border border-transparent px-2 text-left text-sm text-text-muted hover:border-default hover:bg-raised hover:text-text-primary">
                               <span>{tech}</span><Plus size={14} />
                             </button>
                           ))}
@@ -2045,13 +2045,13 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center pointer-events-none"
+            className="fixed inset-0 z-[100] bg-void/95 flex items-center justify-center pointer-events-none"
           >
             <CommunicationMesh activeAgents={agents.filter(a => a.status === 'working').map(a => a.id)} />
             
-            <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 text-center border-nexus-accent/30 shadow-[0_0_50px_rgba(0,242,255,0.1)] relative z-10">
+            <div className="max-w-md w-full glass p-8 rounded-3xl space-y-8 text-center border-default relative z-10">
               <div className="relative">
-                <div className="absolute inset-0 bg-nexus-accent/20 blur-3xl rounded-full"></div>
+                
                 <Zap size={48} className="text-nexus-accent mx-auto relative animate-bounce" />
               </div>
               <div className="space-y-2">
