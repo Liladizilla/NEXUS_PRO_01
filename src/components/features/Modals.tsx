@@ -105,13 +105,13 @@ export const TemplateSearch: React.FC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-[120] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto overscroll-contain"
     >
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="relative w-full max-w-5xl bg-nexus-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+        className="relative my-auto w-full max-w-5xl max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-32px)] bg-nexus-bg border border-white/10 rounded-3xl overflow-y-auto overscroll-contain shadow-2xl"
       >
         <ProjectTemplates />
       </motion.div>
@@ -242,7 +242,7 @@ const Modal: React.FC<{ title: string; children: React.ReactNode; onClose: () =>
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl"
+    className="fixed inset-0 z-[120] flex items-start sm:items-center justify-center overflow-y-auto overscroll-contain p-2 sm:p-4 bg-black/80 backdrop-blur-xl"
   >
     <motion.div 
       initial={{ scale: 0.9, opacity: 0 }}
